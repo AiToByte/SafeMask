@@ -1,0 +1,2 @@
+# 注意：Measure-Command 运行期间控制台不会有输出，直到执行完毕
+Measure-Command { ./target/release/safemask --mode file --path test_big_5gb.log > output.txt }
