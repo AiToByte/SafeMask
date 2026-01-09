@@ -1,0 +1,17 @@
+$path = "test_func.txt"
+$content = @"
+--- 关键词测试 ---
+项目代号: TopSecretProject
+服务器名: InternalDB-01
+负责人: CEO-Admin
+
+--- 正则模式测试 ---
+OpenAI密钥: sk-ant-api03-L7zXXXXXXXXXXXXX123456789012345678901234
+数据库: postgres://admin:password123@10.50.1.5:5432/prod_db
+IPv4地址: 192.168.1.105, 8.8.8.8
+电子邮箱: developer_test@safemask.io
+"@
+
+# 使用 .NET 方法写入文件，确保是不带 BOM 的纯 UTF-8，防止 Rust 识别混乱
+[System.IO.File]::WriteAllLines((Join-Path (Get-Location) $path), $content)
+Write-Host "✅ 功能测试文件 $path 已通过 .NET 引擎重新生成 (UTF-8 无 BOM)" -ForegroundColor Green

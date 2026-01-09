@@ -1,0 +1,27 @@
+$path = "test_perf.log"
+$lines = 1000000
+
+Write-Host "🚀 正在生成 100 万行测试数据..." -ForegroundColor Cyan
+
+# 1. 先创建一个随机数实例 (这是修复报错的关键)
+$rand = New-Object System.Random
+
+# 2. 使用 .NET 的 StreamWriter
+$filePath = Join-Path (Get-Location) $path
+$sw = [System.IO.StreamWriter]::new($filePath)
+
+for ($i = 1; $i -le $lines; $i++) {
+    # 3. 使用实例方法调用 .Next()
+    $ip = "$($rand.Next(1,255)).$($rand.Next(0,255)).$($rand.Next(0,255)).$($rand.Next(0,255))"
+    
+    # 生成包含关键词和正则特征的行
+    $guid1 = [guid]::NewGuid().ToString("N")
+    $line = "INFO [2026-01-09] User_$i (IP: $ip) accessed TopSecretProject using sk-$guid1"
+    
+    $sw.WriteLine($line)
+    
+    if ($i % 200000 -eq 0) { Write-Host "进度: 已完成 $i 行..." }
+}
+
+$sw.Close()
+Write-Host "✅ 成功生成文件: $path" -ForegroundColor Green
