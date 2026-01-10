@@ -61,6 +61,38 @@ cargo build --release
 ./safemask --mode file --path ./input.log --output ./output_masked.log
 ```
 
+### 3.效果演示
+#### 3.1 输入
+```txt
+INFO [2026-01-09] User_1 (IP: 99.237.89.211) accessed TopSecretProject using sk-47e9a70ff0e240ee9f3a0ebb04e9131f
+INFO [2026-01-09] User_2 (IP: 52.158.34.170) accessed TopSecretProject using sk-7eee0e40148040b29a56829556fe0b88
+INFO [2026-01-09] User_3 (IP: 225.95.77.71) accessed TopSecretProject using sk-0289c054a0394bb2a99daa44b5d4f4a2
+INFO [2026-01-09] User_4 (IP: 49.75.32.104) accessed TopSecretProject using sk-6541c4475bae4ac1a44d9d5813b4575c
+INFO [2026-01-09] User_5 (IP: 55.231.84.214) accessed TopSecretProject using sk-5c91dcc325e941b59817789f60cf7bb0
+INFO [2026-01-09] User_6 (IP: 210.55.8.24) accessed TopSecretProject using sk-fe044476c8494108881746217929c82c
+INFO [2026-01-09] User_7 (IP: 127.183.99.151) accessed TopSecretProject using sk-f2b904e3b686496ca4b88c8698a27818
+INFO [2026-01-09] User_8 (IP: 109.143.251.146) accessed TopSecretProject using sk-4c22af8a8da94424a3bd8cbcab30d398
+INFO [2026-01-09] User_9 (IP: 250.88.109.70) accessed TopSecretProject using sk-4cd6d738173441d284b0f32141c82fd4
+INFO [2026-01-09] User_10 (IP: 118.41.41.205) accessed TopSecretProject using sk-9ac26f750ab741729f4a5813fbe739e8
+INFO [2026-01-09] User_11 (IP: 152.38.117.101) accessed TopSecretProject using sk-f0a2b85db0e2404e8ca8b506e1b4f99e
+INFO [2026-01-09] User_12 (IP: 145.44.57.211) accessed TopSecretProject using sk-5e0bc7589ad543c785d6cebfc5f2941b
+```
+
+#### 3.2 使用SafeMask之后
+```txt
+INFO [2026-01-09] User_719013 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_500468 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_641938 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_625353 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_648768 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_719014 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_1 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_500469 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_523885 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_644866 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_640963 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+```
+
 ## ⚙️ 规则配置
 
 规则以 YAML 格式存储在 `rules/` 目录下，支持多层文件夹分类：
