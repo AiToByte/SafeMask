@@ -48,7 +48,7 @@ fn main() -> Result<()> {
         "clipboard" => handle_clipboard()?,
         "file" => {
             let path = args.path.context("file模式必须使用 --path 指定路径")?;
-            handle_file_parallel(path, args.output)?;
+            handle_file_ordered(path, args.output)?;
         }
         _ => println!("❌ 未知模式。 请使用 --help 查看用法。")
     }
@@ -68,7 +68,8 @@ fn handle_clipboard() -> Result<()> {
     Ok(())
 }
 
-/// 核心文件处理函数：并行扫描 + 直接流式写入
+/// 核心文件处理函数：并行扫描 + 直接流式写入, 不保证顺序
+#[allow(dead_code)]
 fn handle_file_parallel(input_path: PathBuf, output_path: Option<PathBuf>) -> Result<()> {
     let global_start = Instant::now();
 
@@ -124,6 +125,63 @@ fn handle_file_parallel(input_path: PathBuf, output_path: Option<PathBuf>) -> Re
     println!("⏱️  总计运行时间  : {:?}", total_time);
     println!("🚀 平均处理吞吐  : {:.2} MB/s", throughput);
     println!("----------------------------");
+
+    Ok(())
+}
+
+
+/// 文件模式：通过 IndexedParallelIterator 保证行顺序
+fn handle_file_ordered(input_path: PathBuf, output_path: Option<PathBuf>) -> Result<()> {
+    let global_start = Instant::now();
+
+    // 1. 内存映射输入文件 (读取最快方案)
+    let file = File::open(&input_path).with_context(|| format!("无法打开输入文件: {:?}", input_path))?;
+    let mmap = unsafe { Mmap::map(&file)? };
+    let file_size = mmap.len();
+    let load_time = global_start.elapsed();
+
+    println!("🚀 引擎加载成功 | 线程池大小: {} | 文件大小: {:.2} MB", 
+             rayon::current_num_threads(),
+             file_size as f64 / 1024.0 / 1024.0);
+
+    // 2. 并行映射 (Map) + 保序收集 (Collect)
+    // Rayon 的 collect 会保证最终生成的 Vec 顺序与原始切分顺序完全一致
+    let processed_results: Vec<String> = mmap
+        .par_split(|&b| b == b'\n')
+        .map(|chunk| {
+            // 将字节切片转换为字符串（零拷贝尝试）
+            let line = String::from_utf8_lossy(chunk);
+            // 核心脱敏计算 (CPU 密集型)
+            ENGINE.mask_line(&line).into_owned()
+        })
+        .collect();
+
+    let process_time = global_start.elapsed() - load_time;
+
+    // 3. 顺序写入 (Sequential Write)
+    // 此时已经得到了有序的 Vec<String>，直接顺序写入磁盘
+    let writer_target: Box<dyn Write> = if let Some(out_p) = output_path {
+        Box::new(File::create(&out_p)?)
+    } else {
+        Box::new(io::stdout())
+    };
+
+    let mut writer = BufWriter::with_capacity(1024 * 1024, writer_target);
+    for line in processed_results {
+        writeln!(writer, "{}", line)?;
+    }
+    writer.flush()?;
+
+    // 4. 性能报告
+    let total_time = global_start.elapsed();
+    let throughput = (file_size as f64 / 1024.0 / 1024.0) / total_time.as_secs_f64();
+
+    println!("\n--- ⚡ SafeMask 性能分析报告 ---");
+    println!("📂 IO 读取/映射耗时: {:?}", load_time);
+    println!("⚙️  并行保序计算耗时: {:?}", process_time);
+    println!("⏱️  总计运行时间    : {:?}", total_time);
+    println!("🚀 平均保序吞吐量  : {:.2} MB/s", throughput);
+    println!("--------------------------------------");
 
     Ok(())
 }

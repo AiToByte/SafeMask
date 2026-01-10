@@ -80,17 +80,18 @@ INFO [2026-01-09] User_12 (IP: 145.44.57.211) accessed TopSecretProject using sk
 
 #### 3.2 使用SafeMask之后
 ```txt
-INFO [2026-01-09] User_719013 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_500468 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_641938 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_625353 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_648768 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_719014 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
 INFO [2026-01-09] User_1 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_500469 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_523885 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_644866 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_640963 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_2 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_3 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_4 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_5 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_6 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_7 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_8 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_9 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_10 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_11 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_12 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
 ```
 
 ## ⚙️ 规则配置
