@@ -1,0 +1,6 @@
+group: "SENSITIVE_INFO"
+rules:
+  - name: "Email_Address"
+    # 简化了逻辑，重点在于匹配 @ 和域名
+    pattern: '\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b'
+    mask: "<EMAIL>"

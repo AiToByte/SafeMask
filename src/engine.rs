@@ -1,59 +1,113 @@
-/**
- * 核心算法逻辑
- */
-use aho_corasick::AhoCorasick;
-use regex::{Regex, RegexSet};
+use crate::config::Rule;
+use regex::{Regex, Captures};
 use std::borrow::Cow;
-/// 预定义的模式, 实际项目中可移至rules.yaml
-const STATIC_KEYWORDS: &[&str] = &["InternalSecret", "PrivateProject", "SuperAdmin"];
-const REGEX_PATTERNS: &[&str] = &[
-    r"sk-[a-zA-Z0-9]{32}",   // OpenAI
-    r#"(jdbc:|postgres://|mongodb\+srv://)[^\s'"]+\s*"#, // 数据库连接
-    r"\b(?:\d{1,3}\.){3}\d{1,3}\b",                    // IPv4
-];
+use aho_corasick::{AhoCorasick, MatchKind};
 
 pub struct MaskEngine {
-    ac: AhoCorasick,
-    re_set: RegexSet,
-    re_list: Vec<Regex>,
-    mask: &'static str,
+   // 处理正则模式
+    combined_regex: Option<Regex>,
+    regex_masks: Vec<String>,
+    
+    // 处理固定词
+    ac_engine: Option<AhoCorasick>,
+    ac_masks: Vec<String>,
 }
 
 impl MaskEngine {
-     pub fn new() -> Self {
+    pub fn new(rules: Vec<Rule>) -> Self {
+        let mut regex_patterns = Vec::new();
+        let mut regex_masks = Vec::new();
+        
+        let mut ac_patterns = Vec::new();
+        let mut ac_masks = Vec::new();
+
+        for rule in rules {
+            // 简单的启发式判断：如果正则不包含特殊字符，则视为固定词
+            if is_literal(&rule.pattern) {
+                ac_patterns.push(rule.pattern);
+                ac_masks.push(rule.mask);
+            } else {
+                regex_patterns.push(format!("({})", rule.pattern));
+                regex_masks.push(rule.mask);
+            }
+        }
+
+        let combined_regex = if !regex_patterns.is_empty() {
+            let pattern_str = regex_patterns.join("|");
+            // 将 expect 改为更友好的处理或打印
+            match Regex::new(&pattern_str) {
+                Ok(re) => Some(re),
+                Err(e) => {
+                    eprintln!("❌ 正则编译错误: {}", e);
+                    eprintln!("💡 提示: Rust regex 不支持环视断言 (?!) 或 (?<!)，请检查 rules 目录下的 YAML 规则。");
+                    std::process::exit(1); // 优雅退出而不是 panic
+                }
+            }
+        } else {
+            None
+        };
+
+        let ac_engine = if !ac_patterns.is_empty() {
+            Some(AhoCorasick::builder()
+                .match_kind(MatchKind::LeftmostLongest) // 匹配最长路径，防止子串干扰
+                .build(ac_patterns)
+                .expect("AC 引擎初始化失败"))
+        } else {
+            None
+        };
+
         Self {
-            ac: AhoCorasick::new(STATIC_KEYWORDS).expect("AC 引擎编译失败"),
-            re_set: RegexSet::new(REGEX_PATTERNS).expect("RegexSet 编译失败"),
-            re_list: REGEX_PATTERNS.iter().map(|p| Regex::new(p).unwrap()).collect(),
-            mask: "<SAFE_MASK>",
+            combined_regex,
+            regex_masks,
+            ac_engine,
+            ac_masks,
         }
     }
 
-    /// 核心脱敏逻辑，使用 Cow 避免不必要的字符串拷贝
     pub fn mask_line<'a>(&self, input: &'a str) -> Cow<'a, str> {
+        // --- 第一阶段: AC 引擎处理 (固定词) ---
+        // 如果 AC 引擎存在，处理后产生 Cow::Owned(String)；否则保持 Cow::Borrowed(&'a str)
+        let ac_result = if let Some(ref ac) = self.ac_engine {
+            // 注意：Aho-Corasick 的 replace_all 总是返回 String
+            // 为了优化，你可以在此处先调用 find 判断是否有匹配，但通常直接处理即可
+            Cow::Owned(ac.replace_all(input, &self.ac_masks))
+        } else {
+            Cow::Borrowed(input)
+        };
+        // --- 第二阶段: Regex 引擎处理 (模式匹配) ---
+        let re_engine = match &self.combined_regex {
+            Some(re) => re,
+            None => return ac_result, // 如果没有正则规则，直接返回第一阶段结果
+        };
+       // 执行单次扫描替换
+        // 这里的 re_result 生命周期受限于 ac_result
+        let re_result = re_engine.replace_all(&ac_result, |caps: &Captures| {
+            for i in 0..self.regex_masks.len() {
+                if caps.get(i + 1).is_some() {
+                    return self.regex_masks[i].as_str();
+                }
+            }
+            "<MASKED>"
+        });
+            // --- 生命周期修复核心逻辑 ---
+        match re_result {
+            // 情况 1: 正则引擎修改了文本，产生了新的 String
+            // 将其所有权通过 Cow::Owned 转移给调用者
+            Cow::Owned(s) => Cow::Owned(s),
 
-        
-         // 第一阶段：Aho-Corasick 字典匹配（极速）
-        // 为每一个模式提供一个替换标签（即创建一个包含 3 个 self.mask 的 Vec）
-        let replacements = vec![self.mask; STATIC_KEYWORDS.len()]; 
-        
-        // 使用针对模式数量相等的替换逻辑
-        let mut result = self.ac.replace_all(input, &replacements);
-
-        // 第二阶段：RegexSet 探测是否有模式命中
-        let matches: Vec<_> = self.re_set.matches(&result).into_iter().collect();
-        
-        if matches.is_empty() {
-            // 如果既没命中字典也没命中正则，返回原始借用，零开销
-            return Cow::Owned(result); 
+            // 情况 2: 正则引擎没动过文本（Borrowed）
+            // 此时 re_result 指向的是 ac_result 的内存。
+            // 为了避免生命周期报错，我们直接返回 ac_result。
+            // 这样返回的生命周期就回到了 ac_result 拥有的所有权或 input 的借用。
+            Cow::Borrowed(_) => ac_result,
         }
-
-        // 第三阶段：针对命中的正则执行替换
-        for index in matches {
-            result = self.re_list[index]
-                .replace_all(&result, self.mask)
-                .into_owned();
-        }
-        Cow::Owned(result)
     }
+}
+
+/// 简单的辅助函数：判断是否为纯文本（无正则特殊符号）
+fn is_literal(pattern: &str) -> bool {
+    let specials = [
+        '.', '+', '*', '?', '(', ')', '[', ']', '{', '}', '|', '^', '$', '\\',
+    ];
+    !pattern.chars().any(|c| specials.contains(&c))
 }

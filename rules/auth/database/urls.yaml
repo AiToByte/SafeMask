@@ -1,0 +1,30 @@
+group: "DATABASE_CONNECTION"
+rules:
+  - name: "PostgreSQL_URI"
+    # 移除了 ^ 和 $，使用 \b (词边界) 并在末尾使用排除字符集，确保抓取到空白符或引号为止
+    pattern: '\bpostgres(?:ql)?://[^\s''"<>]+'
+    mask: "<POSTGRES_URI>"
+
+  - name: "MySQL_URI"
+    pattern: '\bmysql(?:\+.+)?://[^\s''"<>]+'
+    mask: "<MYSQL_URI>"
+
+  - name: "MongoDB_URI"
+    pattern: '\bmongodb(?:\+srv)?://[^\s''"<>]+'
+    mask: "<MONGODB_URI>"
+
+  - name: "Redis_URI"
+    pattern: '\brediss?://[^\s''"<>]+'
+    mask: "<REDIS_URI>"
+
+  - name: "SQLServer_URI"
+    pattern: '\bsqlserver://[^\s''"<>]+'
+    mask: "<SQLSERVER_URI>"
+
+  - name: "Oracle_URI"
+    pattern: '\boracle:thin:@[^\s''"<>]+'
+    mask: "<ORACLE_URI>"
+
+  - name: "SQLite_File"
+    pattern: '\bsqlite(?:3)?://[^\s''"<>]+'
+    mask: "<SQLITE_URI>"

@@ -1,0 +1,19 @@
+
+group: "SENSITIVE_INFO"
+rules:
+  # --- AI API KEYS (去掉了锚点，增加了边界判定) ---
+  - name: "OpenAI"
+    pattern: '\bsk-[a-zA-Z0-9]{48,}\b' # 适配 sk-proj 及长 key
+    mask: "<OPENAI_KEY>"
+  
+  - name: "Anthropic_Claude"
+    pattern: '\bsk-ant-api03-[a-zA-Z0-9\-_]{90,100}AA\b'
+    mask: "<CLAUDE_KEY>"
+
+  - name: "Google_Gemini"
+    pattern: '\bAIzaSy[a-zA-Z0-9\-_]{33}\b'
+    mask: "<GEMINI_KEY>"
+
+  - name: "DeepSeek"
+    pattern: '\bsk-[a-z0-9]{32}\b'
+    mask: "<DEEPSEEK_KEY>"

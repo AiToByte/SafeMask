@@ -1,0 +1,10 @@
+group: "SENSITIVE_INFO"
+rules:
+  - name: "Global_Phone_E164"
+    pattern: '\b[1-9]\d{1,14}\b$'
+    mask: "<GLOBAL_PHONE>"
+
+  - name: "China_Mobile_Phone"
+    # 增加了边界判定，防止匹配到时间戳中的一段数字
+    pattern: '\b1[3-9]\d{9}\b'
+    mask: "<CHINA_MOBILE>"

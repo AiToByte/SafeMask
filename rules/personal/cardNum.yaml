@@ -1,0 +1,6 @@
+group: "SENSITIVE_INFO"
+rules:
+  - name: "China_ID_Card_18"
+  # 身份证末尾可能是 X，前后必须是词边界防止误切长数字
+    pattern: '\b[1-9]\d{5}(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}(\d|X|x)\b'
+    mask: "<CHINA_ID_CARD>"
