@@ -38,7 +38,7 @@ This software de-identifies sensitive personal information. After your content i
 确保已安装 Rust 环境 (MSRV 1.70+)。
 
 ```bash
-git clone https://github.com/YourUsername/safemask.git
+git clone https://github.com/AiToByte/safemask.git
 cd safemask
 
 # 必须使用 --release 模式以开启所有编译优化
