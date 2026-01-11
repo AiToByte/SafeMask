@@ -18,6 +18,18 @@ use std::time::Instant;
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
+#[cfg(target_os = "windows")]
+const BUFFER_SIZE: usize = 8 * 1024 * 1024; // Windows 侧重减少系统调用
+
+#[cfg(target_os = "macos")]
+const BUFFER_SIZE: usize = 16 * 1024 * 1024; // macOS 侧重喂饱高速 NVMe
+
+#[cfg(target_os = "linux")]
+const BUFFER_SIZE: usize = 4 * 1024 * 1024; // Linux 内核高效，4MB 即可保持极低内存占用
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+const BUFFER_SIZE: usize = 1024 * 1024; // 其他系统默认 1MB
+
 /// 全局静态引擎，确保规则只加载和编译一次
 static ENGINE: Lazy<MaskEngine> = Lazy::new(|| {
     let rules = config::load_all_rules("rules");
