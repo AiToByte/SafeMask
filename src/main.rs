@@ -18,6 +18,18 @@ use std::time::Instant;
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
+#[cfg(target_os = "windows")]
+const BUFFER_SIZE: usize = 8 * 1024 * 1024; // Windows 侧重减少系统调用
+
+#[cfg(target_os = "macos")]
+const BUFFER_SIZE: usize = 16 * 1024 * 1024; // macOS 侧重喂饱高速 NVMe
+
+#[cfg(target_os = "linux")]
+const BUFFER_SIZE: usize = 4 * 1024 * 1024; // Linux 内核高效，4MB 即可保持极低内存占用
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+const BUFFER_SIZE: usize = 1024 * 1024; // 其他系统默认 1MB
+
 /// 全局静态引擎，确保规则只加载和编译一次
 static ENGINE: Lazy<MaskEngine> = Lazy::new(|| {
     let rules = config::load_all_rules("rules");
@@ -88,11 +100,11 @@ fn handle_file_parallel(input_path: PathBuf, output_path: Option<PathBuf>) -> Re
     };
 
     // 使用 1MB 的大容量缓冲区，并用 Mutex 包装以支持并发写入
-    let writer = Arc::new(Mutex::new(BufWriter::with_capacity(1024 * 1024, writer_raw)));
+    let writer = Arc::new(Mutex::new(BufWriter::with_capacity(BUFFER_SIZE, writer_raw)));
 
     println!("🚀 引擎就绪 | 线程数: {} | 文件大小: {:.2} MB", 
              rayon::current_num_threads(),
-             file_size as f64 / 1024.0 / 1024.0);
+             file_size / BUFFER_SIZE);
 
     // 3. 并行流水线处理
     // 注意：这里不再 collect() 到 Vec，而是直接 for_each 写入
