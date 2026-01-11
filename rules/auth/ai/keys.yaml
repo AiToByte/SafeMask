@@ -3,7 +3,7 @@ group: "SENSITIVE_INFO"
 rules:
   # --- AI API KEYS (去掉了锚点，增加了边界判定) ---
   - name: "OpenAI"
-    pattern: '\bsk-[a-zA-Z0-9]{48,}\b' # 适配 sk-proj 及长 key
+    pattern: '\bsk-proj-[A-Za-z0-9-_]{40,}\b' # 适配 sk-proj 及长 key
     mask: "<OPENAI_KEY>"
   
   - name: "Anthropic_Claude"
