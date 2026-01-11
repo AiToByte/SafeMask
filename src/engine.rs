@@ -6,11 +6,10 @@ use aho_corasick::{AhoCorasick, MatchKind};
 pub struct MaskEngine {
    // 处理正则模式
     combined_regex: Option<Regex>,
-    regex_masks: Vec<String>,
+    regex_masks: Vec<Vec<u8>>,
     
-    // 处理固定词
     ac_engine: Option<AhoCorasick>,
-    ac_masks: Vec<String>,
+    ac_masks: Vec<Vec<u8>>, // 遮罩也存为字节流
 }
 
 impl MaskEngine {
@@ -25,10 +24,10 @@ impl MaskEngine {
             // 简单的启发式判断：如果正则不包含特殊字符，则视为固定词
             if is_literal(&rule.pattern) {
                 ac_patterns.push(rule.pattern);
-                ac_masks.push(rule.mask);
+                ac_masks.push(rule.mask.into_bytes());
             } else {
                 regex_patterns.push(format!("({})", rule.pattern));
-                regex_masks.push(rule.mask);
+                regex_masks.push(rule.mask.into_bytes());
             }
         }
 
@@ -64,13 +63,13 @@ impl MaskEngine {
         }
     }
 
-    pub fn mask_line<'a>(&self, input: &'a str) -> Cow<'a, str> {
+    pub fn mask_line<'a>(&self, input: &'a [u8]) -> Cow<'a, [u8]> {
         // --- 第一阶段: AC 引擎处理 (固定词) ---
         // 如果 AC 引擎存在，处理后产生 Cow::Owned(String)；否则保持 Cow::Borrowed(&'a str)
         let ac_result = if let Some(ref ac) = self.ac_engine {
             // 注意：Aho-Corasick 的 replace_all 总是返回 String
             // 为了优化，你可以在此处先调用 find 判断是否有匹配，但通常直接处理即可
-            Cow::Owned(ac.replace_all(input, &self.ac_masks))
+            Cow::Owned(ac.replace_all_bytes(input, &self.ac_masks))
         } else {
             Cow::Borrowed(input)
         };
@@ -84,10 +83,10 @@ impl MaskEngine {
         let re_result = re_engine.replace_all(&ac_result, |caps: &Captures| {
             for i in 0..self.regex_masks.len() {
                 if caps.get(i + 1).is_some() {
-                    return self.regex_masks[i].as_str();
+                    return self.regex_masks[i].as_slice();
                 }
             }
-            "<MASKED>"
+            b"<MASKED>"
         });
             // --- 生命周期修复核心逻辑 ---
         match re_result {
