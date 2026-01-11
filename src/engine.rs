@@ -1,5 +1,5 @@
 use crate::config::Rule;
-use regex::{Regex, Captures};
+use regex::bytes::{Regex, Captures};
 use std::borrow::Cow;
 use aho_corasick::{AhoCorasick, MatchKind};
 
