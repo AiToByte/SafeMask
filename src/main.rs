@@ -1,10 +1,11 @@
 mod engine;
 mod config;
+use config::RuleManager;
+use engine::MaskEngine;
 
 use anyhow::{Context, Result};
 use arboard::Clipboard;
 use clap::Parser;
-use engine::MaskEngine;
 use memmap2::Mmap;
 use once_cell::sync::Lazy;
 use rayon::prelude::*;
@@ -20,7 +21,10 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 /// 全局静态引擎，确保规则只加载和编译一次
 static ENGINE: Lazy<MaskEngine> = Lazy::new(|| {
-    let rules = config::load_all_rules("rules");
+    let rules = RuleManager::load_all_rules();
+    if rules.is_empty() {
+        eprintln!("⚠️ 未发现任何规则文件，请检查 rules/ 或 custom/ 目录");
+    }
     MaskEngine::new(rules)
 });
 
