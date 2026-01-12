@@ -84,34 +84,37 @@ cargo build --release
 ### 3.效果演示
 #### 3.1 输入
 ```txt
-INFO [2026-01-09] User_1 (IP: 99.237.89.211) accessed TopSecretProject using sk-47e9a70ff0e240ee9f3a0ebb04e9131f
-INFO [2026-01-09] User_2 (IP: 52.158.34.170) accessed TopSecretProject using sk-7eee0e40148040b29a56829556fe0b88
-INFO [2026-01-09] User_3 (IP: 225.95.77.71) accessed TopSecretProject using sk-0289c054a0394bb2a99daa44b5d4f4a2
-INFO [2026-01-09] User_4 (IP: 49.75.32.104) accessed TopSecretProject using sk-6541c4475bae4ac1a44d9d5813b4575c
-INFO [2026-01-09] User_5 (IP: 55.231.84.214) accessed TopSecretProject using sk-5c91dcc325e941b59817789f60cf7bb0
-INFO [2026-01-09] User_6 (IP: 210.55.8.24) accessed TopSecretProject using sk-fe044476c8494108881746217929c82c
-INFO [2026-01-09] User_7 (IP: 127.183.99.151) accessed TopSecretProject using sk-f2b904e3b686496ca4b88c8698a27818
-INFO [2026-01-09] User_8 (IP: 109.143.251.146) accessed TopSecretProject using sk-4c22af8a8da94424a3bd8cbcab30d398
-INFO [2026-01-09] User_9 (IP: 250.88.109.70) accessed TopSecretProject using sk-4cd6d738173441d284b0f32141c82fd4
-INFO [2026-01-09] User_10 (IP: 118.41.41.205) accessed TopSecretProject using sk-9ac26f750ab741729f4a5813fbe739e8
-INFO [2026-01-09] User_11 (IP: 152.38.117.101) accessed TopSecretProject using sk-f0a2b85db0e2404e8ca8b506e1b4f99e
-INFO [2026-01-09] User_12 (IP: 145.44.57.211) accessed TopSecretProject using sk-5e0bc7589ad543c785d6cebfc5f2941b
+INFO [2026-01-09] REQ_ID:c6c146f4-5f59-49fb-9af3-ae53dffd80fe | Client: 158.209.138.172 | Phone: 13184327690 | Email: user_c6c146f4@internal.cloud | DNS: node-923.api.service.io | DB: postgres://admin:pwd6435@/db_main | Key: sk-c6c146f4-5f59-49fb-9af3-ae53dffd80fec6c146f4-5f59-49fb-9af3-ae53dffd80fe
+INFO [2026-01-09] REQ_ID:fdfbc6fe-6a6f-4a29-ad25-33800e07a54c | Client: 199.203.32.197 | Phone: 15018443387 | Email: user_fdfbc6fe@internal.cloud | DNS: node-806.prod.corp | DB: postgres://admin:pwd6920@/db_main | Key: sk-fdfbc6fe-6a6f-4a29-ad25-33800e07a54cfdfbc6fe-6a6f-4a29-ad25-33800e07a54c
+INFO [2026-01-09] REQ_ID:1cee87c0-c759-4a28-9c5a-f53d0795fa33 | Client: 170.35.237.6 | Phone: 15025377154 | Email: user_1cee87c0@prod.corp | DNS: node-176.secure.node | DB: postgres://admin:pwd5656@/db_main | Key: sk-1cee87c0-c759-4a28-9c5a-f53d0795fa331cee87c0-c759-4a28-9c5a-f53d0795fa33
+INFO [2026-01-09] REQ_ID:79909f77-e7b6-4cbc-84eb-802894deb6cd | Client: 89.153.179.13 | Phone: 13887270345 | Email: user_79909f77@prod.corp | DNS: node-725.dev.local | DB: postgres://admin:pwd9011@/db_main | Key: sk-79909f77-e7b6-4cbc-84eb-802894deb6cd79909f77-e7b6-4cbc-84eb-802894deb6cd
+INFO [2026-01-09] REQ_ID:8c18cfe5-33f9-49f8-a958-2f00d6018dda | Client: 99.21.87.115 | Phone: 18833721927 | Email: user_8c18cfe5@secure.node | DNS: node-448.prod.corp | DB: postgres://admin:pwd4623@/db_main | Key: sk-8c18cfe5-33f9-49f8-a958-2f00d6018dda8c18cfe5-33f9-49f8-a958-2f00d6018dda
+INFO [2026-01-09] REQ_ID:4eb8c76e-4626-4b1c-a4b2-23556d727cf5 | Client: 150.161.35.52 | Phone: 18953035548 | Email: user_4eb8c76e@api.service.io | DNS: node-564.prod.corp | DB: postgres://admin:pwd7753@/db_main | Key: sk-4eb8c76e-4626-4b1c-a4b2-23556d727cf54eb8c76e-4626-4b1c-a4b2-23556d727cf5
+INFO [2026-01-09] REQ_ID:e9915291-850f-4043-8184-053b51932395 | Client: 158.5.64.110 | Phone: 15026107635 | Email: user_e9915291@internal.cloud | DNS: node-169.secure.node | DB: postgres://admin:pwd4699@/db_main | Key: sk-e9915291-850f-4043-8184-053b51932395e9915291-850f-4043-8184-053b51932395
+INFO [2026-01-09] REQ_ID:9c442dbb-24c2-4ba1-a666-22c4dfb32ab8 | Client: 211.100.85.125 | Phone: 15062438861 | Email: user_9c442dbb@secure.node | DNS: node-531.prod.corp | DB: postgres://admin:pwd1412@/db_main | Key: sk-9c442dbb-24c2-4ba1-a666-22c4dfb32ab89c442dbb-24c2-4ba1-a666-22c4dfb32ab8
+INFO [2026-01-09] REQ_ID:8aa7a501-7aa1-4cf3-92d9-944652605994 | Client: 123.208.175.66 | Phone: 13174268227 | Email: user_8aa7a501@dev.local | DNS: node-550.internal.cloud | DB: postgres://admin:pwd6410@/db_main | Key: sk-8aa7a501-7aa1-4cf3-92d9-9446526059948aa7a501-7aa1-4cf3-92d9-944652605994
 ```
 
 #### 3.2 使用SafeMask之后
 ```txt
-INFO [2026-01-09] User_1 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_2 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_3 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_4 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_5 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_6 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_7 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_8 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_9 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_10 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_11 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_12 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] REQ_ID:c6c146f4-5f59-49fb-9af3-ae53dffd80fe | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:fdfbc6fe-6a6f-4a29-ad25-33800e07a54c | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:1cee87c0-c759-4a28-9c5a-f53d0795fa33 | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:79909f77-e7b6-4cbc-84eb-802894deb6cd | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:8c18cfe5-33f9-49f8-a958-2f00d6018dda | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:4eb8c76e-4626-4b1c-a4b2-23556d727cf5 | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:e9915291-850f-4043-8184-053b51932395 | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:9c442dbb-24c2-4ba1-a666-22c4dfb32ab8 | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:8aa7a501-7aa1-4cf3-92d9-944652605994 | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY> 
 ```
 
 ## ⚙️ 规则配置
