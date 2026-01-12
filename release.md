@@ -1,55 +1,86 @@
-这份 `README.md` 的改进建议旨在进一步突出 **“AI 时代原生脱敏”** 的理念，强调 **“隐私安全”** 与 **“语义保留”** 的平衡，同时提升文档的视觉专业度。
+根据你新增的**法定目录规则加载**和**混合引擎（AC + Regex）**功能，我为你优化了 `README.md`。
 
-以下是为你优化后的完整版本：
+这次更新重点突出了**“零配置自定义”**、**“混合动力引擎”**以及**“法定目录规范”**，使文档更具工具书的专业感。
 
 ---
 
-# 🛡️ SafeMask v0.4.1
+# 🛡️ SafeMask v0.4.2
+
+<p align="center">
+  <strong>SafeMask</strong> - <em>让每一行数据都能安全地拥抱 AI。</em>
+</p>
 
 [![Rust](https://img.shields.io/badge/language-Rust-orange.svg)](https://www.rust-lang.org/)
-[![Performance](https://img.shields.io/badge/performance-300MB%2Fs+-green.svg)](#-performance-benchmarks)
+[![Performance](https://img.shields.io/badge/performance-300MB%2Fs+-green.svg)](#-性能基准)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](#-installation)
-[![AI-Friendly](https://img.shields.io/badge/AI-Friendly-brightgreen.svg)](#-ai-friendly-masking)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](#-使用指南)
 
-**SafeMask** 是一款工业级的、基于 Rust 驱动的高性能隐私数据脱敏工具。它不仅是简单的字符替换，更是为 **AI 开发者、安全审计员及数据工程师** 设计的隐私防线。
-
-## 🌟 为什么选择 SafeMask?
-
-在 LLM（大语言模型）时代，将日志或代码直接粘贴给 AI 处理存在极高的泄露风险。SafeMask 解决了三大痛点：
-
-1.  **AI 语义保留 (AI-Friendly)**：传统的 `***` 掩码会破坏 AI 的理解能力。SafeMask 使用 **语义化标签**（如 `<POSTGRES_URI>`），让 AI 知道此处是一个数据库链接，在不暴露密码的前提下保留逻辑上下文。
-2.  **绝对零信任 (Zero-Trust)**：100% 本地运行，不产生任何外网请求，确保数据不出本地。
-3.  **极致性能 (Industrial-Grade)**：利用 Rust 的并行计算和内存映射技术，处理 GB 级日志仅需数秒，无惧海量数据。
+**SafeMask** 是一款工业级的隐私数据脱敏工具，专为 AI 开发者、安全审计员设计。它不仅能瞬间处理 GB 级日志，更能通过**语义化脱敏**，在保护隐私的同时完整保留数据的逻辑上下文，让 AI 辅助分析不再受阻。
 
 ---
 
-## 🚀 核心架构：三阶段保序流水线
+## ✨ v0.4.2 新特性：灵活定制，极致性能
 
-SafeMask 采用了**生产者-消费者流水线**模型，实现了 **CPU 计算与 I/O 读写的完全重叠（Overlapping）**。
+*   **🗂️ 法定目录管理**：自动扫描 `rules/` (系统内置) 与 `custom/` (用户自定义) 目录，规则变更无需重新编译。
+*   **🚀 混合动力引擎**：
+    *   **固定词过滤**：自动识别纯文本规则（如人名、项目名），采用 **Aho-Corasick** 算法，实现 $O(n)$ 级极速过滤。
+    *   **模式匹配**：复杂隐私模式采用 **高性能字节正则**，分层优先级处理。
+*   **🧠 AI 友好型语义**：支持将敏感信息替换为 `<EMAIL>`、`<PROJECT_ID>` 等标签，而非破坏性的 `***`。
 
-### 🏗️ 架构概览
+---
+
+## 🏗️ 核心架构
+
+SafeMask 采用三阶段保序流水线，实现了 CPU 计算与磁盘 I/O 的完全重叠：
+
 ```text
 [ 原始数据 ] 
      |
      v
-( Stage 1: 生产者 ) ➔ 内存映射 (Mmap) + 智能宏分块 (Macro-Chunking 4MB)
+( Stage 1: 生产者 ) ➔ 内存映射 (Mmap) 自动分块
      |
      v
-( Stage 2: 计算集群 ) ➔ Rayon 并行处理 | 字节流正则引擎 | Aho-Corasick 自动机
+( Stage 2: 混合计算 ) ➔ AC 自动机 (固定词) + 分层正则 (模式) 
      |
      v
-( Stage 3: 消费者 ) ➔ BTreeMap 排序缓冲区 | 保序合并 | 8MB 聚合写入 (BufWriter)
+( Stage 3: 消费者 ) ➔ BTreeMap 保序缓冲区 ➔ 聚合写入 (BufWriter)
      |
      v
 [ 脱敏产物 ]
 ```
 
-### ⚡ 深度优化细节
-- **Zero-Copy I/O**: 使用 `memmap2` 绕过内核缓冲区拷贝。
-- **Byte-Level Engine**: 基于 `regex::bytes` 实现，完全跳过 UTF-8 校验开销。
-- **Context-Aware**: 智能识别 `sk-`、`postgres://` 等特征，精准区分隐私类型。
-- **Ordered Pipelining**: 确保高并发处理后的输出行序与输入完全一致。
+---
+
+## ⚙️ 规则定制指南
+
+SafeMask 强制执行目录化管理，你只需将 YAML 规则文件放入对应目录即可生效。
+
+### 1. 目录结构
+```text
+.
+├── safemask.exe       # 执行文件
+├── rules/             # [系统级] 内置规则 (IP, Email, API Keys等)
+└── custom/            # [用户级] 在这里添加你的私有规则
+    ├── private.yaml
+    └── internal.yaml
+```
+
+### 2. 配置示例 (`custom/my_rules.yaml`)
+```yaml
+group: "MY_CUSTOM_RULES"
+rules:
+  # 固定字符串匹配 (极速模式)
+  - name: "PersonalName"
+    pattern: "xiaosheng"
+    mask: "<MY_NAME>"
+    priority: 100
+
+  # 正则模式匹配
+  - name: "InternalProject"
+    pattern: 'PROJ-[0-9]{5,}'
+    mask: "<PROJECT_ID>"
+    priority: 80
+```
 
 ---
 
@@ -64,85 +95,35 @@ SafeMask 采用了**生产者-消费者流水线**模型，实现了 **CPU 计�
 
 ---
 
-## 🤖 AI 友好型脱敏示例 (AI-Friendly Masking)
-
-### 3.1 原始风险数据
-> `INFO | User: admin | IP: 158.209.138.172 | DB: postgres://admin:p@ssw0rd123@10.0.0.5:5432/prod | Key: sk-ant-api03-xxxx...`
-
-### 3.2 传统脱敏 (AI 难以理解逻辑)
-> `INFO | User: admin | IP: *.*.*.* | DB: *********** | Key: ***********`
-> *AI 反馈: "由于上下文丢失，我无法分析您的数据库连接配置..."*
-
-### 3.3 SafeMask 脱敏 (语义化保留)
-> `INFO | User: admin | IP: <IPv4> | DB: <POSTGRES_URI> | Key: <CLAUDE_KEY>`
-> *AI 反馈: "您的 **PostgreSQL** 连接配置看起来正确，但请确保端口 **5432** 在防火墙中已开放..."*
-
----
-
-## 🛠️ 安装与编译
-
-确保已安装 Rust 环境 (MSRV 1.70+)。
-
-```bash
-git clone https://github.com/AiToByte/safemask.git
-cd safemask
-
-# 必须使用 --release 模式以开启所有编译优化
-cargo build --release
-```
-
 ## 📖 使用指南
 
 ### 1. 剪贴板模式 (与 AI 对话神器)
-将敏感日志复制到剪贴板，运行后直接粘贴到 ChatGPT/Claude：
+最适合在将代码或日志粘贴给 ChatGPT/Claude 前使用。程序会自动读取剪贴板内容，脱敏后回写：
 ```powershell
 ./safemask --mode clipboard
 ```
 
-### 2. 文件模式 (大规模数据清洗)
-处理本地日志文件，并直接导出：
+### 2. 文件模式 (大规模清洗)
+处理本地大文件，支持保序输出：
 ```powershell
 ./safemask --mode file --path ./input.log --output ./output_masked.log
 ```
 
 ---
 
-## ⚙️ 规则配置
+## 🏗️ 设计哲学
 
-SafeMask 支持高度可定制的规则，位于 `rules/` 目录下：
-
-```yaml
-# rules/auth/database.yaml
-group: "DATABASE_CONNECTION"
-rules:
-  - name: "PostgreSQL_URI"
-    pattern: '\bpostgres(?:ql)?://[^\s''"<>]+'
-    mask: "<POSTGRES_URI>"
-    priority: 10
-```
-
----
-
-## 🏗️ 架构背后的思考
-
-作为一个拥有 Java 背景的 Rust 开发者，SafeMask 在设计上严苛追求以下原则：
-1.  **规避 GC 停顿**：通过 Rust 的所有权模型与 `mimalloc` 分配器，消除大规模字符串处理中的内存碎裂。
-2.  **算法聚合**：避免了 $N$ 次 `replace_all` 导致的 $O(N \times M)$ 复杂度，通过超级正则聚合优化为单次扫描。
-3.  **安全性大于校验**：脱敏引擎倾向于“宁可错杀，不可漏过”，即使正则匹配稍宽，也要确保隐私不泄露。
+1.  **语义保留**：脱敏后的数据应保持“可读性”。AI 应该知道这是一个 `<DATABASE_URL>`，而不是一串星号。
+2.  **零拷贝优先**：利用 `Mmap` 和字节流处理，将内存分配压力降至最低。
+3.  **宁过错杀，不可漏过**：引擎设计倾向于覆盖更广的隐私特征，确保安全合规。
 
 ## 🤝 贡献
-欢迎提交新的脱敏规则：
-1. 在 `rules/` 下创建分类目录。
-2. 遵循 `RULES_TEMP.md` 中的非环视正则规范。
-3. 提交 PR 并附带性能测试结果。
+欢迎提交 PR 增加更多内置规则：
+1. 在 `rules/` 下创建新的分类。
+2. 确保正则不包含不支持的环视（Lookaround）语法。
+3. 提交前请运行性能测试。
 
 ---
-**SafeMask** - *让每一行日志都能安全地拥抱 AI。*
-
----
-
-### 主要改进点说明：
-1.  **明确了 AI-Friendly 的定义**：解释了为什么语义化标签（如 `<POSTGRES_URI>`）比星号掩码更好。这直接回应了项目作为 LLM 训练数据清洗工具的价值。
-2.  **强化了隐私安全心智**：加入了 "Zero-Trust" 和 "Zero-Knowledge" 的描述，符合安全类产品的规范。
-3.  **性能可视化**：通过吞吐量和环境说明，体现了 Rust 工业级工具的属性。
-4.  **排版优化**：使用了更专业的 Badge 和 emoji 引导，增加了代码块的说明，使文档更易于扫描阅读。
+<p align="center">
+  <strong>SafeMask</strong> - <em>Empowering Data Security in the AI Era.</em>
+</p>

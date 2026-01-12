@@ -3,7 +3,7 @@ This software de-identifies sensitive personal information. After your content i
 
 ---
 
-# 🛡️ SafeMask v0.4.1
+# 🛡️ SafeMask v0.4.2
 [![Rust](https://img.shields.io/badge/language-Rust-orange.svg)](https://www.rust-lang.org/)
 [![Performance](https://img.shields.io/badge/performance-300MB%2Fs+-green.svg)](#-performance-benchmarks)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -20,6 +20,15 @@ This software de-identifies sensitive personal information. After your content i
 </div>
 
 **SafeMask** 是一款工业级的、基于 Rust 驱动的高性能隐私数据脱敏工具。它不仅是简单的字符替换，更是为 **AI 开发者、安全审计员及数据工程师** 设计的隐私防线。
+
+## ✨ v0.4.2 新特性：灵活定制，极致性能
+
+*   **🗂️ 法定目录管理**：自动扫描 `rules/` (系统内置) 与 `custom/` (用户自定义) 目录，规则变更无需重新编译。
+*   **🚀 混合动力引擎**：
+    *   **固定词过滤**：自动识别纯文本规则（如人名、项目名），采用 **Aho-Corasick** 算法，实现 $O(n)$ 级极速过滤。
+    *   **模式匹配**：复杂隐私模式采用 **高性能字节正则**，分层优先级处理。
+*   **🧠 AI 友好型语义**：支持将敏感信息替换为 `<EMAIL>`、`<PROJECT_ID>` 等标签，而非破坏性的 `***`。
+
 
 ## 🌟 为什么选择 SafeMask?
 
@@ -155,19 +164,37 @@ INFO [2026-01-09] REQ_ID:8aa7a501-7aa1-4cf3-92d9-944652605994 | Client: <IPv4> |
 <DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY> 
 ```
 
-## ⚙️ 规则配置
+## ⚙️ 规则定制指南
 
-SafeMask 支持高度可定制的规则，位于 `rules/` 目录下：
-
-```yaml
-# rules/auth/database.yaml
-group: "DATABASE_CONNECTION"
-rules:
-  - name: "PostgreSQL_URI"
-    pattern: '\bpostgres(?:ql)?://[^\s''"<>]+'
-    mask: "<POSTGRES_URI>"
-    priority: 10
+### 1. 目录结构
+```text
+.
+├── safemask.exe       # 执行文件
+├── rules/             # [系统级] 内置规则 (IP, Email, API Keys等)
+└── custom/            # [用户级] 在这里添加你的私有规则
+    ├── private.yaml
+    └── internal.yaml
 ```
+
+### 2. 配置示例 (`custom/my_rules.yaml`)
+```yaml
+group: "MY_CUSTOM_RULES"
+rules:
+  # 固定字符串匹配 (极速模式)
+  - name: "PersonalName"
+    pattern: "xiaosheng"
+    mask: "<MY_NAME>"
+    priority: 100
+
+  # 正则模式匹配
+  - name: "InternalProject"
+    pattern: 'PROJ-[0-9]{5,}'
+    mask: "<PROJECT_ID>"
+    priority: 80
+```
+
+---
+
 
 ## 🏗️ 架构背后的思考
 
