@@ -11,7 +11,13 @@ This software de-identifies sensitive personal information. After your content i
 [![AI-Friendly](https://img.shields.io/badge/AI-Friendly-brightgreen.svg)](#-ai-friendly-masking)
 
 
-🤗🛡️ **Enabling every line of data to safely embrace AI**
+
+<div align="center">
+
+
+ **🤗🛡️ Enabling every line of data to safely embrace AI**
+
+</div>
 
 **SafeMask** 是一款工业级的、基于 Rust 驱动的高性能隐私数据脱敏工具。它不仅是简单的字符替换，更是为 **AI 开发者、安全审计员及数据工程师** 设计的隐私防线。
 
@@ -179,5 +185,9 @@ rules:
 3. 提交 PR 并附带性能测试结果。
 
 ---
+<div align="center">
+
 **SafeMask** - *让每一行数据都能安全地拥抱 AI。*
+
+</div>
 
