@@ -44,14 +44,14 @@ SafeMask 不仅仅是一个正则替换工具，它采用了复杂的**生产者
 - **Ordered Pipelining**: 引入 `crossbeam-channel` 与序列号控制，确保高并发下的日志行序与原始文件 100% 一致。
 - **Memory Reuse**: 采用线程局部缓冲区（Scratch Buffers），将内存分配压力从 $O(N)$ 降低到 $O(Threads)$。
 
-> *注：性能受限于磁盘 I/O 上限。*
-
 ## 📊 性能基准 (Performance Benchmarks)
 | 数据量 | 原始耗时 (PS Redirect) | **SafeMask 优化输出 (-o)** | 吞吐量 (Throughput) |
 | :--- | :--- | :--- | :--- |
 | **113 MB (100万行)** | 21.9s | **0.42s** | **~270 MB/s** |
 | **1.2 GB (500万行)** | - | **4.1s** | **~300 MB/s** |
 | **2.3 GB (1000万行)** | - | **8.3s** | **~337 MB/s** |
+
+> *注：性能受限于磁盘 I/O 上限。*
 
 ## 🛠️ 安装与编译
 
