@@ -3,36 +3,93 @@ This software de-identifies sensitive personal information. After your content i
 
 ---
 
-# 🛡️ SafeMask
-
+# 🛡️ SafeMask v0.5.0
 [![Rust](https://img.shields.io/badge/language-Rust-orange.svg)](https://www.rust-lang.org/)
+[![Performance](https://img.shields.io/badge/performance-300MB%2Fs+-green.svg)](#-performance-benchmarks)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Performance](https://img.shields.io/badge/performance-Ultra--High-green.svg)](#performance)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](#-installation)
+[![AI-Friendly](https://img.shields.io/badge/AI-Friendly-brightgreen.svg)](#-ai-friendly-masking)
 
-**SafeMask** 是一款基于 Rust 开发的极致性能隐私数据脱敏工具。它专为处理大规模日志、代码库及敏感文本设计，能够瞬间识别并遮盖 AI API Keys、数据库连接串、IP 地址、手机号等敏感信息，确保数据在进入 AI 模型或共享环境前的合规性。
 
-## ✨ 核心特性
 
-- 🚀 **极致吞吐**：基于内存映射（Mmap）与单次扫描（Single-Pass）正则引擎，支持 GB 级数据秒级处理。
-- 🧵 **多核并发**：利用 Rayon 并行流水线，自动压榨多核 CPU 性能。
-- 🧠 **混合动力引擎**：
-  - **Aho-Corasick 算法**：毫秒级处理成千上万个固定关键词。
-  - **DFA 超级正则**：聚合多维规则，无论多少正则，文本仅需扫描一遍。
-- 📦 **模块化规则**：支持通过 YAML 文件动态配置规则，按包（Package）和分类管理。
-- 💾 **极低内存**：通过内存映射技术（Memory Mapping），处理超大文件时的内存占用仅为数十 MB。
-- 📋 **剪贴板集成**：一键处理剪贴板内容，无缝衔接 AI 辅助开发流。
+<div align="center">
 
-## ⚡ 性能表现 (Benchmark)
 
-在 Windows 11 / i7-12700K 环境下对真实日志进行测试：
+ **🤗🛡️ Enabling every line of data to safely embrace AI**
 
-| 数据量 | 原始耗时 (PS Redirect) | **SafeMask 优化输出 (-o)** | 吞吐量 (Throughput) |
+</div>
+
+**SafeMask** 是一款工业级的、基于 Rust 驱动的高性能隐私数据脱敏工具。它不仅是简单的字符替换，更是为 **AI 开发者、安全审计员及数据工程师** 设计的隐私防线。
+
+## 🌟 为什么选择 SafeMask?
+
+在 LLM（大语言模型）时代，将日志或代码直接粘贴给 AI 处理存在极高的泄露风险。SafeMask 解决了三大痛点：
+
+1.  **AI 语义保留 (AI-Friendly)**：传统的 `***` 掩码会破坏 AI 的理解能力。SafeMask 使用 **语义化标签**（如 `<POSTGRES_URI>`），让 AI 知道此处是一个数据库链接，在不暴露密码的前提下保留逻辑上下文。
+2.  **绝对零信任 (Zero-Trust)**：100% 本地运行，不产生任何外网请求，确保数据不出本地。
+3.  **极致性能 (Industrial-Grade)**：利用 Rust 的并行计算和内存映射技术，处理 GB 级日志仅需数秒，无惧海量数据。
+ 
+
+---
+
+
+
+## 🚀 核心架构：三阶段保序流水线 (Level 3 Optimization)
+
+SafeMask 不仅仅是一个正则替换工具，它采用了复杂的**生产者-消费者流水线**模型，实现了 **CPU 计算与 I/O 读写的完全重叠（Overlapping）**。
+
+### 🏗️ 架构概览
+```text
+[ 原始数据 ] 
+     |
+     v
+( Stage 1: 生产者 ) ➔ 内存映射 (Mmap) + 智能宏分块 (Macro-Chunking 4MB)
+     |
+     v
+( Stage 2: 计算集群 ) ➔ Rayon 并行处理 | 字节流正则引擎 | Aho-Corasick 自动机
+     |
+     v
+( Stage 3: 消费者 ) ➔ BTreeMap 排序缓冲区 | 保序合并 | 8MB 聚合写入 (BufWriter)
+     |
+     v
+[ 脱敏产物 ]
+```
+
+
+### ⚡ 深度优化细节
+- **Zero-Copy I/O**: 使用 `memmap2` 绕过内核缓冲区拷贝。
+- **Byte-Level Engine**: 基于 `regex::bytes` 实现，完全跳过 UTF-8 校验开销。
+- **Context-Aware**: 智能识别 `sk-`、`postgres://` 等特征，精准区分隐私类型。
+- **Ordered Pipelining**: 确保高并发处理后的输出行序与输入完全一致。
+- **Memory Reuse**: 采用线程局部缓冲区（Scratch Buffers），将内存分配压力从 $O(N)$ 降低到 $O(Threads)$。
+
+## 📊 性能基准 (Performance Benchmarks)
+*测试环境: Windows 11 / i7-12700K / NVMe SSD*
+
+| 数据规模 | 原始处理耗时 (PS) | **SafeMask 耗时** | 吞吐量 (Throughput) |
 | :--- | :--- | :--- | :--- |
 | **113 MB (100万行)** | 21.9s | **0.42s** | **~270 MB/s** |
 | **1.2 GB (500万行)** | - | **4.1s** | **~300 MB/s** |
 | **2.3 GB (1000万行)** | - | **8.3s** | **~337 MB/s** |
 
 > *注：性能受限于磁盘 I/O 上限。*
+
+
+## 🤖 AI 友好型脱敏示例 (AI-Friendly Masking)
+
+### 3.1 原始风险数据
+> `INFO | User: admin | IP: 158.209.138.172 | DB: postgres://admin:p@ssw0rd123@10.0.0.5:5432/prod | Key: sk-ant-api03-xxxx...`
+
+### 3.2 传统脱敏 (AI 难以理解逻辑)
+> `INFO | User: admin | IP: *.*.*.* | DB: *********** | Key: ***********`
+> *AI 反馈: "由于上下文丢失，我无法分析您的数据库连接配置..."*
+
+### 3.3 SafeMask 脱敏 (语义化保留)
+> `INFO | User: admin | IP: <IPv4> | DB: <POSTGRES_URI> | Key: <CLAUDE_KEY>`
+> *AI 反馈: "您的 **PostgreSQL** 连接配置看起来正确，但请确保端口 **5432** 在防火墙中已开放..."*
+
+---
+
 
 ## 🛠️ 安装与编译
 
@@ -65,50 +122,51 @@ cargo build --release
 ### 3.效果演示
 #### 3.1 输入
 ```txt
-INFO [2026-01-09] User_1 (IP: 99.237.89.211) accessed TopSecretProject using sk-47e9a70ff0e240ee9f3a0ebb04e9131f
-INFO [2026-01-09] User_2 (IP: 52.158.34.170) accessed TopSecretProject using sk-7eee0e40148040b29a56829556fe0b88
-INFO [2026-01-09] User_3 (IP: 225.95.77.71) accessed TopSecretProject using sk-0289c054a0394bb2a99daa44b5d4f4a2
-INFO [2026-01-09] User_4 (IP: 49.75.32.104) accessed TopSecretProject using sk-6541c4475bae4ac1a44d9d5813b4575c
-INFO [2026-01-09] User_5 (IP: 55.231.84.214) accessed TopSecretProject using sk-5c91dcc325e941b59817789f60cf7bb0
-INFO [2026-01-09] User_6 (IP: 210.55.8.24) accessed TopSecretProject using sk-fe044476c8494108881746217929c82c
-INFO [2026-01-09] User_7 (IP: 127.183.99.151) accessed TopSecretProject using sk-f2b904e3b686496ca4b88c8698a27818
-INFO [2026-01-09] User_8 (IP: 109.143.251.146) accessed TopSecretProject using sk-4c22af8a8da94424a3bd8cbcab30d398
-INFO [2026-01-09] User_9 (IP: 250.88.109.70) accessed TopSecretProject using sk-4cd6d738173441d284b0f32141c82fd4
-INFO [2026-01-09] User_10 (IP: 118.41.41.205) accessed TopSecretProject using sk-9ac26f750ab741729f4a5813fbe739e8
-INFO [2026-01-09] User_11 (IP: 152.38.117.101) accessed TopSecretProject using sk-f0a2b85db0e2404e8ca8b506e1b4f99e
-INFO [2026-01-09] User_12 (IP: 145.44.57.211) accessed TopSecretProject using sk-5e0bc7589ad543c785d6cebfc5f2941b
+INFO [2026-01-09] REQ_ID:c6c146f4-5f59-49fb-9af3-ae53dffd80fe | Client: 158.209.138.172 | Phone: 13184327690 | Email: user_c6c146f4@internal.cloud | DNS: node-923.api.service.io | DB: postgres://admin:pwd6435@/db_main | Key: sk-c6c146f4-5f59-49fb-9af3-ae53dffd80fec6c146f4-5f59-49fb-9af3-ae53dffd80fe
+INFO [2026-01-09] REQ_ID:fdfbc6fe-6a6f-4a29-ad25-33800e07a54c | Client: 199.203.32.197 | Phone: 15018443387 | Email: user_fdfbc6fe@internal.cloud | DNS: node-806.prod.corp | DB: postgres://admin:pwd6920@/db_main | Key: sk-fdfbc6fe-6a6f-4a29-ad25-33800e07a54cfdfbc6fe-6a6f-4a29-ad25-33800e07a54c
+INFO [2026-01-09] REQ_ID:1cee87c0-c759-4a28-9c5a-f53d0795fa33 | Client: 170.35.237.6 | Phone: 15025377154 | Email: user_1cee87c0@prod.corp | DNS: node-176.secure.node | DB: postgres://admin:pwd5656@/db_main | Key: sk-1cee87c0-c759-4a28-9c5a-f53d0795fa331cee87c0-c759-4a28-9c5a-f53d0795fa33
+INFO [2026-01-09] REQ_ID:79909f77-e7b6-4cbc-84eb-802894deb6cd | Client: 89.153.179.13 | Phone: 13887270345 | Email: user_79909f77@prod.corp | DNS: node-725.dev.local | DB: postgres://admin:pwd9011@/db_main | Key: sk-79909f77-e7b6-4cbc-84eb-802894deb6cd79909f77-e7b6-4cbc-84eb-802894deb6cd
+INFO [2026-01-09] REQ_ID:8c18cfe5-33f9-49f8-a958-2f00d6018dda | Client: 99.21.87.115 | Phone: 18833721927 | Email: user_8c18cfe5@secure.node | DNS: node-448.prod.corp | DB: postgres://admin:pwd4623@/db_main | Key: sk-8c18cfe5-33f9-49f8-a958-2f00d6018dda8c18cfe5-33f9-49f8-a958-2f00d6018dda
+INFO [2026-01-09] REQ_ID:4eb8c76e-4626-4b1c-a4b2-23556d727cf5 | Client: 150.161.35.52 | Phone: 18953035548 | Email: user_4eb8c76e@api.service.io | DNS: node-564.prod.corp | DB: postgres://admin:pwd7753@/db_main | Key: sk-4eb8c76e-4626-4b1c-a4b2-23556d727cf54eb8c76e-4626-4b1c-a4b2-23556d727cf5
+INFO [2026-01-09] REQ_ID:e9915291-850f-4043-8184-053b51932395 | Client: 158.5.64.110 | Phone: 15026107635 | Email: user_e9915291@internal.cloud | DNS: node-169.secure.node | DB: postgres://admin:pwd4699@/db_main | Key: sk-e9915291-850f-4043-8184-053b51932395e9915291-850f-4043-8184-053b51932395
+INFO [2026-01-09] REQ_ID:9c442dbb-24c2-4ba1-a666-22c4dfb32ab8 | Client: 211.100.85.125 | Phone: 15062438861 | Email: user_9c442dbb@secure.node | DNS: node-531.prod.corp | DB: postgres://admin:pwd1412@/db_main | Key: sk-9c442dbb-24c2-4ba1-a666-22c4dfb32ab89c442dbb-24c2-4ba1-a666-22c4dfb32ab8
+INFO [2026-01-09] REQ_ID:8aa7a501-7aa1-4cf3-92d9-944652605994 | Client: 123.208.175.66 | Phone: 13174268227 | Email: user_8aa7a501@dev.local | DNS: node-550.internal.cloud | DB: postgres://admin:pwd6410@/db_main | Key: sk-8aa7a501-7aa1-4cf3-92d9-9446526059948aa7a501-7aa1-4cf3-92d9-944652605994
 ```
 
 #### 3.2 使用SafeMask之后
 ```txt
-INFO [2026-01-09] User_1 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_2 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_3 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_4 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_5 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_6 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_7 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_8 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_9 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_10 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_11 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_12 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] REQ_ID:c6c146f4-5f59-49fb-9af3-ae53dffd80fe | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:fdfbc6fe-6a6f-4a29-ad25-33800e07a54c | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:1cee87c0-c759-4a28-9c5a-f53d0795fa33 | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:79909f77-e7b6-4cbc-84eb-802894deb6cd | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:8c18cfe5-33f9-49f8-a958-2f00d6018dda | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:4eb8c76e-4626-4b1c-a4b2-23556d727cf5 | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:e9915291-850f-4043-8184-053b51932395 | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:9c442dbb-24c2-4ba1-a666-22c4dfb32ab8 | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:8aa7a501-7aa1-4cf3-92d9-944652605994 | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY> 
 ```
 
 ## ⚙️ 规则配置
 
-规则以 YAML 格式存储在 `rules/` 目录下，支持多层文件夹分类：
+SafeMask 支持高度可定制的规则，位于 `rules/` 目录下：
 
 ```yaml
-# rules/ai/keys.yaml
-group: "AI_API_KEYS"
+# rules/auth/database.yaml
+group: "DATABASE_CONNECTION"
 rules:
-  - name: "OpenAI"
-    pattern: '\bsk-[a-zA-Z0-9]{48}\b'
-    mask: "<OPENAI_KEY>"
-  - name: "DeepSeek"
-    pattern: '\bsk-[a-z0-9]{32}\b'
-    mask: "<DEEPSEEK_KEY>"
+  - name: "PostgreSQL_URI"
+    pattern: '\bpostgres(?:ql)?://[^\s''"<>]+'
+    mask: "<POSTGRES_URI>"
+    priority: 10
 ```
 
 ## 🏗️ 架构背后的思考
@@ -117,8 +175,18 @@ rules:
 1. **规避 GC 停顿**：通过 Rust 的所有权模型与 `mimalloc` 分配器，消除大规模字符串处理中的停顿。
 2. **零拷贝 I/O**：使用 `Mmap` 替代传统的缓冲读取，减少内核态与用户态的数据拷贝。
 3. **算法聚合**：避免了 $N$ 次 `replace_all` 导致的 $O(N \times M)$ 复杂度，将其优化为 $O(M)$。
+4. **安全性大于校验**：脱敏引擎倾向于“宁可错杀，不可漏过”，即使正则匹配稍宽，也要确保隐私不泄露。
+
 
 ## 🤝 贡献
+欢迎提交新的脱敏规则：
+1. 在 `rules/` 下创建分类目录。
+2. 遵循 `RULES_TEMP.md` 中的非环视正则规范。
+3. 提交 PR 并附带性能测试结果。
 
-**欢迎提交 Issue 或 Pull Request 来增加更多的脱敏规则！**
+---
+<div align="center">
 
+**SafeMask** - *让每一行数据都能安全地拥抱 AI。*
+
+</div>
