@@ -10,8 +10,7 @@ This software de-identifies sensitive personal information. After your content i
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](#-installation)
 
-**SafeMask** 是一款工业级的、基于 Rust 开发的高性能隐私数据脱敏工具。它专为 **LLM (大模型) 训练数据清洗**、**跨境日志审计**以及**开发者隐私保护**场景设计。
-
+## 📝 介绍
 **SafeMask** 是一款基于 Rust 开发的极致性能隐私数据脱敏工具。它专为处理大规模日志、代码库及敏感文本设计，能够瞬间识别并遮盖 AI API Keys、数据库连接串、IP 地址、手机号等敏感信息，确保数据在进入 AI 模型或共享环境前的合规性。
 同时, 也可用于**LLM (大模型) 训练数据清洗**、**跨境日志审计**以及**开发者隐私保护**场景中。
 
