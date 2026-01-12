@@ -4,9 +4,9 @@
 
 ---
 
-## 🚀 SafeMask v0.1.0 - High Performance Privacy Guard
+## 🚀 SafeMask v0.4.1 - High Performance Privacy Guard
+1. 采用三阶段
 
-这是 **SafeMask** 的第一个正式发布版本。SafeMask 是一款专为开发者和运维工程师设计的、基于 Rust 的极致性能脱敏工具，旨在解决 AI 辅助开发流中的数据隐私合规问题。
 
 ### 🌟 核心特性 (Key Features)
 
@@ -51,26 +51,3 @@
 *   **开源透明**：核心算法逻辑完全透明，接受社区审计。
 
 ---
-
-### 💡 发布前的小建议 (Checklist)
-
-1.  **打包规则文件夹**：
-    由于你的程序依赖 `rules/` 目录下的 YAML 文件，用户下载后如果没有这个目录会报错。
-    *   **建议**：将 `safemask.exe` 和 `rules/` 文件夹一起打包进一个 `.zip` 文件。
-2.  **静态链接 (Static Linking)**：
-    为了防止用户电脑缺少某些 DLL，建议在 Windows 编译时使用以下命令（如果是用 MSVC 环境）：
-    ```powershell
-    # 这样生成的 .exe 就不依赖特定的 VC 运行时库
-    $env:RUSTFLAGS="-C target-feature=+crt-static"
-    cargo build --release
-    ```
-3.  **计算 Hash 值**（专业体现）：
-    在 Release 说明的末尾，放上二进制文件的 SHA256 校验码，防止文件被篡改：
-    ```powershell
-    # Windows 下获取哈希值
-    Get-FileHash ./target/release/safemask.exe -Algorithm SHA256
-    ```
-4.  **LICENSE 文件**：
-    确保仓库里有一个 `LICENSE` 文件（推荐 MIT 或 Apache 2.0），这对远程工作的合规性加分很重要。
-
-这份说明体现了你作为一个**资深后端工程师**对性能、易用性和安全性的全面考虑。发布后，这不仅是一个工具，更是你 Rust 工程能力的有力证言。

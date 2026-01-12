@@ -8,7 +8,11 @@ pub struct Rule {
     pub name: String,
     pub pattern: String,
     pub mask: String,
+    #[serde(default = "default_priority")] // 如果YAML没写优先级，则默认为0
+    pub priority: i32,
 }
+
+fn default_priority() -> i32 { 0 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct RuleGroup {
@@ -24,8 +28,9 @@ pub fn load_all_rules<P: AsRef<Path>>(dir: P) -> Vec<Rule> {
         let path = entry.path();
         if path.is_file() && path.extension().map_or(false, |ext| ext == "yaml") {
             let content = std::fs::read_to_string(path).expect("无法读取规则文件");
-            if let Ok(group) = serde_yaml::from_str::<RuleGroup>(&content) {
-                all_rules.extend(group.rules);
+            match serde_yaml::from_str::<RuleGroup>(&content) {
+                Ok(group) => all_rules.extend(group.rules),
+                Err(e) => eprintln!("⚠️ 规则文件解析失败 {:?}: {}", path, e),
             }
         }
     }

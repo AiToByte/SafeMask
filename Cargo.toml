@@ -1,6 +1,6 @@
 [package]
 name = "SafeMask"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024" # 2024最新版语法规范
 authors = ["xiaosheng <xiaosheng.tech@outlook.com>"]
 description = "A high-performance, ordered data masking tool written in Rust."
@@ -21,6 +21,7 @@ serde = {version = "1.0", features = ["derive"]}
 serde_yaml = "0.9"
 walkdir = "2.4" # 用于递归遍历目录
 mimalloc = "0.1" # 引入 mimaloc提升频繁内存分配性能
+crossbeam-channel = "0.5"
 
 # 极致性能优化配置: 当运行 cargo build --release 时生效
 [profile.release]
