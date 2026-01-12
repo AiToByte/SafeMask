@@ -5,5 +5,3 @@ rules:
     pattern: 'xiaosheng'
     mask: "<MY_NAME>"
     priority: 30 # 较高优先级
-
-  
