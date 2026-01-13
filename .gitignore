@@ -24,5 +24,5 @@ target
 # Added by cargo
 
 /targetss
-/out/log
-/test/temp
+/out/
+/test/
