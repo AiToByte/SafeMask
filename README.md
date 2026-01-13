@@ -1,5 +1,6 @@
 # SafeMask
-This software de-identifies sensitive personal information. After your content is processed by SafeMask, all private information will be anonymized, allowing your information to be safely transmitted and processed on the internet, by AI, etc.
+Enabling every line of data to safely embrace AI.
+After your content is processed by SafeMask, all private information will be anonymized, allowing your information to be safely transmitted and processed on the internet, by AI, etc.
 
 ---
 
@@ -119,6 +120,8 @@ cargo build --release
 ### 1. 剪贴板模式
 最适合在将代码或日志粘贴给 ChatGPT/Claude 前使用：
 ```powershell
+./safemask
+或者
 ./safemask --mode clipboard
 ```
 
