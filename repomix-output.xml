@@ -1,0 +1,1116 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.gitignore
+测试方式.md
+Cargo.toml
+command-win.txt
+LICENSE
+README.md
+release.md
+rules/auth/ai/keys.yaml
+rules/auth/database/urls.yaml
+rules/network/dns.yaml
+rules/network/ip.yaml
+rules/personal/cardNum.yaml
+rules/personal/email.yaml
+rules/personal/phone.yaml
+rules/rulesTemp.md
+src/config.rs
+src/engine.rs
+src/main.rs
+test_func.txt
+test_perf.txt
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="测试方式.md">
+为了真正压测 **`safemask`** 的 **Mmap（内存映射）** 和 **Rayon（多核并行）** 特性，我们需要把数据量提升到 **GB 级别（例如 5GB - 10GB）**。
+
+在 Windows PowerShell 中，高效生成大文件有两种推荐方案：
+
+---
+
+### 方案一：倍增法（最快，利用现有文件）
+如果你已经生成了那个 200MB 的 `test_perf.log`，我们可以利用文件流直接把它快速复制并合并，实现容量翻倍。
+
+**在 PowerShell 中运行以下代码：**
+
+```powershell
+# 将 200MB 的文件自我复制合并，运行 5 次就是 32 倍 (约 6.4GB)
+$source = "test_perf.log"
+$target = "test_big_5gb.log"
+
+Write-Host "🚀 正在通过倍增法生成大文件..." -ForegroundColor Cyan
+
+# 先拷贝一份作为基础
+Copy-Item $source $target
+
+# 循环 5 次，每次文件大小翻倍：200MB -> 400 -> 800 -> 1.6G -> 3.2G -> 6.4G
+for ($i = 1; $i -le 5; $i++) {
+    Write-Host "正在进行第 $i 次翻倍..."
+    # 使用 CMD 的二进制拷贝模式，这是 Windows 下合并文件最快的方式
+    cmd /c "copy /b $target + $target $target_tmp"
+    Move-Item $target_tmp $target -Force
+}
+
+Write-Host "✅ 成功生成超大测试文件: $target" -ForegroundColor Green
+```
+
+---
+
+### 方案二：高性能 .NET 流生成器（生成 1000 万行 ≈ 2.7GB）
+如果你想生成更具随机性的数据，我们可以把循环次数加大。为了避免 PowerShell 自身的性能瓶颈，我们增大缓冲区。
+
+```powershell
+$path = "test_perf_1000.log"
+$lines = 10000000  # 1000 万行
+
+# 1. 初始化随机数发生器实例 (修复报错的关键)
+$rand = [System.Random]::new()
+
+# 2. 定义缺失的变量库
+$domains = @("internal.cloud", "prod.corp", "dev.local", "secure.node", "api.service.io")
+$phonePrefixes = @("138", "139", "150", "159", "170", "188", "133", "189", "131")
+
+Write-Host "🚀 正在生成 1000 万行压力测试数据..." -ForegroundColor Cyan
+
+# 3. 使用 64KB 缓冲区以提升写入速度
+$sw = [System.IO.StreamWriter]::new((Join-Path (Get-Location) $path), $false, [System.Text.Encoding]::UTF8, 65536)
+
+for ($i = 1; $i -le $lines; $i++) {
+    # 4. 正确调用随机数实例方法 .Next()
+    $ip = "$($rand.Next(1,255)).$($rand.Next(0,255)).$($rand.Next(0,255)).$($rand.Next(0,255))"
+    
+    # 随机选择前缀并生成手机号
+    $prefix = $phonePrefixes[$rand.Next(0, $phonePrefixes.Length)]
+    $phone = "$prefix$($rand.Next(10000000, 99999999))"
+    
+    # 生成 UUID 相关的随机数据
+    $guid = [guid]::NewGuid().ToString()
+    $email = "user_$($guid.Substring(0,8))@$($domains[$rand.Next(0, $domains.Length)])"
+    $dns = "node-$($rand.Next(100,999)).$($domains[$rand.Next(0, $domains.Length)])"
+    
+    $db_uri = "postgres://admin:pwd$($rand.Next(1000,9999))@$dns:5432/db_main"
+    
+    # 构造一行混合日志
+    $line = "INFO [2026-01-09] REQ_ID:$guid | Client: $ip | Phone: $phone | Email: $email | DNS: $dns | DB: $db_uri | Key: sk-$($guid)$($guid)"
+    
+    $sw.WriteLine($line)
+    
+    # 每 100 万行报告一次进度
+    if ($i % 1000000 -eq 0) { 
+        $percent = ($i / $lines) * 100
+        Write-Host "已完成 $percent% ..." 
+    }
+}
+
+$sw.Close()
+Write-Host "✅ 压力测试文件 $path 生成完毕 (约 1.8GB - 2.2GB)" -ForegroundColor Green
+```
+
+
+### .NET 流生成器（生成 100 万行 ≈ 280MB）
+```powershell
+$path = "test_perf_100.log"
+$lines = 1000000  # 1000 万行
+
+# 1. 初始化随机数发生器实例 (修复报错的关键)
+$rand = [System.Random]::new()
+
+# 2. 定义缺失的变量库
+$domains = @("internal.cloud", "prod.corp", "dev.local", "secure.node", "api.service.io")
+$phonePrefixes = @("138", "139", "150", "159", "170", "188", "133", "189", "131")
+
+Write-Host "🚀 正在生成 100 万行压力测试数据..." -ForegroundColor Cyan
+
+# 3. 使用 64KB 缓冲区以提升写入速度
+$sw = [System.IO.StreamWriter]::new((Join-Path (Get-Location) $path), $false, [System.Text.Encoding]::UTF8, 65536)
+
+for ($i = 1; $i -le $lines; $i++) {
+    # 4. 正确调用随机数实例方法 .Next()
+    $ip = "$($rand.Next(1,255)).$($rand.Next(0,255)).$($rand.Next(0,255)).$($rand.Next(0,255))"
+    
+    # 随机选择前缀并生成手机号
+    $prefix = $phonePrefixes[$rand.Next(0, $phonePrefixes.Length)]
+    $phone = "$prefix$($rand.Next(10000000, 99999999))"
+    
+    # 生成 UUID 相关的随机数据
+    $guid = [guid]::NewGuid().ToString()
+    $email = "user_$($guid.Substring(0,8))@$($domains[$rand.Next(0, $domains.Length)])"
+    $dns = "node-$($rand.Next(100,999)).$($domains[$rand.Next(0, $domains.Length)])"
+    
+    $db_uri = "postgres://admin:pwd$($rand.Next(1000,9999))@$dns:5432/db_main"
+    
+    # 构造一行混合日志
+    $line = "INFO [2026-01-09] REQ_ID:$guid | Client: $ip | Phone: $phone | Email: $email | DNS: $dns | DB: $db_uri | Key: sk-$($guid)$($guid)"
+    
+    $sw.WriteLine($line)
+    
+    # 每 10 万行报告一次进度
+    if ($i % 100000 -eq 0) { 
+        $percent = ($i / $lines) * 100
+        Write-Host "已完成 $percent% ..." 
+    }
+}
+
+$sw.Close()
+Write-Host "✅ 压力测试文件 $path 生成完毕 " -ForegroundColor Green
+
+```
+
+---
+
+### 如何进行真正的性能压测？
+
+当你拥有了一个 **5GB 以上** 的文件后，你可以观察到 `safemask` 极其硬核的表现：
+
+#### 1. 监控磁盘 I/O
+运行测试：
+```powershell
+# 记得把控制台编码设为 UTF8 避免输出乱码干扰
+chcp 65001
+Measure-Command { ./target/release/safemask --mode file --path test_big_5gb.log > output_big.txt }
+```
+
+#### 2. 观察任务管理器
+在程序运行的那几秒钟：
+*   **CPU**：点击“逻辑处理器”视图，你应该看到**所有核心**全部瞬间顶满。这证明 `Rayon` 的工作窃取（Work-stealing）算法正在疯狂压榨多核性能。
+*   **内存**：重点来了！观察 `safemask` 的内存占用。你会发现，虽然你处理的是 5GB 的文件，但 **`safemask` 的内存占用（Private Bytes）可能非常低**。
+    *   **原因**：这就是 `Mmap` 的魔力。它没有把 5GB 全部读进内存，而是让操作系统按需映射磁盘分页。这证明了你的程序具备处理“超大数据量”（超过物理内存容量）的能力。
+
+#### 3. 结果验证
+处理完大文件后，随机抽查最后几行：
+```powershell
+# 1. 文件最前面 7 行
+Write-Host "=== 文件开头 (前 7 行) ===" -ForegroundColor Cyan
+Get-Content output_big.txt -First 7
+
+# 2. 文件最后 7 行
+Write-Host "`n=== 文件结尾 (后 7 行) ===" -ForegroundColor Cyan
+Get-Content output_big.txt -Tail 7
+
+# 3. 随机抽 6 行（效果比较好）, 大文件不建议使用, 耗时较长
+Write-Host "`n=== 文件中随机 6 行 ===" -ForegroundColor Cyan
+Get-Content output_big.txt | Get-Random -Count 6
+```
+</file>
+
+<file path="command-win.txt">
+$start = Get-Date
+Write-Host "🚀 开始脱敏处理: $start" -ForegroundColor Cyan
+
+./target/release/safemask --mode file --path test_perf.log > output.txt
+
+$end = Get-Date
+$duration = $end - $start
+Write-Host "✅ 处理完成: $end" -ForegroundColor Green
+Write-Host "⏱️ 总共耗时: $($duration.TotalSeconds) 秒" -ForegroundColor Yellow
+</file>
+
+<file path="LICENSE">
+MIT License
+
+Copyright (c) 2026 xiao sheng
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+</file>
+
+<file path="release.md">
+对于一个 5 年经验、追求高质量产出的工程师来说，GitHub Release 不仅仅是上传一个 `.exe` 文件，它是一份**产品的身份说明书**。
+
+以下是为你设计的 **SafeMask v0.1.0** 发布说明模板。你可以直接复制到 GitHub 的 "Release Notes" 框中，并根据实际情况微调。
+
+---
+
+## 🚀 SafeMask v0.4.1 - High Performance Privacy Guard
+
+
+
+### 🌟 核心特性 (Key Features)
+
+*   **极致性能引擎**：采用 **Aho-Corasick** 算法与 **超级正则 (Combined DFA)** 混合驱动，实现单次扫描脱敏。
+*   **零拷贝 I/O**：深度利用 **Memory Mapping (Mmap)** 技术，处理 GB 级别大文件时内存占用极低。
+*   **多核并发处理**：通过 **Rayon** 并行流，自动利用多核 CPU 算力，100MB 级别日志处理仅需 **0.4s**。
+*   **模块化配置**：支持 YAML 定义规则包，涵盖 OpenAI/Claude/DeepSeek API Keys、主流数据库连接串、IP/Email 等。
+*   **双模式支持**：
+    *   **Clipboard 模式**：一键处理剪贴板内容，无缝对接 ChatGPT/Claude 对话。
+    *   **File 模式**：支持大规模本地日志文件的脱敏导出。
+
+### 📊 性能表现 (Benchmarks)
+
+在 Windows 11 环境下，处理包含百万行数据的真实日志文件（113 MB）：
+*   **吞吐量**: ~270 MB/s
+*   **总耗时**: **420ms** (计算+磁盘写入)
+*   **内存峰值**: < 50 MB
+
+### 📂 产物说明 (Artifacts)
+
+| 文件名 | 适用平台 | 说明 |
+| :--- | :--- | :--- |
+| `safemask-v0.1.0-windows-x64.zip` | Windows 10/11 | 包含可执行文件及示例规则文件夹 |
+| `rules.zip` | 全平台 | 预置的脱敏规则包（AI, Database, Network） |
+
+### 🛠️ 安装与使用 (Quick Start)
+
+1.  下载并解压 `safemask-v0.1.0-windows-x64.zip`。
+2.  确保 `safemask.exe` 同级目录下存在 `rules/` 文件夹。
+3.  **剪贴板脱敏**：
+    ```powershell
+    ./safemask --mode clipboard
+    ```
+4.  **大规模文件处理**：
+    ```powershell
+    ./safemask --mode file --path test.log --output masked.log
+    ```
+
+### 🔒 安全承诺
+
+*   **100% 离线运行**：所有计算均在本地完成，绝不上传任何数据。
+*   **开源透明**：核心算法逻辑完全透明，接受社区审计。
+
+---
+
+### 💡 发布前的小建议 (Checklist)
+
+1.  **打包规则文件夹**：
+    由于你的程序依赖 `rules/` 目录下的 YAML 文件，用户下载后如果没有这个目录会报错。
+    *   **建议**：将 `safemask.exe` 和 `rules/` 文件夹一起打包进一个 `.zip` 文件。
+2.  **静态链接 (Static Linking)**：
+    为了防止用户电脑缺少某些 DLL，建议在 Windows 编译时使用以下命令（如果是用 MSVC 环境）：
+    ```powershell
+    # 这样生成的 .exe 就不依赖特定的 VC 运行时库
+    $env:RUSTFLAGS="-C target-feature=+crt-static"
+    cargo build --release
+    ```
+3.  **计算 Hash 值**（专业体现）：
+    在 Release 说明的末尾，放上二进制文件的 SHA256 校验码，防止文件被篡改：
+    ```powershell
+    # Windows 下获取哈希值
+    Get-FileHash ./target/release/safemask.exe -Algorithm SHA256
+    ```
+4.  **LICENSE 文件**：
+    确保仓库里有一个 `LICENSE` 文件（推荐 MIT 或 Apache 2.0），这对远程工作的合规性加分很重要。
+
+这份说明体现了你作为一个**资深后端工程师**对性能、易用性和安全性的全面考虑。发布后，这不仅是一个工具，更是你 Rust 工程能力的有力证言。
+</file>
+
+<file path="rules/auth/ai/keys.yaml">
+group: "SENSITIVE_INFO"
+rules:
+  # --- AI API KEYS (去掉了锚点，增加了边界判定) ---
+  - name: "OpenAI"
+    pattern: '\bsk-[a-zA-Z0-9]{48,}\b' # 适配 sk-proj 及长 key
+    mask: "<OPENAI_KEY>"
+    priority: 10 # 高优先级
+  
+  - name: "Anthropic_Claude"
+    pattern: '\bsk-ant-api03-[a-zA-Z0-9\-_]{90,100}AA\b'
+    mask: "<CLAUDE_KEY>"
+    priority: 10 # 高优先级
+
+  - name: "Google_Gemini"
+    pattern: '\bAIzaSy[a-zA-Z0-9\-_]{33}\b'
+    mask: "<GEMINI_KEY>"
+    priority: 10 # 高优先级
+
+  - name: "DeepSeek"
+    pattern: '\bsk-[a-z0-9]{32}\b'
+    mask: "<DEEPSEEK_KEY>"
+    priority: 10 # 高优先级
+</file>
+
+<file path="rules/auth/database/urls.yaml">
+group: "DATABASE_CONNECTION"
+rules:
+  - name: "PostgreSQL_URI"
+    # 移除了 ^ 和 $，使用 \b (词边界) 并在末尾使用排除字符集，确保抓取到空白符或引号为止
+    pattern: '\bpostgres(?:ql)?://[^\s''"<>]+'
+    mask: "<POSTGRES_URI>"
+
+  - name: "MySQL_URI"
+    pattern: '\bmysql(?:\+.+)?://[^\s''"<>]+'
+    mask: "<MYSQL_URI>"
+
+  - name: "MongoDB_URI"
+    pattern: '\bmongodb(?:\+srv)?://[^\s''"<>]+'
+    mask: "<MONGODB_URI>"
+
+  - name: "Redis_URI"
+    pattern: '\brediss?://[^\s''"<>]+'
+    mask: "<REDIS_URI>"
+
+  - name: "SQLServer_URI"
+    pattern: '\bsqlserver://[^\s''"<>]+'
+    mask: "<SQLSERVER_URI>"
+
+  - name: "Oracle_URI"
+    pattern: '\boracle:thin:@[^\s''"<>]+'
+    mask: "<ORACLE_URI>"
+
+  - name: "SQLite_File"
+    pattern: '\bsqlite(?:3)?://[^\s''"<>]+'
+    mask: "<SQLITE_URI>"
+</file>
+
+<file path="rules/network/dns.yaml">
+group: "SENSITIVE_INFO"
+rules:
+  - name: "FQDN_Domain"
+    pattern: '\b[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}\b'
+    mask: "<DOMAIN>"
+    priority: 5 # 普通优先级
+</file>
+
+<file path="rules/personal/cardNum.yaml">
+group: "SENSITIVE_INFO"
+rules:
+  - name: "China_ID_Card_18"
+  # 身份证末尾可能是 X，前后必须是词边界防止误切长数字
+    pattern: '\b[1-9]\d{5}(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}(\d|X|x)\b'
+    mask: "<CHINA_ID_CARD>"
+    priority: 100 # 更高优先级
+</file>
+
+<file path="rules/personal/phone.yaml">
+group: "SENSITIVE_INFO"
+rules:
+  - name: "Global_Phone_E164"
+    pattern: '\b[1-9]\d{7,14}\b'
+    mask: "<GLOBAL_PHONE>"
+    priority: 5 # 低优先级
+
+  - name: "China_Mobile_Phone"
+    # 增加了边界判定，防止匹配到时间戳中的一段数字
+    pattern: '\b1[3-9]\d{9}\b'
+    mask: "<CHINA_MOBILE>"
+    priority: 100 # 更高优先级
+</file>
+
+<file path="rules/rulesTemp.md">
+为了保证 safemask 的极致性能和匹配准确性，请遵循以下规范：
+1. 正则编写准则 (Principles)
+脱敏而非校验：我们的目的是遮盖隐私，不是验证数据的合法性。宁可错杀（遮盖范围稍大），不可漏过。 复杂的正则（如严格的 Email 校验）会显著降低匹配速度。
+词边界优先：始终在正则两端使用 \b。这能防止把 ID_12345678901 中的数字误认为手机号。
+禁用锚点：严禁在 rules 中使用 ^ 和 $（除非你确定要匹配整行）。
+禁止环视：Rust regex 库不支持 (?!)、(?<=) 等。如果需要排除，请通过字符集 [^...] 实现。
+
+group: "CATEGORY_NAME" # 大类名称（如 AUTH, PII, NETWORK）
+rules:
+  - name: "Rule_Unique_Name" # 规则描述名
+    # 模式建议：
+    # 1. 使用单引号包裹，防止 YAML 转义冲突
+    # 2. 模式开头结尾尽量使用 \b
+    # 3. 避免过度使用 (.*) 等贪婪匹配
+    pattern: '\bPREFIX-[a-zA-Z0-9]{10,}\b'
+    mask: "<LABEL>" # 建议使用大写+尖括号，AI 识别效果最好
+</file>
+
+<file path="src/config.rs">
+use serde::Deserialize;
+use std::path::Path;
+use walkdir::WalkDir;
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Rule {
+    #[allow(dead_code)]
+    pub name: String,
+    pub pattern: String,
+    pub mask: String,
+    #[serde(default = "default_priority")] // 如果YAML没写优先级，则默认为0
+    pub priority: i32,
+}
+
+fn default_priority() -> i32 { 0 }
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct RuleGroup {
+    #[allow(dead_code)]
+    pub group: String,
+    pub rules: Vec<Rule>,
+}
+
+/// 递归扫描目录加载所有 YAML 规则
+pub fn load_all_rules<P: AsRef<Path>>(dir: P) -> Vec<Rule> {
+    let mut all_rules = Vec::new();
+    for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
+        let path = entry.path();
+        if path.is_file() && path.extension().map_or(false, |ext| ext == "yaml") {
+            let content = std::fs::read_to_string(path).expect("无法读取规则文件");
+            if let Ok(group) = serde_yaml::from_str::<RuleGroup>(&content) {
+                all_rules.extend(group.rules);
+            }
+        }
+    }
+    all_rules
+}
+</file>
+
+<file path="test_perf.txt">
+$path = "test_perf.log"
+$lines = 1000000
+
+Write-Host "🚀 正在生成 100 万行测试数据..." -ForegroundColor Cyan
+
+# 1. 先创建一个随机数实例 (这是修复报错的关键)
+$rand = New-Object System.Random
+
+# 2. 使用 .NET 的 StreamWriter
+$filePath = Join-Path (Get-Location) $path
+$sw = [System.IO.StreamWriter]::new($filePath)
+
+for ($i = 1; $i -le $lines; $i++) {
+    # 3. 使用实例方法调用 .Next()
+    $ip = "$($rand.Next(1,255)).$($rand.Next(0,255)).$($rand.Next(0,255)).$($rand.Next(0,255))"
+    
+    # 生成包含关键词和正则特征的行
+    $guid1 = [guid]::NewGuid().ToString("N")
+    $line = "INFO [2026-01-09] User_$i (IP: $ip) accessed TopSecretProject using sk-$guid1"
+    
+    $sw.WriteLine($line)
+    
+    if ($i % 200000 -eq 0) { Write-Host "进度: 已完成 $i 行..." }
+}
+
+$sw.Close()
+Write-Host "✅ 成功生成文件: $path" -ForegroundColor Green
+</file>
+
+<file path="rules/network/ip.yaml">
+group: "SENSITIVE_INFO"
+rules:
+  - name: "IPv4_Address"
+    # 兼顾准确性与性能的写法
+    pattern: '\b(?:(?:25[0-5]|2[0-4]\d|1?\d{1,2})\.){3}(?:25[0-5]|2[0-4]\d|1?\d{1,2})\b'
+    priority: 60 # 高优先级
+
+  - name: "IPv6_Address"
+    pattern: '\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b|\b(?:[0-9a-fA-F]{1,4}:){1,7}:|:[:0-9a-fA-F]{1,7}\b'
+    mask: "<IPv6>"
+    priority: 10
+</file>
+
+<file path="rules/personal/email.yaml">
+group: "SENSITIVE_INFO"
+rules:
+  - name: "Email_Address"
+    # 简化了逻辑，重点在于匹配 @ 和域名
+    pattern: '\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b'
+    mask: "<EMAIL>"
+    priority: 30 # 较高优先级
+</file>
+
+<file path="src/engine.rs">
+use crate::config::Rule;
+use regex::bytes::{Captures, Regex};
+use std::borrow::Cow;
+use aho_corasick::{AhoCorasick, MatchKind};
+
+/// 规则层级：用于存储编译后的正则及其对应的偏移量
+struct RegexLayer {
+    re: Regex,
+    masks: Vec<Vec<u8>>,
+    offsets: Vec<usize>,
+}
+
+pub struct MaskEngine {
+    // 层级 1: AC 引擎 (固定词，处理 O(1) 匹配)
+    ac_engine: Option<AhoCorasick>,
+    ac_masks: Vec<Vec<u8>>,
+
+    // 层级 2 & 3: 优先级正则引擎
+    high_layer: Option<RegexLayer>,
+    low_layer: Option<RegexLayer>,
+}
+
+impl MaskEngine {
+     /// 构造函数：执行规则分类、优先级排序、捕获组计算及引擎编译
+    pub fn new(mut rules: Vec<Rule>) -> Self {
+        
+        // 1. 优先级降序排序：高优先级在左侧，符合正则引擎匹配偏好
+        rules.sort_by(|a, b| b.priority.cmp(&a.priority).then_with(|| a.name.cmp(&b.name)));
+
+        let mut ac_p = Vec::new(); let mut ac_m = Vec::new();
+        let mut hr_p = Vec::new(); let mut hr_m = Vec::new();
+        let mut lr_p = Vec::new(); let mut lr_m = Vec::new();
+        
+        for rule in rules {
+            if is_literal(&rule.pattern) {
+                ac_p.push(rule.pattern);
+                ac_m.push(rule.mask.as_bytes().to_vec());
+            } else if rule.priority > 5 {
+                hr_p.push(format!("({})", rule.pattern));
+                hr_m.push(rule.mask.as_bytes().to_vec());
+            } else {
+                lr_p.push(format!("({})", rule.pattern));
+                lr_m.push(rule.mask.as_bytes().to_vec());
+            }
+        }
+        
+        Self {
+            ac_engine: if ac_p.is_empty() { None } else {
+                Some(AhoCorasick::builder()
+                    .match_kind(MatchKind::LeftmostLongest)
+                    .build(ac_p).expect("AC 引擎构建失败"))
+            },
+            ac_masks: ac_m,
+            high_layer: Self::compile_layer(hr_p, hr_m),
+            low_layer: Self::compile_layer(lr_p, lr_m),
+        }
+    }
+
+     /// 编译正则层，并计算每个规则的捕获组起始索引
+    fn compile_layer(patterns: Vec<String>, masks: Vec<Vec<u8>>) -> Option<RegexLayer> {
+        if patterns.is_empty() { return None; }
+
+        let mut offsets = Vec::new();
+        let mut current_offset = 1; // 0 是整个匹配项，第一个规则从 1 开始
+
+        for p in &patterns {
+            let temp_re = Regex::new(p).expect("正则语法错误");
+            offsets.push(current_offset);
+            current_offset += temp_re.captures_len(); // 动态计算该规则占用的组数量
+        }
+
+        let combined_re = Regex::new(&patterns.join("|")).expect("超级正则聚合失败");
+
+        Some(RegexLayer {
+            re: combined_re,
+            masks,
+            offsets,
+        })
+    }
+
+    /// 执行脱敏流程：AC -> High Priority Regex -> Low Priority Regex
+    pub fn mask_line<'a>(&self, input: &'a [u8]) -> Cow<'a, [u8]> {
+        // 第一阶段: AC 引擎
+        let mut result = if let Some(ref ac) = self.ac_engine {
+            Cow::Owned(ac.replace_all_bytes(input, &self.ac_masks))
+        } else {
+            Cow::Borrowed(input)
+        };
+
+        // 第二阶段: 高优先级正则
+        if let Some(ref layer) = self.high_layer {
+            let next = layer.re.replace_all(&result, |caps: &Captures| {
+                self.dispatch(layer, caps)
+            });
+            // 关键：如果发生了替换（Owned），转移所有权；否则保持原样（维持 'a 生命周期）
+            result = match next {
+                Cow::Owned(v) => Cow::Owned(v),
+                Cow::Borrowed(_) => result,
+            };
+        }
+
+        // 第三阶段: 低优先级正则
+        if let Some(ref layer) = self.low_layer {
+            let next = layer.re.replace_all(&result, |caps: &Captures| {
+                self.dispatch(layer, caps)
+            });
+            result = match next {
+                Cow::Owned(v) => Cow::Owned(v),
+                Cow::Borrowed(_) => result,
+            };
+        }
+        result
+    }
+
+    fn dispatch(&self, layer: &RegexLayer, caps: &Captures) -> Vec<u8> {
+        for (i, &offset) in layer.offsets.iter().enumerate() {
+            if caps.get(offset).is_some() {
+                return layer.masks[i].clone();
+            }
+        }
+        b"<MASKED>".to_vec()
+    }  
+}
+
+/// 简单的辅助函数：判断是否为纯文本（无正则特殊符号）
+fn is_literal(pattern: &str) -> bool {
+    let specials = [
+        '.', '+', '*', '?', '(', ')', '[', ']', '{', '}', '|', '^', '$', '\\',
+    ];
+    !pattern.chars().any(|c| specials.contains(&c))
+}
+</file>
+
+<file path="Cargo.toml">
+[package]
+name = "SafeMask"
+version = "0.4.1"
+edition = "2024" # 2024最新版语法规范
+authors = ["xiaosheng <xiaosheng.tech@outlook.com>"]
+description = "A high-performance, ordered data masking tool written in Rust."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/AiToByte/SafeMask.git"
+
+[dependencies]
+aho-corasick = "1.1.4"
+anyhow = "1.0.100"
+arboard = "3.6.1"
+clap = { version = "4.5.54", features = ["derive"] }
+memmap2 = "0.9.9"
+once_cell = "1.21.3"
+rayon = "1.11.0"
+regex = "1.12.2"
+serde = {version = "1.0", features = ["derive"]}
+serde_yaml = "0.9"
+walkdir = "2.4" # 用于递归遍历目录
+mimalloc = "0.1" # 引入 mimaloc提升频繁内存分配性能
+crossbeam-channel = "0.5"
+
+# 极致性能优化配置: 当运行 cargo build --release 时生效
+[profile.release]
+opt-level = 3
+lto = true # 启用链接时优化
+codegen-units = 1 # 减少代码生成单元以提高优化效果
+panic = "abort" # 减少二进制文件大小
+</file>
+
+<file path=".gitignore">
+# Generated by Cargo
+# will have compiled files and executables
+debug
+target
+
+# These are backup files generated by rustfmt
+**/*.rs.bk
+
+# MSVC Windows builds of rustc generate these, which store debugging information
+*.pdb
+
+# Generated by cargo mutants
+# Contains mutation testing data
+**/mutants.out*/
+
+# RustRover
+#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
+#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+#  and can be added to the global gitignore or merged into this file.  For a more nuclear
+#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
+#.idea/
+
+
+# Added by cargo
+
+/target
+/out
+/test
+</file>
+
+<file path="README.md">
+# SafeMask
+This software de-identifies sensitive personal information. After your content is processed by SafeMask, all private information will be anonymized, allowing your information to be safely transmitted and processed on the internet, by AI, etc.
+
+---
+
+# 🛡️ SafeMask v0.4.1
+
+[![Rust](https://img.shields.io/badge/language-Rust-orange.svg)](https://www.rust-lang.org/)
+[![Performance](https://img.shields.io/badge/performance-500MB%2Fs+-green.svg)](#-performance-benchmarks)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](#-installation)
+
+**SafeMask** 是一款工业级的、基于 Rust 开发的高性能隐私数据脱敏工具。它专为 **LLM (大模型) 训练数据清洗**、**跨境日志审计**以及**开发者隐私保护**场景设计。
+
+**SafeMask** 是一款基于 Rust 开发的极致性能隐私数据脱敏工具。它专为处理大规模日志、代码库及敏感文本设计，能够瞬间识别并遮盖 AI API Keys、数据库连接串、IP 地址、手机号等敏感信息，确保数据在进入 AI 模型或共享环境前的合规性。
+同时, 也可用于**LLM (大模型) 训练数据清洗**、**跨境日志审计**以及**开发者隐私保护**场景中。
+
+
+## 🚀 核心架构：三阶段保序流水线 (Level 3 Optimization)
+
+SafeMask 不仅仅是一个正则替换工具，它采用了复杂的**生产者-消费者流水线**模型，实现了 **CPU 计算与 I/O 读写的完全重叠（Overlapping）**。
+
+### 🏗️ 架构概览
+```text
+[ 磁盘文件 ] 
+     |
+     v
+( Stage 1: 生产者 ) -> 内存映射 (Mmap) + 智能宏分块 (Macro-Chunking 4MB)
+     |
+     v
+( Stage 2: 计算集群 ) -> Rayon 并行计算 | 字节流正则 (Regex Bytes) | AC 自动机
+     |
+     v
+( Stage 3: 消费者 ) -> 优先级缓冲区 (BTreeMap) | 保序合并 | 8MB 聚合写入 (BufWriter)
+     |
+     v
+[ 脱敏输出 ]
+```
+
+
+### ⚡ 深度优化细节
+- **Zero-Copy I/O**: 使用 `memmap2` 绕过内核缓冲区拷贝。
+- **Byte-Level Engine**: 基于 `regex::bytes` 实现，完全跳过 UTF-8 校验开销。
+- **Ordered Pipelining**: 引入 `crossbeam-channel` 与序列号控制，确保高并发下的日志行序与原始文件 100% 一致。
+- **Memory Reuse**: 采用线程局部缓冲区（Scratch Buffers），将内存分配压力从 $O(N)$ 降低到 $O(Threads)$。
+
+> *注：性能受限于磁盘 I/O 上限。*
+
+## 📊 性能基准 (Performance Benchmarks)
+| 数据量 | 原始耗时 (PS Redirect) | **SafeMask 优化输出 (-o)** | 吞吐量 (Throughput) |
+| :--- | :--- | :--- | :--- |
+| **113 MB (100万行)** | 21.9s | **0.42s** | **~270 MB/s** |
+| **1.2 GB (500万行)** | - | **4.1s** | **~300 MB/s** |
+| **2.3 GB (1000万行)** | - | **8.3s** | **~337 MB/s** |
+
+## 🛠️ 安装与编译
+
+确保已安装 Rust 环境 (MSRV 1.70+)。
+
+```bash
+git clone https://github.com/AiToByte/safemask.git
+cd safemask
+
+# 必须使用 --release 模式以开启所有编译优化
+cargo build --release
+```
+
+编译产物位于 `./target/release/safemask`。
+
+## 📖 使用指南
+
+### 1. 剪贴板模式
+最适合在将代码或日志粘贴给 ChatGPT/Claude 前使用：
+```powershell
+./safemask --mode clipboard
+```
+
+### 2. 文件模式
+处理大规模日志文件，并直接输出到指定文件（推荐）：
+```powershell
+./safemask --mode file --path ./input.log --output ./output_masked.log
+```
+
+### 3.效果演示
+#### 3.1 输入
+```txt
+INFO [2026-01-09] User_1 (IP: 99.237.89.211) accessed TopSecretProject using sk-47e9a70ff0e240ee9f3a0ebb04e9131f
+INFO [2026-01-09] User_2 (IP: 52.158.34.170) accessed TopSecretProject using sk-7eee0e40148040b29a56829556fe0b88
+INFO [2026-01-09] User_3 (IP: 225.95.77.71) accessed TopSecretProject using sk-0289c054a0394bb2a99daa44b5d4f4a2
+INFO [2026-01-09] User_4 (IP: 49.75.32.104) accessed TopSecretProject using sk-6541c4475bae4ac1a44d9d5813b4575c
+INFO [2026-01-09] User_5 (IP: 55.231.84.214) accessed TopSecretProject using sk-5c91dcc325e941b59817789f60cf7bb0
+INFO [2026-01-09] User_6 (IP: 210.55.8.24) accessed TopSecretProject using sk-fe044476c8494108881746217929c82c
+INFO [2026-01-09] User_7 (IP: 127.183.99.151) accessed TopSecretProject using sk-f2b904e3b686496ca4b88c8698a27818
+INFO [2026-01-09] User_8 (IP: 109.143.251.146) accessed TopSecretProject using sk-4c22af8a8da94424a3bd8cbcab30d398
+INFO [2026-01-09] User_9 (IP: 250.88.109.70) accessed TopSecretProject using sk-4cd6d738173441d284b0f32141c82fd4
+INFO [2026-01-09] User_10 (IP: 118.41.41.205) accessed TopSecretProject using sk-9ac26f750ab741729f4a5813fbe739e8
+INFO [2026-01-09] User_11 (IP: 152.38.117.101) accessed TopSecretProject using sk-f0a2b85db0e2404e8ca8b506e1b4f99e
+INFO [2026-01-09] User_12 (IP: 145.44.57.211) accessed TopSecretProject using sk-5e0bc7589ad543c785d6cebfc5f2941b
+```
+
+#### 3.2 使用SafeMask之后
+```txt
+INFO [2026-01-09] User_1 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_2 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_3 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_4 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_5 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_6 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_7 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_8 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_9 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_10 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_11 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+INFO [2026-01-09] User_12 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
+```
+
+## ⚙️ 规则配置
+
+规则以 YAML 格式存储在 `rules/` 目录下，支持多层文件夹分类：
+
+```yaml
+# rules/ai/keys.yaml
+group: "AI_API_KEYS"
+rules:
+  - name: "OpenAI"
+    pattern: '\bsk-[a-zA-Z0-9]{48}\b'
+    mask: "<OPENAI_KEY>"
+    priority: 5 # 优先级越高，越先处理
+  - name: "DeepSeek"
+    pattern: '\bsk-[a-z0-9]{32}\b'
+    mask: "<DEEPSEEK_KEY>"
+    priority: 20 # 优先级越高，越先处理
+```
+
+## 🏗️ 架构背后的思考
+
+作为一个拥有 Java 背景的开发者，我在设计 SafeMask 时重点解决了以下痛点：
+1. **规避 GC 停顿**：通过 Rust 的所有权模型与 `mimalloc` 分配器，消除大规模字符串处理中的停顿。
+2. **零拷贝 I/O**：使用 `Mmap` 替代传统的缓冲读取，减少内核态与用户态的数据拷贝。
+3. **算法聚合**：避免了 $N$ 次 `replace_all` 导致的 $O(N \times M)$ 复杂度，将其优化为 $O(M)$。
+
+## 🤝 贡献
+我们欢迎社区提交新的脱敏规则：
+1. 在 `rules/` 下创建分类目录。
+2. 遵循 `RULES_TEMP.md` 中的非环视正则规范。
+3. 提交 PR 并附带性能测试结果。
+</file>
+
+<file path="src/main.rs">
+mod engine;
+mod config;
+
+use anyhow::{Context, Result};
+use arboard::Clipboard;
+use clap::Parser;
+use engine::MaskEngine;
+use memmap2::Mmap;
+use once_cell::sync::Lazy;
+use rayon::prelude::*;
+use std::collections::BTreeMap;
+use std::fs::File;
+use std::io::{self, BufWriter, Write};
+use std::path::PathBuf;
+use std::time::Instant;
+
+// 使用 mimalloc 替代默认分配器，在高并发 String 操作下性能更佳
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+/// 全局静态引擎，确保规则只加载和编译一次
+static ENGINE: Lazy<MaskEngine> = Lazy::new(|| {
+    let rules = config::load_all_rules("rules");
+    MaskEngine::new(rules)
+});
+
+#[cfg(target_os = "windows")]
+const BUFFER_SIZE: usize = 8 * 1024 * 1024; // Windows 侧重减少系统调用
+
+#[cfg(target_os = "macos")]
+const BUFFER_SIZE: usize = 16 * 1024 * 1024; // macOS 侧重喂饱高速 NVMe
+
+#[cfg(target_os = "linux")]
+const BUFFER_SIZE: usize = 4 * 1024 * 1024; // Linux 内核高效，4MB 即可保持极低内存占用
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+const BUFFER_SIZE: usize = 1024 * 1024; // 其他系统默认 1MB
+
+// 4MB 并行块
+const MACRO_CHUNK_SIZE: usize = 4 * 1024 * 1024; // 4MB 并行块
+
+#[derive(Parser, Debug)]
+#[command(name = "safemask", version = "0.4.1", about = "High-performance Data Masking Tool")]
+struct Args {
+    /// 模式: clipboard (默认) 或 file
+    #[arg(short, long, default_value = "clipboard")]
+    mode: String,
+
+    /// 文件路径 (仅 file 模式下有效)
+    #[arg(short, long)]
+    path: Option<PathBuf>,
+
+     /// [输出] 文件路径 (可选，指定后将直接写文件而不经过 stdout)
+    #[arg(short, long)]
+    output: Option<PathBuf>,
+}
+
+
+fn main() -> Result<()> {
+    let args = Args::parse();
+
+    match args.mode.as_str() {
+        "clipboard" => handle_clipboard()?,
+        "file" => {
+            let path = args.path.context("file模式必须使用 --path 指定路径")?;
+            handle_file_pipeline_ordered(path, args.output)?;
+        }
+        _ => println!("❌ 未知模式。 请使用 --help 查看用法。")
+    }
+    Ok(())
+}
+
+/// 剪切板处理逻辑
+fn handle_clipboard() -> Result<()> {
+    let mut clipboard = Clipboard::new().context("无法连接剪贴板")?;
+    let input = clipboard.get_text().context("剪贴板空")?;
+    println!("🚀 正在处理剪贴板数据...");
+    let output_bytes = ENGINE.mask_line(input.as_bytes());
+    let output_text = String::from_utf8_lossy(&output_bytes).into_owned();
+    clipboard.set_text(output_text).context("回写失败")?;
+    println!("✅ 脱敏成功！");
+    Ok(())
+}
+
+/// 文件模式：三阶段保序流水线 (Mmap -> Rayon -> BTreeMap -> Writer)
+fn handle_file_pipeline_ordered(input_path: PathBuf, output_path: Option<PathBuf>) -> Result<()> {
+    let global_start = Instant::now();
+    let file = File::open(&input_path)?;
+    let mmap = unsafe { Mmap::map(&file)? };
+    let file_size = mmap.len();
+
+    // 1. 构建跨线程通信通道
+    let (tx, rx) = crossbeam_channel::bounded::<(usize, Vec<u8>)>(rayon::current_num_threads() * 2);
+
+    // 2. 启动 Stage 3: 顺序写入线程
+    let writer_handle = std::thread::spawn(move || -> Result<()> {
+        let writer_target: Box<dyn Write> = if let Some(p) = output_path {
+            Box::new(File::create(p)?)
+        } else {
+            Box::new(io::stdout())
+        };
+        let mut writer = BufWriter::with_capacity(BUFFER_SIZE, writer_target);
+        let mut next_idx = 0;
+        let mut pending_map: BTreeMap<usize, Vec<u8>> = BTreeMap::new();
+
+        while let Ok((idx, data)) = rx.recv() {
+            pending_map.insert(idx, data);
+            while let Some(data) = pending_map.remove(&next_idx) {
+                writer.write_all(&data)?;
+                next_idx += 1;
+            }
+        }
+        writer.flush()?;
+        Ok(())
+    });
+
+    println!("🚀 流水线启动 | 核心数: {} | 文件: {:.2} MB", 
+             rayon::current_num_threads(), file_size as f64 / 1024.0 / 1024.0);
+
+    // 3. Stage 1 & 2: 生产者与并行计算
+    mmap.par_chunks(MACRO_CHUNK_SIZE)
+        .enumerate()
+        .for_each(|(idx, chunk)| {
+            // 预分配内存：原始块大小 + 5% 缓冲区用于存放脱敏标签
+            let mut chunk_output = Vec::with_capacity(chunk.len() + chunk.len() / 20);
+            // 块内按行切割并脱敏
+            for line in chunk.split(|&b| b == b'\n') {
+                if !line.is_empty() {
+                    let masked = ENGINE.mask_line(line);
+                    chunk_output.extend_from_slice(&masked);
+                }
+                chunk_output.push(b'\n'); // 保持行结构
+            }
+            let _ = tx.send((idx, chunk_output));
+        });
+
+    // 4. 关闭通道并等待结束 
+    // 必须手动释放 tx，否则 rx 会死锁
+    drop(tx);
+    writer_handle.join().unwrap()?;
+
+    let total_time = global_start.elapsed();
+    println!("\n--- ⚡ SafeMask v{} 性能报告 ---", env!("CARGO_PKG_VERSION"));
+    println!("⏱️  总执行时间: {:?}", total_time);
+    println!("🚀 极限吞吐量: {:.2} MB/s", (file_size as f64 / 1024.0 / 1024.0) / total_time.as_secs_f64());
+    Ok(())
+}
+
+
+// /// 文件模式：通过 IndexedParallelIterator 保证行顺序
+// #[allow(dead_code)]
+// fn handle_file_ordered(input_path: PathBuf, output_path: Option<PathBuf>) -> Result<()> {
+//     let global_start = Instant::now();
+
+//     // 1. 内存映射输入文件 (读取最快方案)
+//     let file = File::open(&input_path).with_context(|| format!("无法打开输入文件: {:?}", input_path))?;
+//     let mmap = unsafe { Mmap::map(&file)? };
+//     let file_size = mmap.len();
+//     let load_time = global_start.elapsed();
+
+//     println!("🚀 引擎加载成功 | 线程池大小: {} | 文件大小: {:.2} MB", 
+//              rayon::current_num_threads(),
+//              file_size as f64 / 1024.0 / 1024.0);
+
+//     // 2. 并行映射 (Map) + 保序收集 (Collect)
+//     // Rayon 的 collect 会保证最终生成的 Vec 顺序与原始切分顺序完全一致
+//     let processed_results: Vec<String> = mmap
+//         .par_split(|&b| b == b'\n')
+//         .map(|chunk| {
+//             // 将字节切片转换为字符串（零拷贝尝试）
+//             let line = String::from_utf8_lossy(chunk);
+//             // 核心脱敏计算 (CPU 密集型)
+//             ENGINE.mask_line(&line).into_owned()
+//         })
+//         .collect();
+
+//     let process_time = global_start.elapsed() - load_time;
+
+//     // 3. 顺序写入 (Sequential Write)
+//     // 此时已经得到了有序的 Vec<String>，直接顺序写入磁盘
+//     let writer_target: Box<dyn Write> = if let Some(out_p) = output_path {
+//         Box::new(File::create(&out_p)?)
+//     } else {
+//         Box::new(io::stdout())
+//     };
+
+//     let mut writer = BufWriter::with_capacity(1024 * 1024, writer_target);
+//     for line in processed_results {
+//         writeln!(writer, "{}", line)?;
+//     }
+//     writer.flush()?;
+
+//     // 4. 性能报告
+//     let total_time = global_start.elapsed();
+//     let throughput = (file_size as f64 / 1024.0 / 1024.0) / total_time.as_secs_f64();
+
+//     println!("\n--- ⚡ SafeMask 性能分析报告 ---");
+//     println!("📂 IO 读取/映射耗时: {:?}", load_time);
+//     println!("⚙️  并行保序计算耗时: {:?}", process_time);
+//     println!("⏱️  总计运行时间    : {:?}", total_time);
+//     println!("🚀 平均保序吞吐量  : {:.2} MB/s", throughput);
+//     println!("--------------------------------------");
+
+//     Ok(())
+// }
+</file>
+
+</files>

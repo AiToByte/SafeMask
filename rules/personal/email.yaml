@@ -2,5 +2,6 @@ group: "SENSITIVE_INFO"
 rules:
   - name: "Email_Address"
     # 简化了逻辑，重点在于匹配 @ 和域名
-    pattern: '(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b'
+    pattern: '\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b'
     mask: "<EMAIL>"
+    priority: 30 # 较高优先级

@@ -23,6 +23,6 @@ target
 
 # Added by cargo
 
-/targetss
-/out/
-/test/
+/target
+/out
+/test

@@ -1,107 +1,128 @@
 use crate::config::Rule;
-use regex::{Regex, Captures};
+use regex::bytes::{Captures, Regex};
 use std::borrow::Cow;
 use aho_corasick::{AhoCorasick, MatchKind};
 
+/// 规则层级：用于存储编译后的正则及其对应的偏移量
+struct RegexLayer {
+    re: Regex,
+    masks: Vec<Vec<u8>>,
+    offsets: Vec<usize>,
+}
+
 pub struct MaskEngine {
-   // 处理正则模式
-    combined_regex: Option<Regex>,
-    regex_masks: Vec<String>,
-    
-    // 处理固定词
+    // 层级 1: AC 引擎 (固定词，处理 O(1) 匹配)
     ac_engine: Option<AhoCorasick>,
-    ac_masks: Vec<String>,
+    ac_masks: Vec<Vec<u8>>,
+
+    // 层级 2 & 3: 优先级正则引擎
+    high_layer: Option<RegexLayer>,
+    low_layer: Option<RegexLayer>,
 }
 
 impl MaskEngine {
-    pub fn new(rules: Vec<Rule>) -> Self {
-        let mut regex_patterns = Vec::new();
-        let mut regex_masks = Vec::new();
+     /// 构造函数：执行规则分类、优先级排序、捕获组计算及引擎编译
+    pub fn new(mut rules: Vec<Rule>) -> Self {
         
-        let mut ac_patterns = Vec::new();
-        let mut ac_masks = Vec::new();
+        // 1. 优先级降序排序：高优先级在左侧，符合正则引擎匹配偏好
+        rules.sort_by(|a, b| b.priority.cmp(&a.priority).then_with(|| a.name.cmp(&b.name)));
 
+        let mut ac_p = Vec::new(); let mut ac_m = Vec::new();
+        let mut hr_p = Vec::new(); let mut hr_m = Vec::new();
+        let mut lr_p = Vec::new(); let mut lr_m = Vec::new();
+        
         for rule in rules {
-            // 简单的启发式判断：如果正则不包含特殊字符，则视为固定词
             if is_literal(&rule.pattern) {
-                ac_patterns.push(rule.pattern);
-                ac_masks.push(rule.mask);
+                ac_p.push(rule.pattern);
+                ac_m.push(rule.mask.as_bytes().to_vec());
+            } else if rule.priority > 5 {
+                hr_p.push(format!("({})", rule.pattern));
+                hr_m.push(rule.mask.as_bytes().to_vec());
             } else {
-                regex_patterns.push(format!("({})", rule.pattern));
-                regex_masks.push(rule.mask);
+                lr_p.push(format!("({})", rule.pattern));
+                lr_m.push(rule.mask.as_bytes().to_vec());
             }
         }
-
-        let combined_regex = if !regex_patterns.is_empty() {
-            let pattern_str = regex_patterns.join("|");
-            // 将 expect 改为更友好的处理或打印
-            match Regex::new(&pattern_str) {
-                Ok(re) => Some(re),
-                Err(e) => {
-                    eprintln!("❌ 正则编译错误: {}", e);
-                    eprintln!("💡 提示: Rust regex 不支持环视断言 (?!) 或 (?<!)，请检查 rules 目录下的 YAML 规则。");
-                    std::process::exit(1); // 优雅退出而不是 panic
-                }
-            }
-        } else {
-            None
-        };
-
-        let ac_engine = if !ac_patterns.is_empty() {
-            Some(AhoCorasick::builder()
-                .match_kind(MatchKind::LeftmostLongest) // 匹配最长路径，防止子串干扰
-                .build(ac_patterns)
-                .expect("AC 引擎初始化失败"))
-        } else {
-            None
-        };
-
+        
         Self {
-            combined_regex,
-            regex_masks,
-            ac_engine,
-            ac_masks,
+            ac_engine: if ac_p.is_empty() { None } else {
+                Some(AhoCorasick::builder()
+                    .match_kind(MatchKind::LeftmostLongest)
+                    .build(ac_p).expect("AC 引擎构建失败"))
+            },
+            ac_masks: ac_m,
+            high_layer: Self::compile_layer(hr_p, hr_m),
+            low_layer: Self::compile_layer(lr_p, lr_m),
         }
     }
 
-    pub fn mask_line<'a>(&self, input: &'a str) -> Cow<'a, str> {
-        // --- 第一阶段: AC 引擎处理 (固定词) ---
-        // 如果 AC 引擎存在，处理后产生 Cow::Owned(String)；否则保持 Cow::Borrowed(&'a str)
-        let ac_result = if let Some(ref ac) = self.ac_engine {
-            // 注意：Aho-Corasick 的 replace_all 总是返回 String
-            // 为了优化，你可以在此处先调用 find 判断是否有匹配，但通常直接处理即可
-            Cow::Owned(ac.replace_all(input, &self.ac_masks))
+     /// 编译正则层，并计算每个规则的捕获组起始索引
+    fn compile_layer(patterns: Vec<String>, masks: Vec<Vec<u8>>) -> Option<RegexLayer> {
+        if patterns.is_empty() { return None; }
+
+        let mut offsets = Vec::new();
+        let mut current_offset = 1; // 0 是整个匹配项，第一个规则从 1 开始
+
+        for p in &patterns {
+            let temp_re = Regex::new(p).expect("正则语法错误");
+            offsets.push(current_offset);
+            // temp_re 已经是 "(pattern)" 形式
+            // 它在整体正则中占用的组数就是它的 captures_len() - 1
+            // 但由于 joined 是 "(p1)|(p2)"，每一组其实只占用了原本的组空间
+            current_offset += temp_re.captures_len() - 1; // 动态计算该规则占用的组数量
+        }
+
+        let combined_re = Regex::new(&patterns.join("|")).expect("超级正则聚合失败");
+
+        Some(RegexLayer {
+            re: combined_re,
+            masks,
+            offsets,
+        })
+    }
+
+    /// 执行脱敏流程：AC -> High Priority Regex -> Low Priority Regex
+    pub fn mask_line<'a>(&self, input: &'a [u8]) -> Cow<'a, [u8]> {
+        // 第一阶段: AC 引擎
+        let mut result = if let Some(ref ac) = self.ac_engine {
+            Cow::Owned(ac.replace_all_bytes(input, &self.ac_masks))
         } else {
             Cow::Borrowed(input)
         };
-        // --- 第二阶段: Regex 引擎处理 (模式匹配) ---
-        let re_engine = match &self.combined_regex {
-            Some(re) => re,
-            None => return ac_result, // 如果没有正则规则，直接返回第一阶段结果
-        };
-       // 执行单次扫描替换
-        // 这里的 re_result 生命周期受限于 ac_result
-        let re_result = re_engine.replace_all(&ac_result, |caps: &Captures| {
-            for i in 0..self.regex_masks.len() {
-                if caps.get(i + 1).is_some() {
-                    return self.regex_masks[i].as_str();
-                }
-            }
-            "<MASKED>"
-        });
-            // --- 生命周期修复核心逻辑 ---
-        match re_result {
-            // 情况 1: 正则引擎修改了文本，产生了新的 String
-            // 将其所有权通过 Cow::Owned 转移给调用者
-            Cow::Owned(s) => Cow::Owned(s),
 
-            // 情况 2: 正则引擎没动过文本（Borrowed）
-            // 此时 re_result 指向的是 ac_result 的内存。
-            // 为了避免生命周期报错，我们直接返回 ac_result。
-            // 这样返回的生命周期就回到了 ac_result 拥有的所有权或 input 的借用。
-            Cow::Borrowed(_) => ac_result,
+        // 第二阶段: 高优先级正则
+        if let Some(ref layer) = self.high_layer {
+            let next = layer.re.replace_all(&result, |caps: &Captures| {
+                self.dispatch(layer, caps)
+            });
+            // 关键：如果发生了替换（Owned），转移所有权；否则保持原样（维持 'a 生命周期）
+            result = match next {
+                Cow::Owned(v) => Cow::Owned(v),
+                Cow::Borrowed(_) => result,
+            };
         }
+
+        // 第三阶段: 低优先级正则
+        if let Some(ref layer) = self.low_layer {
+            let next = layer.re.replace_all(&result, |caps: &Captures| {
+                self.dispatch(layer, caps)
+            });
+            result = match next {
+                Cow::Owned(v) => Cow::Owned(v),
+                Cow::Borrowed(_) => result,
+            };
+        }
+        result
     }
+
+    fn dispatch(&self, layer: &RegexLayer, caps: &Captures) -> Vec<u8> {
+        for (i, &offset) in layer.offsets.iter().enumerate() {
+            if caps.get(offset).is_some() {
+                return layer.masks[i].clone();
+            }
+        }
+        b"<MASKED>".to_vec()
+    }  
 }
 
 /// 简单的辅助函数：判断是否为纯文本（无正则特殊符号）
