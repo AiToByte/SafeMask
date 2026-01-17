@@ -41,215 +41,109 @@ The content is organized as follows:
 
 <directory_structure>
 .gitignore
-测试方式.md
 Cargo.toml
-command-win.txt
-LICENSE
-README.md
-release.md
-rules/auth/ai/keys.yaml
-rules/auth/database/urls.yaml
-rules/network/dns.yaml
-rules/network/ip.yaml
-rules/personal/cardNum.yaml
-rules/personal/email.yaml
-rules/personal/phone.yaml
-rules/rulesTemp.md
-src/config.rs
-src/engine.rs
-src/main.rs
-test_func.txt
-test_perf.txt
+safemask/.gitignore
+safemask/.vscode/extensions.json
+safemask/custom/internal.yaml
+safemask/custom/private.yaml
+safemask/LICENSE
+safemask/README.md
+safemask/src-tauri/.gitignore
+safemask/src-tauri/build.rs
+safemask/src-tauri/capabilities/default.json
+safemask/src-tauri/Cargo.toml
+safemask/src-tauri/icons/128x128.png
+safemask/src-tauri/icons/128x128@2x.png
+safemask/src-tauri/icons/32x32.png
+safemask/src-tauri/icons/icon.icns
+safemask/src-tauri/icons/icon.ico
+safemask/src-tauri/icons/icon.png
+safemask/src-tauri/icons/Square107x107Logo.png
+safemask/src-tauri/icons/Square142x142Logo.png
+safemask/src-tauri/icons/Square150x150Logo.png
+safemask/src-tauri/icons/Square284x284Logo.png
+safemask/src-tauri/icons/Square30x30Logo.png
+safemask/src-tauri/icons/Square310x310Logo.png
+safemask/src-tauri/icons/Square44x44Logo.png
+safemask/src-tauri/icons/Square71x71Logo.png
+safemask/src-tauri/icons/Square89x89Logo.png
+safemask/src-tauri/icons/StoreLogo.png
+safemask/src-tauri/rules/auth/ai/keys.yaml
+safemask/src-tauri/rules/auth/database/urls.yaml
+safemask/src-tauri/rules/network/dns.yaml
+safemask/src-tauri/rules/network/ip.yaml
+safemask/src-tauri/rules/personal/cardNum.yaml
+safemask/src-tauri/rules/personal/email.yaml
+safemask/src-tauri/rules/personal/phone.yaml
+safemask/src-tauri/rules/rulesTemp.md
+safemask/src-tauri/src/clipboard.rs
+safemask/src-tauri/src/config.rs
+safemask/src-tauri/src/engine.rs
+safemask/src-tauri/src/lib.rs
+safemask/src-tauri/src/main.rs
+safemask/src-tauri/tauri.conf.json
+safemask/src/assets/javascript.svg
+safemask/src/assets/tauri.svg
+safemask/src/index.html
+safemask/src/main.js
+safemask/src/styles.css
 </directory_structure>
 
 <files>
 This section contains the contents of the repository's files.
 
-<file path="测试方式.md">
-为了真正压测 **`safemask`** 的 **Mmap（内存映射）** 和 **Rayon（多核并行）** 特性，我们需要把数据量提升到 **GB 级别（例如 5GB - 10GB）**。
+<file path="safemask/.gitignore">
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-在 Windows PowerShell 中，高效生成大文件有两种推荐方案：
+node_modules
+dist
+dist-ssr
+*.local
 
----
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-### 方案一：倍增法（最快，利用现有文件）
-如果你已经生成了那个 200MB 的 `test_perf.log`，我们可以利用文件流直接把它快速复制并合并，实现容量翻倍。
-
-**在 PowerShell 中运行以下代码：**
-
-```powershell
-# 将 200MB 的文件自我复制合并，运行 5 次就是 32 倍 (约 6.4GB)
-$source = "test_perf.log"
-$target = "test_big_5gb.log"
-
-Write-Host "🚀 正在通过倍增法生成大文件..." -ForegroundColor Cyan
-
-# 先拷贝一份作为基础
-Copy-Item $source $target
-
-# 循环 5 次，每次文件大小翻倍：200MB -> 400 -> 800 -> 1.6G -> 3.2G -> 6.4G
-for ($i = 1; $i -le 5; $i++) {
-    Write-Host "正在进行第 $i 次翻倍..."
-    # 使用 CMD 的二进制拷贝模式，这是 Windows 下合并文件最快的方式
-    cmd /c "copy /b $target + $target $target_tmp"
-    Move-Item $target_tmp $target -Force
-}
-
-Write-Host "✅ 成功生成超大测试文件: $target" -ForegroundColor Green
-```
-
----
-
-### 方案二：高性能 .NET 流生成器（生成 1000 万行 ≈ 2.7GB）
-如果你想生成更具随机性的数据，我们可以把循环次数加大。为了避免 PowerShell 自身的性能瓶颈，我们增大缓冲区。
-
-```powershell
-$path = "test_perf_1000.log"
-$lines = 10000000  # 1000 万行
-
-# 1. 初始化随机数发生器实例 (修复报错的关键)
-$rand = [System.Random]::new()
-
-# 2. 定义缺失的变量库
-$domains = @("internal.cloud", "prod.corp", "dev.local", "secure.node", "api.service.io")
-$phonePrefixes = @("138", "139", "150", "159", "170", "188", "133", "189", "131")
-
-Write-Host "🚀 正在生成 1000 万行压力测试数据..." -ForegroundColor Cyan
-
-# 3. 使用 64KB 缓冲区以提升写入速度
-$sw = [System.IO.StreamWriter]::new((Join-Path (Get-Location) $path), $false, [System.Text.Encoding]::UTF8, 65536)
-
-for ($i = 1; $i -le $lines; $i++) {
-    # 4. 正确调用随机数实例方法 .Next()
-    $ip = "$($rand.Next(1,255)).$($rand.Next(0,255)).$($rand.Next(0,255)).$($rand.Next(0,255))"
-    
-    # 随机选择前缀并生成手机号
-    $prefix = $phonePrefixes[$rand.Next(0, $phonePrefixes.Length)]
-    $phone = "$prefix$($rand.Next(10000000, 99999999))"
-    
-    # 生成 UUID 相关的随机数据
-    $guid = [guid]::NewGuid().ToString()
-    $email = "user_$($guid.Substring(0,8))@$($domains[$rand.Next(0, $domains.Length)])"
-    $dns = "node-$($rand.Next(100,999)).$($domains[$rand.Next(0, $domains.Length)])"
-    
-    $db_uri = "postgres://admin:pwd$($rand.Next(1000,9999))@$dns:5432/db_main"
-    
-    # 构造一行混合日志
-    $line = "INFO [2026-01-09] REQ_ID:$guid | Client: $ip | Phone: $phone | Email: $email | DNS: $dns | DB: $db_uri | Key: sk-$($guid)$($guid)"
-    
-    $sw.WriteLine($line)
-    
-    # 每 100 万行报告一次进度
-    if ($i % 1000000 -eq 0) { 
-        $percent = ($i / $lines) * 100
-        Write-Host "已完成 $percent% ..." 
-    }
-}
-
-$sw.Close()
-Write-Host "✅ 压力测试文件 $path 生成完毕 (约 1.8GB - 2.2GB)" -ForegroundColor Green
-```
-
-
-### .NET 流生成器（生成 100 万行 ≈ 280MB）
-```powershell
-$path = "test_perf_100.log"
-$lines = 1000000  # 1000 万行
-
-# 1. 初始化随机数发生器实例 (修复报错的关键)
-$rand = [System.Random]::new()
-
-# 2. 定义缺失的变量库
-$domains = @("internal.cloud", "prod.corp", "dev.local", "secure.node", "api.service.io")
-$phonePrefixes = @("138", "139", "150", "159", "170", "188", "133", "189", "131")
-
-Write-Host "🚀 正在生成 100 万行压力测试数据..." -ForegroundColor Cyan
-
-# 3. 使用 64KB 缓冲区以提升写入速度
-$sw = [System.IO.StreamWriter]::new((Join-Path (Get-Location) $path), $false, [System.Text.Encoding]::UTF8, 65536)
-
-for ($i = 1; $i -le $lines; $i++) {
-    # 4. 正确调用随机数实例方法 .Next()
-    $ip = "$($rand.Next(1,255)).$($rand.Next(0,255)).$($rand.Next(0,255)).$($rand.Next(0,255))"
-    
-    # 随机选择前缀并生成手机号
-    $prefix = $phonePrefixes[$rand.Next(0, $phonePrefixes.Length)]
-    $phone = "$prefix$($rand.Next(10000000, 99999999))"
-    
-    # 生成 UUID 相关的随机数据
-    $guid = [guid]::NewGuid().ToString()
-    $email = "user_$($guid.Substring(0,8))@$($domains[$rand.Next(0, $domains.Length)])"
-    $dns = "node-$($rand.Next(100,999)).$($domains[$rand.Next(0, $domains.Length)])"
-    
-    $db_uri = "postgres://admin:pwd$($rand.Next(1000,9999))@$dns:5432/db_main"
-    
-    # 构造一行混合日志
-    $line = "INFO [2026-01-09] REQ_ID:$guid | Client: $ip | Phone: $phone | Email: $email | DNS: $dns | DB: $db_uri | Key: sk-$($guid)$($guid)"
-    
-    $sw.WriteLine($line)
-    
-    # 每 10 万行报告一次进度
-    if ($i % 100000 -eq 0) { 
-        $percent = ($i / $lines) * 100
-        Write-Host "已完成 $percent% ..." 
-    }
-}
-
-$sw.Close()
-Write-Host "✅ 压力测试文件 $path 生成完毕 " -ForegroundColor Green
-
-```
-
----
-
-### 如何进行真正的性能压测？
-
-当你拥有了一个 **5GB 以上** 的文件后，你可以观察到 `safemask` 极其硬核的表现：
-
-#### 1. 监控磁盘 I/O
-运行测试：
-```powershell
-# 记得把控制台编码设为 UTF8 避免输出乱码干扰
-chcp 65001
-Measure-Command { ./target/release/safemask --mode file --path test_big_5gb.log > output_big.txt }
-```
-
-#### 2. 观察任务管理器
-在程序运行的那几秒钟：
-*   **CPU**：点击“逻辑处理器”视图，你应该看到**所有核心**全部瞬间顶满。这证明 `Rayon` 的工作窃取（Work-stealing）算法正在疯狂压榨多核性能。
-*   **内存**：重点来了！观察 `safemask` 的内存占用。你会发现，虽然你处理的是 5GB 的文件，但 **`safemask` 的内存占用（Private Bytes）可能非常低**。
-    *   **原因**：这就是 `Mmap` 的魔力。它没有把 5GB 全部读进内存，而是让操作系统按需映射磁盘分页。这证明了你的程序具备处理“超大数据量”（超过物理内存容量）的能力。
-
-#### 3. 结果验证
-处理完大文件后，随机抽查最后几行：
-```powershell
-# 1. 文件最前面 7 行
-Write-Host "=== 文件开头 (前 7 行) ===" -ForegroundColor Cyan
-Get-Content output_big.txt -First 7
-
-# 2. 文件最后 7 行
-Write-Host "`n=== 文件结尾 (后 7 行) ===" -ForegroundColor Cyan
-Get-Content output_big.txt -Tail 7
-
-# 3. 随机抽 6 行（效果比较好）, 大文件不建议使用, 耗时较长
-Write-Host "`n=== 文件中随机 6 行 ===" -ForegroundColor Cyan
-Get-Content output_big.txt | Get-Random -Count 6
-```
+/target
+/out
+/test
 </file>
 
-<file path="command-win.txt">
-$start = Get-Date
-Write-Host "🚀 开始脱敏处理: $start" -ForegroundColor Cyan
-
-./target/release/safemask --mode file --path test_perf.log > output.txt
-
-$end = Get-Date
-$duration = $end - $start
-Write-Host "✅ 处理完成: $end" -ForegroundColor Green
-Write-Host "⏱️ 总共耗时: $($duration.TotalSeconds) 秒" -ForegroundColor Yellow
+<file path="safemask/.vscode/extensions.json">
+{
+  "recommendations": ["tauri-apps.tauri-vscode", "rust-lang.rust-analyzer"]
+}
 </file>
 
-<file path="LICENSE">
+<file path="safemask/custom/internal.yaml">
+group: "MY_INFO"
+rules:
+  - name: "MY_NAME"
+    # 简化了逻辑，重点在于匹配 @ 和域名
+    pattern: 'xiaosheng'
+    mask: "<MY_NAME>"
+    priority: 30 # 较高优先级
+</file>
+
+<file path="safemask/custom/private.yaml">
+
+</file>
+
+<file path="safemask/LICENSE">
 MIT License
 
 Copyright (c) 2026 xiao sheng
@@ -273,91 +167,325 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 </file>
 
-<file path="release.md">
-对于一个 5 年经验、追求高质量产出的工程师来说，GitHub Release 不仅仅是上传一个 `.exe` 文件，它是一份**产品的身份说明书**。
-
-以下是为你设计的 **SafeMask v0.1.0** 发布说明模板。你可以直接复制到 GitHub 的 "Release Notes" 框中，并根据实际情况微调。
-
----
-
-## 🚀 SafeMask v0.4.1 - High Performance Privacy Guard
-
-
-
-### 🌟 核心特性 (Key Features)
-
-*   **极致性能引擎**：采用 **Aho-Corasick** 算法与 **超级正则 (Combined DFA)** 混合驱动，实现单次扫描脱敏。
-*   **零拷贝 I/O**：深度利用 **Memory Mapping (Mmap)** 技术，处理 GB 级别大文件时内存占用极低。
-*   **多核并发处理**：通过 **Rayon** 并行流，自动利用多核 CPU 算力，100MB 级别日志处理仅需 **0.4s**。
-*   **模块化配置**：支持 YAML 定义规则包，涵盖 OpenAI/Claude/DeepSeek API Keys、主流数据库连接串、IP/Email 等。
-*   **双模式支持**：
-    *   **Clipboard 模式**：一键处理剪贴板内容，无缝对接 ChatGPT/Claude 对话。
-    *   **File 模式**：支持大规模本地日志文件的脱敏导出。
-
-### 📊 性能表现 (Benchmarks)
-
-在 Windows 11 环境下，处理包含百万行数据的真实日志文件（113 MB）：
-*   **吞吐量**: ~270 MB/s
-*   **总耗时**: **420ms** (计算+磁盘写入)
-*   **内存峰值**: < 50 MB
-
-### 📂 产物说明 (Artifacts)
-
-| 文件名 | 适用平台 | 说明 |
-| :--- | :--- | :--- |
-| `safemask-v0.1.0-windows-x64.zip` | Windows 10/11 | 包含可执行文件及示例规则文件夹 |
-| `rules.zip` | 全平台 | 预置的脱敏规则包（AI, Database, Network） |
-
-### 🛠️ 安装与使用 (Quick Start)
-
-1.  下载并解压 `safemask-v0.1.0-windows-x64.zip`。
-2.  确保 `safemask.exe` 同级目录下存在 `rules/` 文件夹。
-3.  **剪贴板脱敏**：
-    ```powershell
-    ./safemask --mode clipboard
-    ```
-4.  **大规模文件处理**：
-    ```powershell
-    ./safemask --mode file --path test.log --output masked.log
-    ```
-
-### 🔒 安全承诺
-
-*   **100% 离线运行**：所有计算均在本地完成，绝不上传任何数据。
-*   **开源透明**：核心算法逻辑完全透明，接受社区审计。
+<file path="safemask/README.md">
+# SafeMask
+Enabling every line of data to safely embrace AI.
+After your content is processed by SafeMask, all private information will be anonymized, allowing your information to be safely transmitted and processed on the internet, by AI, etc.
 
 ---
 
-### 💡 发布前的小建议 (Checklist)
+# 🛡️ SafeMask v0.4.2
+[![Rust](https://img.shields.io/badge/language-Rust-orange.svg)](https://www.rust-lang.org/)
+[![Performance](https://img.shields.io/badge/performance-300MB%2Fs+-green.svg)](#-performance-benchmarks)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](#-installation)
+[![AI-Friendly](https://img.shields.io/badge/AI-Friendly-brightgreen.svg)](#-ai-friendly-masking)
 
-1.  **打包规则文件夹**：
-    由于你的程序依赖 `rules/` 目录下的 YAML 文件，用户下载后如果没有这个目录会报错。
-    *   **建议**：将 `safemask.exe` 和 `rules/` 文件夹一起打包进一个 `.zip` 文件。
-2.  **静态链接 (Static Linking)**：
-    为了防止用户电脑缺少某些 DLL，建议在 Windows 编译时使用以下命令（如果是用 MSVC 环境）：
-    ```powershell
-    # 这样生成的 .exe 就不依赖特定的 VC 运行时库
-    $env:RUSTFLAGS="-C target-feature=+crt-static"
-    cargo build --release
-    ```
-3.  **计算 Hash 值**（专业体现）：
-    在 Release 说明的末尾，放上二进制文件的 SHA256 校验码，防止文件被篡改：
-    ```powershell
-    # Windows 下获取哈希值
-    Get-FileHash ./target/release/safemask.exe -Algorithm SHA256
-    ```
-4.  **LICENSE 文件**：
-    确保仓库里有一个 `LICENSE` 文件（推荐 MIT 或 Apache 2.0），这对远程工作的合规性加分很重要。
+<div align="center">
 
-这份说明体现了你作为一个**资深后端工程师**对性能、易用性和安全性的全面考虑。发布后，这不仅是一个工具，更是你 Rust 工程能力的有力证言。
+
+ **🤗🛡️ Enabling every line of data to safely embrace AI**
+
+</div>
+
+## 📡 项目动态 (Project Roadmap)
+| 形态 | 分支 | 状态 | 核心能力 |
+| :--- | :--- | :--- | :--- |
+| 🐚 **CLI 命令行** | [`main-cmd`](https://github.com/AiToByte/safemask/tree/main-cmd) | **稳定版 (Stable)** | 高性能文件脱敏、混合引擎、保序流水线 |
+| 🖥️ **Desktop 桌面** | `main` | **研发中 (WIP)** | **Tauri 驱动**、剪贴板实时监听、静默脱敏、可视化配置 |
+
+
+> **📢 立即开始使用：**
+> 如果您需要处理本地大规模日志，或手动清洗剪贴板内容，请点击切换至 **[`main-cmd`](https://github.com/AiToByte/safemask/tree/main-cmd)** 分支。
+
+
+> **🧪 实验性特性预告：**
+> `main` 分支正在进行 **SafeMask Desktop** 的封闭开发。我们利用 **Tauri + Rust** 的高性能架构，实现对系统剪贴板的“无感监控”——敏感信息在进入 AI 对话框前将被自动拦截并替换。敬请期待！
+
+## ✨ v0.4.2 新特性：灵活定制，极致性能
+
+*   **🗂️ 法定目录管理**：自动扫描 `rules/` (系统内置) 与 `custom/` (用户自定义) 目录，规则变更无需重新编译。
+*   **🚀 混合动力引擎**：
+    *   **固定词过滤**：自动识别纯文本规则（如人名、项目名），采用 **Aho-Corasick** 算法，实现 $O(n)$ 级极速过滤。
+    *   **模式匹配**：复杂隐私模式采用 **高性能字节正则**，分层优先级处理。
+*   **🧠 AI 友好型语义**：支持将敏感信息替换为 `<EMAIL>`、`<PROJECT_ID>` 等标签，而非破坏性的 `***`。
+
+
+## 🌟 为什么选择 SafeMask?
+
+在 LLM（大语言模型）时代，将日志或代码直接粘贴给 AI 处理存在极高的泄露风险。SafeMask 解决了三大痛点：
+
+1.  **AI 语义保留 (AI-Friendly)**：传统的 `***` 掩码会破坏 AI 的理解能力。SafeMask 使用 **语义化标签**（如 `<POSTGRES_URI>`），让 AI 知道此处是一个数据库链接，在不暴露密码的前提下保留逻辑上下文。
+2.  **绝对零信任 (Zero-Trust)**：100% 本地运行，不产生任何外网请求，确保数据不出本地。
+3.  **极致性能 (Industrial-Grade)**：利用 Rust 的并行计算和内存映射技术，处理 GB 级日志仅需数秒，无惧海量数据。
+ 
+
+---
+
+
+
+## 🚀 核心架构：三阶段保序流水线 (Level 3 Optimization)
+
+SafeMask 不仅仅是一个正则替换工具，它采用了复杂的**生产者-消费者流水线**模型，实现了 **CPU 计算与 I/O 读写的完全重叠（Overlapping）**。
+
+### 🏗️ 架构概览
+```text
+[ 原始数据 ] 
+     |
+     v
+( Stage 1: 生产者 ) ➔ 内存映射 (Mmap) + 智能宏分块 (Macro-Chunking 4MB)
+     |
+     v
+( Stage 2: 计算集群 ) ➔ Rayon 并行处理 | 字节流正则引擎 | Aho-Corasick 自动机
+     |
+     v
+( Stage 3: 消费者 ) ➔ BTreeMap 排序缓冲区 | 保序合并 | 8MB 聚合写入 (BufWriter)
+     |
+     v
+[ 脱敏产物 ]
+```
+
+
+### ⚡ 深度优化细节
+- **Zero-Copy I/O**: 使用 `memmap2` 绕过内核缓冲区拷贝。
+- **Byte-Level Engine**: 基于 `regex::bytes` 实现，完全跳过 UTF-8 校验开销。
+- **Context-Aware**: 智能识别 `sk-`、`postgres://` 等特征，精准区分隐私类型。
+- **Ordered Pipelining**: 确保高并发处理后的输出行序与输入完全一致。
+- **Memory Reuse**: 采用线程局部缓冲区（Scratch Buffers），将内存分配压力从 $O(N)$ 降低到 $O(Threads)$。
+
+## 📊 性能基准 (Performance Benchmarks)
+*测试环境: Windows 11 / i7-12700K / NVMe SSD*
+
+| 数据规模 | 原始处理耗时 (PS) | **SafeMask 耗时** | 吞吐量 (Throughput) |
+| :--- | :--- | :--- | :--- |
+| **113 MB (100万行)** | 21.9s | **0.42s** | **~270 MB/s** |
+| **1.2 GB (500万行)** | - | **4.1s** | **~300 MB/s** |
+| **2.3 GB (1000万行)** | - | **8.3s** | **~337 MB/s** |
+
+> *注：性能受限于磁盘 I/O 上限。*
+
+
+## 🤖 AI 友好型脱敏示例 (AI-Friendly Masking)
+
+### 3.1 原始风险数据
+> `INFO | User: admin | IP: 158.209.138.172 | DB: postgres://admin:p@ssw0rd123@10.0.0.5:5432/prod | Key: sk-ant-api03-xxxx...`
+
+### 3.2 传统脱敏 (AI 难以理解逻辑)
+> `INFO | User: admin | IP: *.*.*.* | DB: *********** | Key: ***********`
+> *AI 反馈: "由于上下文丢失，我无法分析您的数据库连接配置..."*
+
+### 3.3 SafeMask 脱敏 (语义化保留)
+> `INFO | User: admin | IP: <IPv4> | DB: <POSTGRES_URI> | Key: <CLAUDE_KEY>`
+> *AI 反馈: "您的 **PostgreSQL** 连接配置看起来正确，但请确保端口 **5432** 在防火墙中已开放..."*
+
+---
+
+
+## 🛠️ 安装与编译
+
+确保已安装 Rust 环境 (MSRV 1.70+)。
+
+```bash
+git clone https://github.com/AiToByte/safemask.git
+cd safemask
+
+# 必须使用 --release 模式以开启所有编译优化
+cargo build --release
+```
+
+编译产物位于 `./target/release/safemask`。
+
+## 📖 使用指南
+
+### 1. 剪贴板模式
+最适合在将代码或日志粘贴给 ChatGPT/Claude 前使用：
+```powershell
+./safemask
+或者
+./safemask --mode clipboard
+```
+
+### 2. 文件模式
+处理大规模日志文件，并直接输出到指定文件（推荐）：
+```powershell
+./safemask --mode file --path ./input.log --output ./output_masked.log
+```
+
+### 3.效果演示
+#### 3.1 输入
+```txt
+INFO [2026-01-09] REQ_ID:c6c146f4-5f59-49fb-9af3-ae53dffd80fe | Client: 158.209.138.172 | Phone: 13184327690 | Email: user_c6c146f4@internal.cloud | DNS: node-923.api.service.io | DB: postgres://admin:pwd6435@/db_main | Key: sk-c6c146f4-5f59-49fb-9af3-ae53dffd80fec6c146f4-5f59-49fb-9af3-ae53dffd80fe
+INFO [2026-01-09] REQ_ID:fdfbc6fe-6a6f-4a29-ad25-33800e07a54c | Client: 199.203.32.197 | Phone: 15018443387 | Email: user_fdfbc6fe@internal.cloud | DNS: node-806.prod.corp | DB: postgres://admin:pwd6920@/db_main | Key: sk-fdfbc6fe-6a6f-4a29-ad25-33800e07a54cfdfbc6fe-6a6f-4a29-ad25-33800e07a54c
+INFO [2026-01-09] REQ_ID:1cee87c0-c759-4a28-9c5a-f53d0795fa33 | Client: 170.35.237.6 | Phone: 15025377154 | Email: user_1cee87c0@prod.corp | DNS: node-176.secure.node | DB: postgres://admin:pwd5656@/db_main | Key: sk-1cee87c0-c759-4a28-9c5a-f53d0795fa331cee87c0-c759-4a28-9c5a-f53d0795fa33
+INFO [2026-01-09] REQ_ID:79909f77-e7b6-4cbc-84eb-802894deb6cd | Client: 89.153.179.13 | Phone: 13887270345 | Email: user_79909f77@prod.corp | DNS: node-725.dev.local | DB: postgres://admin:pwd9011@/db_main | Key: sk-79909f77-e7b6-4cbc-84eb-802894deb6cd79909f77-e7b6-4cbc-84eb-802894deb6cd
+INFO [2026-01-09] REQ_ID:8c18cfe5-33f9-49f8-a958-2f00d6018dda | Client: 99.21.87.115 | Phone: 18833721927 | Email: user_8c18cfe5@secure.node | DNS: node-448.prod.corp | DB: postgres://admin:pwd4623@/db_main | Key: sk-8c18cfe5-33f9-49f8-a958-2f00d6018dda8c18cfe5-33f9-49f8-a958-2f00d6018dda
+INFO [2026-01-09] REQ_ID:4eb8c76e-4626-4b1c-a4b2-23556d727cf5 | Client: 150.161.35.52 | Phone: 18953035548 | Email: user_4eb8c76e@api.service.io | DNS: node-564.prod.corp | DB: postgres://admin:pwd7753@/db_main | Key: sk-4eb8c76e-4626-4b1c-a4b2-23556d727cf54eb8c76e-4626-4b1c-a4b2-23556d727cf5
+INFO [2026-01-09] REQ_ID:e9915291-850f-4043-8184-053b51932395 | Client: 158.5.64.110 | Phone: 15026107635 | Email: user_e9915291@internal.cloud | DNS: node-169.secure.node | DB: postgres://admin:pwd4699@/db_main | Key: sk-e9915291-850f-4043-8184-053b51932395e9915291-850f-4043-8184-053b51932395
+INFO [2026-01-09] REQ_ID:9c442dbb-24c2-4ba1-a666-22c4dfb32ab8 | Client: 211.100.85.125 | Phone: 15062438861 | Email: user_9c442dbb@secure.node | DNS: node-531.prod.corp | DB: postgres://admin:pwd1412@/db_main | Key: sk-9c442dbb-24c2-4ba1-a666-22c4dfb32ab89c442dbb-24c2-4ba1-a666-22c4dfb32ab8
+INFO [2026-01-09] REQ_ID:8aa7a501-7aa1-4cf3-92d9-944652605994 | Client: 123.208.175.66 | Phone: 13174268227 | Email: user_8aa7a501@dev.local | DNS: node-550.internal.cloud | DB: postgres://admin:pwd6410@/db_main | Key: sk-8aa7a501-7aa1-4cf3-92d9-9446526059948aa7a501-7aa1-4cf3-92d9-944652605994
+```
+
+#### 3.2 使用SafeMask之后
+```txt
+INFO [2026-01-09] REQ_ID:c6c146f4-5f59-49fb-9af3-ae53dffd80fe | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:fdfbc6fe-6a6f-4a29-ad25-33800e07a54c | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:1cee87c0-c759-4a28-9c5a-f53d0795fa33 | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:79909f77-e7b6-4cbc-84eb-802894deb6cd | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:8c18cfe5-33f9-49f8-a958-2f00d6018dda | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:4eb8c76e-4626-4b1c-a4b2-23556d727cf5 | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:e9915291-850f-4043-8184-053b51932395 | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:9c442dbb-24c2-4ba1-a666-22c4dfb32ab8 | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY>
+INFO [2026-01-09] REQ_ID:8aa7a501-7aa1-4cf3-92d9-944652605994 | Client: <IPv4> | Phone: <CHINA_MOBILE> | Email: <EMAIL> | DNS: 
+<DOMAIN> | DB: <POSTGRES_URI> | Key: <OPENAI_KEY> 
+```
+
+## ⚙️ 规则定制指南
+
+### 1. 目录结构
+```text
+.
+├── safemask.exe       # 执行文件
+├── rules/             # [系统级] 内置规则 (IP, Email, API Keys等)
+└── custom/            # [用户级] 在这里添加你的私有规则
+    ├── private.yaml
+    └── internal.yaml
+```
+
+### 2. 配置示例 (`custom/my_rules.yaml`)
+```yaml
+group: "MY_CUSTOM_RULES"
+rules:
+  # 固定字符串匹配 (极速模式)
+  - name: "PersonalName"
+    pattern: "xiaosheng"
+    mask: "<MY_NAME>"
+    priority: 100
+
+  # 正则模式匹配
+  - name: "InternalProject"
+    pattern: 'PROJ-[0-9]{5,}'
+    mask: "<PROJECT_ID>"
+    priority: 80
+```
+
+---
+
+
+## 🏗️ 架构背后的思考
+
+作为一个拥有 Java 背景的开发者，我在设计 SafeMask 时重点解决了以下痛点：
+1. **规避 GC 停顿**：通过 Rust 的所有权模型与 `mimalloc` 分配器，消除大规模字符串处理中的停顿。
+2. **零拷贝 I/O**：使用 `Mmap` 替代传统的缓冲读取，减少内核态与用户态的数据拷贝。
+3. **算法聚合**：避免了 $N$ 次 `replace_all` 导致的 $O(N \times M)$ 复杂度，将其优化为 $O(M)$。
+4. **安全性大于校验**：脱敏引擎倾向于“宁可错杀，不可漏过”，即使正则匹配稍宽，也要确保隐私不泄露。
+
+
+## 🤝 贡献
+欢迎提交新的脱敏规则：
+1. 在 `rules/` 下创建分类目录。
+2. 遵循 `RULES_TEMP.md` 中的非环视正则规范。
+3. 提交 PR 并附带性能测试结果。
+
+---
+<div align="center">
+
+**SafeMask** - *让每一行数据都能安全地拥抱 AI。*
+
+</div>
 </file>
 
-<file path="rules/auth/ai/keys.yaml">
+<file path="safemask/src-tauri/.gitignore">
+# Generated by Cargo
+# will have compiled files and executables
+/target/
+
+# Generated by Tauri
+# will have schema files for capabilities auto-completion
+/gen/schemas
+</file>
+
+<file path="safemask/src-tauri/build.rs">
+fn main() {
+    tauri_build::build()
+}
+</file>
+
+<file path="safemask/src-tauri/capabilities/default.json">
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:default"
+  ]
+}
+</file>
+
+<file path="safemask/src-tauri/Cargo.toml">
+[package]
+name = "safemask"
+version = "1.0.0"
+description = "A Tauri App"
+authors = ["you"]
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "safemask_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# 原有核心
+aho-corasick = "1.1.4"
+regex = "1.12.2"
+rayon = "1.11.0"
+memmap2 = "0.9.9"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+walkdir = "2.4"
+mimalloc = "0.1"
+once_cell = "1.21.3"
+anyhow = "1.0"
+arboard = "3.6.1"
+crossbeam-channel = "0.5"
+# 方案一：原生事件驱动剪贴板监听
+clipboard-master = "4.0.0"
+
+# 方案二：全局热键支持 (Tauri v2 官方插件)
+tauri-plugin-global-hotkey = "2.0.0"
+# 用于发送系统通知
+tauri-plugin-notification = "2.0.0"
+
+# Tauri 增强
+tokio = { version = "1", features = ["full"] }
+tauri = { version = "2", features = ["all"] }
+tauri-plugin-opener = "2"
+serde_json = "1"
+</file>
+
+<file path="safemask/src-tauri/rules/auth/ai/keys.yaml">
 group: "SENSITIVE_INFO"
 rules:
   # --- AI API KEYS (去掉了锚点，增加了边界判定) ---
   - name: "OpenAI"
-    pattern: '\bsk-[a-zA-Z0-9]{48,}\b' # 适配 sk-proj 及长 key
+    pattern: '\bsk-[a-zA-Z0-9\-]{32,}\b' # 适配 sk-proj 及长 key
     mask: "<OPENAI_KEY>"
     priority: 10 # 高优先级
   
@@ -377,7 +505,7 @@ rules:
     priority: 10 # 高优先级
 </file>
 
-<file path="rules/auth/database/urls.yaml">
+<file path="safemask/src-tauri/rules/auth/database/urls.yaml">
 group: "DATABASE_CONNECTION"
 rules:
   - name: "PostgreSQL_URI"
@@ -410,7 +538,7 @@ rules:
     mask: "<SQLITE_URI>"
 </file>
 
-<file path="rules/network/dns.yaml">
+<file path="safemask/src-tauri/rules/network/dns.yaml">
 group: "SENSITIVE_INFO"
 rules:
   - name: "FQDN_Domain"
@@ -419,7 +547,22 @@ rules:
     priority: 5 # 普通优先级
 </file>
 
-<file path="rules/personal/cardNum.yaml">
+<file path="safemask/src-tauri/rules/network/ip.yaml">
+group: "SENSITIVE_INFO"
+rules:
+  - name: "IPv4_Address"
+    # 兼顾准确性与性能的写法
+    pattern: '\b(?:(?:25[0-5]|2[0-4]\d|1?\d{1,2})\.){3}(?:25[0-5]|2[0-4]\d|1?\d{1,2})\b'
+    mask: "<IPv4>"
+    priority: 60 # 高优先级
+
+  - name: "IPv6_Address"
+    pattern: '\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b|\b(?:[0-9a-fA-F]{1,4}:){1,7}:|:[:0-9a-fA-F]{1,7}\b'
+    mask: "<IPv6>"
+    priority: 10
+</file>
+
+<file path="safemask/src-tauri/rules/personal/cardNum.yaml">
 group: "SENSITIVE_INFO"
 rules:
   - name: "China_ID_Card_18"
@@ -429,13 +572,24 @@ rules:
     priority: 100 # 更高优先级
 </file>
 
-<file path="rules/personal/phone.yaml">
+<file path="safemask/src-tauri/rules/personal/email.yaml">
+group: "SENSITIVE_INFO"
+rules:
+  - name: "Email_Address"
+    # 简化了逻辑，重点在于匹配 @ 和域名
+    pattern: '\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b'
+    mask: "<EMAIL>"
+    priority: 30 # 较高优先级
+</file>
+
+<file path="safemask/src-tauri/rules/personal/phone.yaml">
 group: "SENSITIVE_INFO"
 rules:
   - name: "Global_Phone_E164"
-    pattern: '\b[1-9]\d{7,14}\b'
+    # 增加对 + 号的倾向或更严格的边界
+    pattern: '(?:\+|00)[1-9]\d{7,14}\b' 
     mask: "<GLOBAL_PHONE>"
-    priority: 5 # 低优先级
+    priority: 5
 
   - name: "China_Mobile_Phone"
     # 增加了边界判定，防止匹配到时间戳中的一段数字
@@ -444,7 +598,7 @@ rules:
     priority: 100 # 更高优先级
 </file>
 
-<file path="rules/rulesTemp.md">
+<file path="safemask/src-tauri/rules/rulesTemp.md">
 为了保证 safemask 的极致性能和匹配准确性，请遵循以下规范：
 1. 正则编写准则 (Principles)
 脱敏而非校验：我们的目的是遮盖隐私，不是验证数据的合法性。宁可错杀（遮盖范围稍大），不可漏过。 复杂的正则（如严格的 Email 校验）会显著降低匹配速度。
@@ -463,10 +617,89 @@ rules:
     mask: "<LABEL>" # 建议使用大写+尖括号，AI 识别效果最好
 </file>
 
-<file path="src/config.rs">
+<file path="safemask/src-tauri/src/clipboard.rs">
+use clipboard_master::{ClipboardHandler, CallbackResult};
+use arboard::Clipboard;
+use std::sync::{Arc, Mutex};
+use crate::engine::MaskEngine;
+use tauri::AppHandle;
+use tauri::Emitter; // Tauri v2 
+
+pub struct GlobalClipboardHandler {
+    pub app_handle: AppHandle,
+    pub engine: Arc<MaskEngine>,
+    pub last_content: Arc<Mutex<String>>,
+    pub is_enabled: Arc<Mutex<bool>>,
+}
+
+impl ClipboardHandler for GlobalClipboardHandler {
+    /// 当系统剪贴板内容发生变化时，OS 会回调此方法
+    fn on_clipboard_change(&mut self) -> CallbackResult {
+        // 1. 检查自动监控开关是否开启
+        if !*self.is_enabled.lock().unwrap() {
+            return CallbackResult::Next;
+        }
+
+        let mut ctx = match Clipboard::new() {
+            Ok(c) => c,
+            Err(_) => return CallbackResult::Next,
+        };
+        
+        // 2. 尝试获取文本。如果当前剪贴板是图片、文件或空，get_text() 会返回 Err
+        match ctx.get_text() {
+            Ok(current_text) => {
+                // 3. 性能优化：如果文本超级巨大（例如超过 2MB），建议跳过自动脱敏，防止 UI 卡死
+                // 这种大数据建议引导用户使用“文件模式”
+                if current_text.len() > 2 * 1024 * 1024 {
+                    return CallbackResult::Next;
+                }
+
+                let mut last = self.last_content.lock().unwrap();
+
+                // 4. 防循环校验
+                if current_text != *last && !current_text.is_empty() {
+                    let masked_bytes = self.engine.mask_line(current_text.as_bytes());
+                    let masked_text = String::from_utf8_lossy(&masked_bytes).into_owned();
+
+                    if masked_text != current_text {
+                        *last = masked_text.clone();
+                        // 尝试写回脱敏后的文本
+                        if let Ok(_) = ctx.set_text(masked_text) {
+                            let _ = self.app_handle.emit("masked-event", "🛡️ 隐私内容已自动脱敏");
+                        }
+                    }
+                }
+            },
+            // 5. 重点：处理非文本错误（图片、文件列表等）
+            Err(e) => {
+                match e {
+                    ClipboardError::ContentNotAvailable => {
+                        // 这种情况通常是用户复制了图片、文件或二进制数据
+                        // 我们保持沉默，不做任何处理，直接跳过
+                    },
+                    _ => {
+                        // 记录其他可能的系统级错误
+                        eprintln!("剪贴板访问异常: {:?}", e);
+                    }
+                }
+            }
+        }
+        CallbackResult::Next
+    }
+
+    fn on_clipboard_error(&mut self, error: std::io::Error) -> CallbackResult {
+        // 这里的错误通常是底层的系统信号异常
+        eprintln!("OS 剪贴板事件流中断: {}", error);
+        CallbackResult::Next
+    }
+}
+</file>
+
+<file path="safemask/src-tauri/src/config.rs">
 use serde::Deserialize;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
+use anyhow::{Result, Context};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Rule {
@@ -483,81 +716,55 @@ fn default_priority() -> i32 { 0 }
 #[derive(Debug, Deserialize, Clone)]
 pub struct RuleGroup {
     #[allow(dead_code)]
+    #[serde(default)]
     pub group: String,
     pub rules: Vec<Rule>,
 }
 
-/// 递归扫描目录加载所有 YAML 规则
-pub fn load_all_rules<P: AsRef<Path>>(dir: P) -> Vec<Rule> {
-    let mut all_rules = Vec::new();
-    for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
-        let path = entry.path();
-        if path.is_file() && path.extension().map_or(false, |ext| ext == "yaml") {
-            let content = std::fs::read_to_string(path).expect("无法读取规则文件");
-            if let Ok(group) = serde_yaml::from_str::<RuleGroup>(&content) {
-                all_rules.extend(group.rules);
+pub struct RuleManager;
+
+
+impl RuleManager {
+    /// 核心功能：自动加载内置规则目录和用户自定义目录
+    pub fn load_all_rules() -> Vec<Rule> {
+        let mut all_rules = Vec::new();
+        
+        // 规定两个加载路径
+        let paths = vec![
+            PathBuf::from("rules"),  // 内置目录
+            PathBuf::from("custom"), // 用户自定义目录
+        ];
+
+        for path in paths {
+            if path.exists() && path.is_dir() {
+                all_rules.extend(Self::load_from_directory(path));
             }
         }
+        all_rules
     }
-    all_rules
+
+    fn load_from_directory<P: AsRef<Path>>(dir: P) -> Vec<Rule> {
+        let mut rules = Vec::new();
+        for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
+            if entry.path().extension().map_or(false, |ext| ext == "yaml") {
+                if let Ok(file_rules) = Self::parse_file(entry.path()) {
+                    rules.extend(file_rules);
+                }
+            }
+        }
+        rules
+    }
+
+    fn parse_file(path: &Path) -> Result<Vec<Rule>> {
+        let content = std::fs::read_to_string(path)?;
+        let group: RuleGroup = serde_yaml::from_str(&content)
+            .with_context(|| format!("解析规则文件失败: {:?}", path))?;
+        Ok(group.rules)
+    }
 }
 </file>
 
-<file path="test_perf.txt">
-$path = "test_perf.log"
-$lines = 1000000
-
-Write-Host "🚀 正在生成 100 万行测试数据..." -ForegroundColor Cyan
-
-# 1. 先创建一个随机数实例 (这是修复报错的关键)
-$rand = New-Object System.Random
-
-# 2. 使用 .NET 的 StreamWriter
-$filePath = Join-Path (Get-Location) $path
-$sw = [System.IO.StreamWriter]::new($filePath)
-
-for ($i = 1; $i -le $lines; $i++) {
-    # 3. 使用实例方法调用 .Next()
-    $ip = "$($rand.Next(1,255)).$($rand.Next(0,255)).$($rand.Next(0,255)).$($rand.Next(0,255))"
-    
-    # 生成包含关键词和正则特征的行
-    $guid1 = [guid]::NewGuid().ToString("N")
-    $line = "INFO [2026-01-09] User_$i (IP: $ip) accessed TopSecretProject using sk-$guid1"
-    
-    $sw.WriteLine($line)
-    
-    if ($i % 200000 -eq 0) { Write-Host "进度: 已完成 $i 行..." }
-}
-
-$sw.Close()
-Write-Host "✅ 成功生成文件: $path" -ForegroundColor Green
-</file>
-
-<file path="rules/network/ip.yaml">
-group: "SENSITIVE_INFO"
-rules:
-  - name: "IPv4_Address"
-    # 兼顾准确性与性能的写法
-    pattern: '\b(?:(?:25[0-5]|2[0-4]\d|1?\d{1,2})\.){3}(?:25[0-5]|2[0-4]\d|1?\d{1,2})\b'
-    priority: 60 # 高优先级
-
-  - name: "IPv6_Address"
-    pattern: '\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b|\b(?:[0-9a-fA-F]{1,4}:){1,7}:|:[:0-9a-fA-F]{1,7}\b'
-    mask: "<IPv6>"
-    priority: 10
-</file>
-
-<file path="rules/personal/email.yaml">
-group: "SENSITIVE_INFO"
-rules:
-  - name: "Email_Address"
-    # 简化了逻辑，重点在于匹配 @ 和域名
-    pattern: '\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b'
-    mask: "<EMAIL>"
-    priority: 30 # 较高优先级
-</file>
-
-<file path="src/engine.rs">
+<file path="safemask/src-tauri/src/engine.rs">
 use crate::config::Rule;
 use regex::bytes::{Captures, Regex};
 use std::borrow::Cow;
@@ -626,7 +833,10 @@ impl MaskEngine {
         for p in &patterns {
             let temp_re = Regex::new(p).expect("正则语法错误");
             offsets.push(current_offset);
-            current_offset += temp_re.captures_len(); // 动态计算该规则占用的组数量
+            // temp_re 已经是 "(pattern)" 形式
+            // 它在整体正则中占用的组数就是它的 captures_len() - 1
+            // 但由于 joined 是 "(p1)|(p2)"，每一组其实只占用了原本的组空间
+            current_offset += temp_re.captures_len() - 1; // 动态计算该规则占用的组数量
         }
 
         let combined_re = Regex::new(&patterns.join("|")).expect("超级正则聚合失败");
@@ -691,38 +901,366 @@ fn is_literal(pattern: &str) -> bool {
 }
 </file>
 
-<file path="Cargo.toml">
-[package]
-name = "SafeMask"
-version = "0.4.1"
-edition = "2024" # 2024最新版语法规范
-authors = ["xiaosheng <xiaosheng.tech@outlook.com>"]
-description = "A high-performance, ordered data masking tool written in Rust."
-license = "MIT"
-readme = "README.md"
-repository = "https://github.com/AiToByte/SafeMask.git"
+<file path="safemask/src-tauri/src/lib.rs">
+// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+#[tauri::command]
+fn greet(name: &str) -> String {
+    format!("Hello, {}! You've been greeted from Rust!", name)
+}
 
-[dependencies]
-aho-corasick = "1.1.4"
-anyhow = "1.0.100"
-arboard = "3.6.1"
-clap = { version = "4.5.54", features = ["derive"] }
-memmap2 = "0.9.9"
-once_cell = "1.21.3"
-rayon = "1.11.0"
-regex = "1.12.2"
-serde = {version = "1.0", features = ["derive"]}
-serde_yaml = "0.9"
-walkdir = "2.4" # 用于递归遍历目录
-mimalloc = "0.1" # 引入 mimaloc提升频繁内存分配性能
-crossbeam-channel = "0.5"
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![greet])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+</file>
 
-# 极致性能优化配置: 当运行 cargo build --release 时生效
-[profile.release]
-opt-level = 3
-lto = true # 启用链接时优化
-codegen-units = 1 # 减少代码生成单元以提高优化效果
-panic = "abort" # 减少二进制文件大小
+<file path="safemask/src-tauri/src/main.rs">
+// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+mod engine;
+mod config;
+mod clipboard;
+
+use std::sync::{Arc, Mutex};
+use tauri::{Manager, State, AppHandle};
+use tauri_plugin_global_hotkey::{GlobalHotkeyExt, Hotkey};
+use crate::engine::MaskEngine;
+use crate::config::RuleManager;
+use crate::clipboard::GlobalClipboardHandler;
+use clipboard_master::Master;
+
+// 使用 mimalloc 提升内存分配性能
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+/// 应用全局状态，将在 Tauri 生命周期内持续存在
+struct AppState {
+    // 包装引擎，使其跨线程安全
+    engine: Arc<MaskEngine>,
+    // 记录最后一次脱敏后的内容，防止“处理 -> 写回 -> 再次检测到变化”的死循环
+    last_content: Arc<Mutex<String>>,
+    // 控制自动监控的开关
+    is_monitor_on: Arc<Mutex<bool>>,
+}
+
+/// 前端调用命令：单次脱敏文本
+/// 指令：手动触发当前剪贴板脱敏 (供前端按钮调用)
+#[tauri::command]
+async fn manual_mask(state: State<'_, AppState>) -> Result<String, String> {
+    let mut ctx = arboard::Clipboard::new().map_err(|e| e.to_string())?;
+    let text = ctx.get_text().map_err(|e| e.to_string())?;
+    
+    let masked = state.engine.mask_line(text.as_bytes());
+    let masked_text = String::from_utf8_lossy(&masked).into_owned();
+    
+    ctx.set_text(masked_text.clone()).map_err(|e| e.to_string())?;
+    Ok("手动脱敏成功".to_string())
+}
+
+/// 前端调用命令：开启/关闭剪贴板监控
+#[tauri::command]
+async fn toggle_monitor(enabled: bool, state: State<'_, AppState>) -> Result<(), String> {
+    let mut monitor = state.is_monitor_on.lock().await;
+    *monitor = enabled;
+    println!("🔔 自动监控状态: {}", enabled);
+    Ok(())
+}
+
+
+fn main() {
+    // 1. 初始化核心引擎
+    let rules = RuleManager::load_all_rules();
+    let engine = Arc::new(MaskEngine::new(rules));
+    
+    // 共享状态
+    let is_monitor_on = Arc::new(Mutex::new(true));
+    let last_content = Arc::new(Mutex::new(String::new()));
+
+    let engine_clone = engine.clone();
+    let is_monitor_clone = is_monitor_on.clone();
+    let last_content_clone = last_content.clone();
+
+    tauri::Builder::default()
+        .plugin(tauri_plugin_global_hotkey::Builder::new().build())
+        .plugin(tauri_plugin_notification::init())
+        .manage(AppState {
+            engine: engine.clone(),
+            is_monitor_on,
+            last_content,
+        })
+        .invoke_handler(tauri::generate_handler![manual_mask])
+        .setup(move |app| {
+            let app_handle = app.handle().clone();
+
+            // --- 方案一：启动原生事件驱动监听线程 ---
+            std::thread::spawn(move || {
+                let handler = GlobalClipboardHandler {
+                    app_handle,
+                    engine: engine_clone,
+                    last_content: last_content_clone,
+                    is_enabled: is_monitor_clone,
+                };
+                // Master::new(handler).run() 会阻塞线程，监听系统剪贴板信号
+                Master::new(handler).run().expect("无法启动剪贴板监听器");
+            });
+
+            // --- 方案二：注册全局热键 (Alt+Shift+D) ---
+            let hotkey = Hotkey::new(
+                Some(tauri_plugin_global_hotkey::Modifiers::ALT | tauri_plugin_global_hotkey::Modifiers::SHIFT),
+                tauri_plugin_global_hotkey::Code::KeyD,
+            );
+
+            app.global_hotkey().register(hotkey, move |app, _event| {
+                // 当按下热键时，执行脱敏
+                let state = app.state::<AppState>();
+                let mut ctx = arboard::Clipboard::new().unwrap();
+                if let Ok(text) = ctx.get_text() {
+                    let masked = state.engine.mask_line(text.as_bytes());
+                    let masked_text = String::from_utf8_lossy(&masked).into_owned();
+                    let _ = ctx.set_text(masked_text);
+                    
+                    // 发送系统通知
+                    app.emit("masked-event", "🚀 热键触发：内容已安全脱敏").unwrap();
+                }
+            })?;
+
+            Ok(())
+        })
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+</file>
+
+<file path="safemask/src-tauri/tauri.conf.json">
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "safemask",
+  "version": "0.1.0",
+  "identifier": "com.xiaoj.safemask",
+  "build": {
+    "frontendDist": "../src"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "safemask",
+        "width": 800,
+        "height": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
+</file>
+
+<file path="safemask/src/assets/javascript.svg">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="32" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 256"><path fill="#F7DF1E" d="M0 0h256v256H0V0Z"></path><path d="m67.312 213.932l19.59-11.856c3.78 6.701 7.218 12.371 15.465 12.371c7.905 0 12.89-3.092 12.89-15.12v-81.798h24.057v82.138c0 24.917-14.606 36.259-35.916 36.259c-19.245 0-30.416-9.967-36.087-21.996m85.07-2.576l19.588-11.341c5.157 8.421 11.859 14.607 23.715 14.607c9.969 0 16.325-4.984 16.325-11.858c0-8.248-6.53-11.17-17.528-15.98l-6.013-2.58c-17.357-7.387-28.87-16.667-28.87-36.257c0-18.044 13.747-31.792 35.228-31.792c15.294 0 26.292 5.328 34.196 19.247l-18.732 12.03c-4.125-7.389-8.591-10.31-15.465-10.31c-7.046 0-11.514 4.468-11.514 10.31c0 7.217 4.468 10.14 14.778 14.608l6.014 2.577c20.45 8.765 31.963 17.7 31.963 37.804c0 21.654-17.012 33.51-39.867 33.51c-22.339 0-36.774-10.654-43.819-24.574"></path></svg>
+</file>
+
+<file path="safemask/src/assets/tauri.svg">
+<svg width="206" height="231" viewBox="0 0 206 231" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M143.143 84C143.143 96.1503 133.293 106 121.143 106C108.992 106 99.1426 96.1503 99.1426 84C99.1426 71.8497 108.992 62 121.143 62C133.293 62 143.143 71.8497 143.143 84Z" fill="#FFC131"/>
+<ellipse cx="84.1426" cy="147" rx="22" ry="22" transform="rotate(180 84.1426 147)" fill="#24C8DB"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M166.738 154.548C157.86 160.286 148.023 164.269 137.757 166.341C139.858 160.282 141 153.774 141 147C141 144.543 140.85 142.121 140.558 139.743C144.975 138.204 149.215 136.139 153.183 133.575C162.73 127.404 170.292 118.608 174.961 108.244C179.63 97.8797 181.207 86.3876 179.502 75.1487C177.798 63.9098 172.884 53.4021 165.352 44.8883C157.82 36.3744 147.99 30.2165 137.042 27.1546C126.095 24.0926 114.496 24.2568 103.64 27.6274C92.7839 30.998 83.1319 37.4317 75.8437 46.1553C74.9102 47.2727 74.0206 48.4216 73.176 49.5993C61.9292 50.8488 51.0363 54.0318 40.9629 58.9556C44.2417 48.4586 49.5653 38.6591 56.679 30.1442C67.0505 17.7298 80.7861 8.57426 96.2354 3.77762C111.685 -1.01901 128.19 -1.25267 143.769 3.10474C159.348 7.46215 173.337 16.2252 184.056 28.3411C194.775 40.457 201.767 55.4101 204.193 71.404C206.619 87.3978 204.374 103.752 197.73 118.501C191.086 133.25 180.324 145.767 166.738 154.548ZM41.9631 74.275L62.5557 76.8042C63.0459 72.813 63.9401 68.9018 65.2138 65.1274C57.0465 67.0016 49.2088 70.087 41.9631 74.275Z" fill="#FFC131"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M38.4045 76.4519C47.3493 70.6709 57.2677 66.6712 67.6171 64.6132C65.2774 70.9669 64 77.8343 64 85.0001C64 87.1434 64.1143 89.26 64.3371 91.3442C60.0093 92.8732 55.8533 94.9092 51.9599 97.4256C42.4128 103.596 34.8505 112.392 30.1816 122.756C25.5126 133.12 23.9357 144.612 25.6403 155.851C27.3449 167.09 32.2584 177.598 39.7906 186.112C47.3227 194.626 57.153 200.784 68.1003 203.846C79.0476 206.907 90.6462 206.743 101.502 203.373C112.359 200.002 122.011 193.568 129.299 184.845C130.237 183.722 131.131 182.567 131.979 181.383C143.235 180.114 154.132 176.91 164.205 171.962C160.929 182.49 155.596 192.319 148.464 200.856C138.092 213.27 124.357 222.426 108.907 227.222C93.458 232.019 76.9524 232.253 61.3736 227.895C45.7948 223.538 31.8055 214.775 21.0867 202.659C10.3679 190.543 3.37557 175.59 0.949823 159.596C-1.47592 143.602 0.768139 127.248 7.41237 112.499C14.0566 97.7497 24.8183 85.2327 38.4045 76.4519ZM163.062 156.711L163.062 156.711C162.954 156.773 162.846 156.835 162.738 156.897C162.846 156.835 162.954 156.773 163.062 156.711Z" fill="#24C8DB"/>
+</svg>
+</file>
+
+<file path="safemask/src/index.html">
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tauri App</title>
+    <script type="module" src="/main.js" defer></script>
+  </head>
+
+  <body>
+    <main class="container">
+      <h1>Welcome to Tauri</h1>
+
+      <div class="row">
+        <a href="https://tauri.app" target="_blank">
+          <img src="/assets/tauri.svg" class="logo tauri" alt="Tauri logo" />
+        </a>
+        <a
+          href="https://developer.mozilla.org/en-US/docs/Web/JavaScript"
+          target="_blank"
+        >
+          <img
+            src="/assets/javascript.svg"
+            class="logo vanilla"
+            alt="JavaScript logo"
+          />
+        </a>
+      </div>
+      <p>Click on the Tauri logo to learn more about the framework</p>
+
+      <form class="row" id="greet-form">
+        <input id="greet-input" placeholder="Enter a name..." />
+        <button type="submit">Greet</button>
+      </form>
+      <p id="greet-msg"></p>
+    </main>
+  </body>
+</html>
+</file>
+
+<file path="safemask/src/main.js">
+const { invoke } = window.__TAURI__.core;
+
+let greetInputEl;
+let greetMsgEl;
+
+async function greet() {
+  // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+  greetMsgEl.textContent = await invoke("greet", { name: greetInputEl.value });
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  greetInputEl = document.querySelector("#greet-input");
+  greetMsgEl = document.querySelector("#greet-msg");
+  document.querySelector("#greet-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    greet();
+  });
+});
+</file>
+
+<file path="safemask/src/styles.css">
+.logo.vanilla:hover {
+  filter: drop-shadow(0 0 2em #ffe21c);
+}
+:root {
+  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+
+  color: #0f0f0f;
+  background-color: #f6f6f6;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+.container {
+  margin: 0;
+  padding-top: 10vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: 0.75s;
+}
+
+.logo.tauri:hover {
+  filter: drop-shadow(0 0 2em #24c8db);
+}
+
+.row {
+  display: flex;
+  justify-content: center;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+
+a:hover {
+  color: #535bf2;
+}
+
+h1 {
+  text-align: center;
+}
+
+input,
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  color: #0f0f0f;
+  background-color: #ffffff;
+  transition: border-color 0.25s;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: #396cd8;
+}
+button:active {
+  border-color: #396cd8;
+  background-color: #e8e8e8;
+}
+
+input,
+button {
+  outline: none;
+}
+
+#greet-input {
+  margin-right: 5px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: #f6f6f6;
+    background-color: #2f2f2f;
+  }
+
+  a:hover {
+    color: #24c8db;
+  }
+
+  input,
+  button {
+    color: #ffffff;
+    background-color: #0f0f0f98;
+  }
+  button:active {
+    background-color: #0f0f0f69;
+  }
+}
 </file>
 
 <file path=".gitignore">
@@ -756,361 +1294,38 @@ target
 /test
 </file>
 
-<file path="README.md">
-# SafeMask
-This software de-identifies sensitive personal information. After your content is processed by SafeMask, all private information will be anonymized, allowing your information to be safely transmitted and processed on the internet, by AI, etc.
-
----
-
-# 🛡️ SafeMask v0.4.1
-
-[![Rust](https://img.shields.io/badge/language-Rust-orange.svg)](https://www.rust-lang.org/)
-[![Performance](https://img.shields.io/badge/performance-500MB%2Fs+-green.svg)](#-performance-benchmarks)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](#-installation)
-
-**SafeMask** 是一款工业级的、基于 Rust 开发的高性能隐私数据脱敏工具。它专为 **LLM (大模型) 训练数据清洗**、**跨境日志审计**以及**开发者隐私保护**场景设计。
-
-**SafeMask** 是一款基于 Rust 开发的极致性能隐私数据脱敏工具。它专为处理大规模日志、代码库及敏感文本设计，能够瞬间识别并遮盖 AI API Keys、数据库连接串、IP 地址、手机号等敏感信息，确保数据在进入 AI 模型或共享环境前的合规性。
-同时, 也可用于**LLM (大模型) 训练数据清洗**、**跨境日志审计**以及**开发者隐私保护**场景中。
-
-
-## 🚀 核心架构：三阶段保序流水线 (Level 3 Optimization)
-
-SafeMask 不仅仅是一个正则替换工具，它采用了复杂的**生产者-消费者流水线**模型，实现了 **CPU 计算与 I/O 读写的完全重叠（Overlapping）**。
-
-### 🏗️ 架构概览
-```text
-[ 磁盘文件 ] 
-     |
-     v
-( Stage 1: 生产者 ) -> 内存映射 (Mmap) + 智能宏分块 (Macro-Chunking 4MB)
-     |
-     v
-( Stage 2: 计算集群 ) -> Rayon 并行计算 | 字节流正则 (Regex Bytes) | AC 自动机
-     |
-     v
-( Stage 3: 消费者 ) -> 优先级缓冲区 (BTreeMap) | 保序合并 | 8MB 聚合写入 (BufWriter)
-     |
-     v
-[ 脱敏输出 ]
-```
-
-
-### ⚡ 深度优化细节
-- **Zero-Copy I/O**: 使用 `memmap2` 绕过内核缓冲区拷贝。
-- **Byte-Level Engine**: 基于 `regex::bytes` 实现，完全跳过 UTF-8 校验开销。
-- **Ordered Pipelining**: 引入 `crossbeam-channel` 与序列号控制，确保高并发下的日志行序与原始文件 100% 一致。
-- **Memory Reuse**: 采用线程局部缓冲区（Scratch Buffers），将内存分配压力从 $O(N)$ 降低到 $O(Threads)$。
-
-> *注：性能受限于磁盘 I/O 上限。*
-
-## 📊 性能基准 (Performance Benchmarks)
-| 数据量 | 原始耗时 (PS Redirect) | **SafeMask 优化输出 (-o)** | 吞吐量 (Throughput) |
-| :--- | :--- | :--- | :--- |
-| **113 MB (100万行)** | 21.9s | **0.42s** | **~270 MB/s** |
-| **1.2 GB (500万行)** | - | **4.1s** | **~300 MB/s** |
-| **2.3 GB (1000万行)** | - | **8.3s** | **~337 MB/s** |
-
-## 🛠️ 安装与编译
-
-确保已安装 Rust 环境 (MSRV 1.70+)。
-
-```bash
-git clone https://github.com/AiToByte/safemask.git
-cd safemask
-
-# 必须使用 --release 模式以开启所有编译优化
-cargo build --release
-```
-
-编译产物位于 `./target/release/safemask`。
-
-## 📖 使用指南
-
-### 1. 剪贴板模式
-最适合在将代码或日志粘贴给 ChatGPT/Claude 前使用：
-```powershell
-./safemask --mode clipboard
-```
-
-### 2. 文件模式
-处理大规模日志文件，并直接输出到指定文件（推荐）：
-```powershell
-./safemask --mode file --path ./input.log --output ./output_masked.log
-```
-
-### 3.效果演示
-#### 3.1 输入
-```txt
-INFO [2026-01-09] User_1 (IP: 99.237.89.211) accessed TopSecretProject using sk-47e9a70ff0e240ee9f3a0ebb04e9131f
-INFO [2026-01-09] User_2 (IP: 52.158.34.170) accessed TopSecretProject using sk-7eee0e40148040b29a56829556fe0b88
-INFO [2026-01-09] User_3 (IP: 225.95.77.71) accessed TopSecretProject using sk-0289c054a0394bb2a99daa44b5d4f4a2
-INFO [2026-01-09] User_4 (IP: 49.75.32.104) accessed TopSecretProject using sk-6541c4475bae4ac1a44d9d5813b4575c
-INFO [2026-01-09] User_5 (IP: 55.231.84.214) accessed TopSecretProject using sk-5c91dcc325e941b59817789f60cf7bb0
-INFO [2026-01-09] User_6 (IP: 210.55.8.24) accessed TopSecretProject using sk-fe044476c8494108881746217929c82c
-INFO [2026-01-09] User_7 (IP: 127.183.99.151) accessed TopSecretProject using sk-f2b904e3b686496ca4b88c8698a27818
-INFO [2026-01-09] User_8 (IP: 109.143.251.146) accessed TopSecretProject using sk-4c22af8a8da94424a3bd8cbcab30d398
-INFO [2026-01-09] User_9 (IP: 250.88.109.70) accessed TopSecretProject using sk-4cd6d738173441d284b0f32141c82fd4
-INFO [2026-01-09] User_10 (IP: 118.41.41.205) accessed TopSecretProject using sk-9ac26f750ab741729f4a5813fbe739e8
-INFO [2026-01-09] User_11 (IP: 152.38.117.101) accessed TopSecretProject using sk-f0a2b85db0e2404e8ca8b506e1b4f99e
-INFO [2026-01-09] User_12 (IP: 145.44.57.211) accessed TopSecretProject using sk-5e0bc7589ad543c785d6cebfc5f2941b
-```
-
-#### 3.2 使用SafeMask之后
-```txt
-INFO [2026-01-09] User_1 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_2 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_3 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_4 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_5 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_6 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_7 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_8 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_9 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_10 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_11 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-INFO [2026-01-09] User_12 (IP: <IPV4>) accessed TopSecretProject using <DEEPSEEK_KEY>
-```
-
-## ⚙️ 规则配置
-
-规则以 YAML 格式存储在 `rules/` 目录下，支持多层文件夹分类：
-
-```yaml
-# rules/ai/keys.yaml
-group: "AI_API_KEYS"
-rules:
-  - name: "OpenAI"
-    pattern: '\bsk-[a-zA-Z0-9]{48}\b'
-    mask: "<OPENAI_KEY>"
-    priority: 5 # 优先级越高，越先处理
-  - name: "DeepSeek"
-    pattern: '\bsk-[a-z0-9]{32}\b'
-    mask: "<DEEPSEEK_KEY>"
-    priority: 20 # 优先级越高，越先处理
-```
-
-## 🏗️ 架构背后的思考
-
-作为一个拥有 Java 背景的开发者，我在设计 SafeMask 时重点解决了以下痛点：
-1. **规避 GC 停顿**：通过 Rust 的所有权模型与 `mimalloc` 分配器，消除大规模字符串处理中的停顿。
-2. **零拷贝 I/O**：使用 `Mmap` 替代传统的缓冲读取，减少内核态与用户态的数据拷贝。
-3. **算法聚合**：避免了 $N$ 次 `replace_all` 导致的 $O(N \times M)$ 复杂度，将其优化为 $O(M)$。
-
-## 🤝 贡献
-我们欢迎社区提交新的脱敏规则：
-1. 在 `rules/` 下创建分类目录。
-2. 遵循 `RULES_TEMP.md` 中的非环视正则规范。
-3. 提交 PR 并附带性能测试结果。
-</file>
-
-<file path="src/main.rs">
-mod engine;
-mod config;
-
-use anyhow::{Context, Result};
-use arboard::Clipboard;
-use clap::Parser;
-use engine::MaskEngine;
-use memmap2::Mmap;
-use once_cell::sync::Lazy;
-use rayon::prelude::*;
-use std::collections::BTreeMap;
-use std::fs::File;
-use std::io::{self, BufWriter, Write};
-use std::path::PathBuf;
-use std::time::Instant;
-
-// 使用 mimalloc 替代默认分配器，在高并发 String 操作下性能更佳
-#[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
-
-/// 全局静态引擎，确保规则只加载和编译一次
-static ENGINE: Lazy<MaskEngine> = Lazy::new(|| {
-    let rules = config::load_all_rules("rules");
-    MaskEngine::new(rules)
-});
-
-#[cfg(target_os = "windows")]
-const BUFFER_SIZE: usize = 8 * 1024 * 1024; // Windows 侧重减少系统调用
-
-#[cfg(target_os = "macos")]
-const BUFFER_SIZE: usize = 16 * 1024 * 1024; // macOS 侧重喂饱高速 NVMe
-
-#[cfg(target_os = "linux")]
-const BUFFER_SIZE: usize = 4 * 1024 * 1024; // Linux 内核高效，4MB 即可保持极低内存占用
-
-#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-const BUFFER_SIZE: usize = 1024 * 1024; // 其他系统默认 1MB
-
-// 4MB 并行块
-const MACRO_CHUNK_SIZE: usize = 4 * 1024 * 1024; // 4MB 并行块
-
-#[derive(Parser, Debug)]
-#[command(name = "safemask", version = "0.4.1", about = "High-performance Data Masking Tool")]
-struct Args {
-    /// 模式: clipboard (默认) 或 file
-    #[arg(short, long, default_value = "clipboard")]
-    mode: String,
-
-    /// 文件路径 (仅 file 模式下有效)
-    #[arg(short, long)]
-    path: Option<PathBuf>,
-
-     /// [输出] 文件路径 (可选，指定后将直接写文件而不经过 stdout)
-    #[arg(short, long)]
-    output: Option<PathBuf>,
-}
-
-
-fn main() -> Result<()> {
-    let args = Args::parse();
-
-    match args.mode.as_str() {
-        "clipboard" => handle_clipboard()?,
-        "file" => {
-            let path = args.path.context("file模式必须使用 --path 指定路径")?;
-            handle_file_pipeline_ordered(path, args.output)?;
-        }
-        _ => println!("❌ 未知模式。 请使用 --help 查看用法。")
-    }
-    Ok(())
-}
-
-/// 剪切板处理逻辑
-fn handle_clipboard() -> Result<()> {
-    let mut clipboard = Clipboard::new().context("无法连接剪贴板")?;
-    let input = clipboard.get_text().context("剪贴板空")?;
-    println!("🚀 正在处理剪贴板数据...");
-    let output_bytes = ENGINE.mask_line(input.as_bytes());
-    let output_text = String::from_utf8_lossy(&output_bytes).into_owned();
-    clipboard.set_text(output_text).context("回写失败")?;
-    println!("✅ 脱敏成功！");
-    Ok(())
-}
-
-/// 文件模式：三阶段保序流水线 (Mmap -> Rayon -> BTreeMap -> Writer)
-fn handle_file_pipeline_ordered(input_path: PathBuf, output_path: Option<PathBuf>) -> Result<()> {
-    let global_start = Instant::now();
-    let file = File::open(&input_path)?;
-    let mmap = unsafe { Mmap::map(&file)? };
-    let file_size = mmap.len();
-
-    // 1. 构建跨线程通信通道
-    let (tx, rx) = crossbeam_channel::bounded::<(usize, Vec<u8>)>(rayon::current_num_threads() * 2);
-
-    // 2. 启动 Stage 3: 顺序写入线程
-    let writer_handle = std::thread::spawn(move || -> Result<()> {
-        let writer_target: Box<dyn Write> = if let Some(p) = output_path {
-            Box::new(File::create(p)?)
-        } else {
-            Box::new(io::stdout())
-        };
-        let mut writer = BufWriter::with_capacity(BUFFER_SIZE, writer_target);
-        let mut next_idx = 0;
-        let mut pending_map: BTreeMap<usize, Vec<u8>> = BTreeMap::new();
-
-        while let Ok((idx, data)) = rx.recv() {
-            pending_map.insert(idx, data);
-            while let Some(data) = pending_map.remove(&next_idx) {
-                writer.write_all(&data)?;
-                next_idx += 1;
-            }
-        }
-        writer.flush()?;
-        Ok(())
-    });
-
-    println!("🚀 流水线启动 | 核心数: {} | 文件: {:.2} MB", 
-             rayon::current_num_threads(), file_size as f64 / 1024.0 / 1024.0);
-
-    // 3. Stage 1 & 2: 生产者与并行计算
-    mmap.par_chunks(MACRO_CHUNK_SIZE)
-        .enumerate()
-        .for_each(|(idx, chunk)| {
-            // 预分配内存：原始块大小 + 5% 缓冲区用于存放脱敏标签
-            let mut chunk_output = Vec::with_capacity(chunk.len() + chunk.len() / 20);
-            // 块内按行切割并脱敏
-            for line in chunk.split(|&b| b == b'\n') {
-                if !line.is_empty() {
-                    let masked = ENGINE.mask_line(line);
-                    chunk_output.extend_from_slice(&masked);
-                }
-                chunk_output.push(b'\n'); // 保持行结构
-            }
-            let _ = tx.send((idx, chunk_output));
-        });
-
-    // 4. 关闭通道并等待结束 
-    // 必须手动释放 tx，否则 rx 会死锁
-    drop(tx);
-    writer_handle.join().unwrap()?;
-
-    let total_time = global_start.elapsed();
-    println!("\n--- ⚡ SafeMask v{} 性能报告 ---", env!("CARGO_PKG_VERSION"));
-    println!("⏱️  总执行时间: {:?}", total_time);
-    println!("🚀 极限吞吐量: {:.2} MB/s", (file_size as f64 / 1024.0 / 1024.0) / total_time.as_secs_f64());
-    Ok(())
-}
-
-
-// /// 文件模式：通过 IndexedParallelIterator 保证行顺序
-// #[allow(dead_code)]
-// fn handle_file_ordered(input_path: PathBuf, output_path: Option<PathBuf>) -> Result<()> {
-//     let global_start = Instant::now();
-
-//     // 1. 内存映射输入文件 (读取最快方案)
-//     let file = File::open(&input_path).with_context(|| format!("无法打开输入文件: {:?}", input_path))?;
-//     let mmap = unsafe { Mmap::map(&file)? };
-//     let file_size = mmap.len();
-//     let load_time = global_start.elapsed();
-
-//     println!("🚀 引擎加载成功 | 线程池大小: {} | 文件大小: {:.2} MB", 
-//              rayon::current_num_threads(),
-//              file_size as f64 / 1024.0 / 1024.0);
-
-//     // 2. 并行映射 (Map) + 保序收集 (Collect)
-//     // Rayon 的 collect 会保证最终生成的 Vec 顺序与原始切分顺序完全一致
-//     let processed_results: Vec<String> = mmap
-//         .par_split(|&b| b == b'\n')
-//         .map(|chunk| {
-//             // 将字节切片转换为字符串（零拷贝尝试）
-//             let line = String::from_utf8_lossy(chunk);
-//             // 核心脱敏计算 (CPU 密集型)
-//             ENGINE.mask_line(&line).into_owned()
-//         })
-//         .collect();
-
-//     let process_time = global_start.elapsed() - load_time;
-
-//     // 3. 顺序写入 (Sequential Write)
-//     // 此时已经得到了有序的 Vec<String>，直接顺序写入磁盘
-//     let writer_target: Box<dyn Write> = if let Some(out_p) = output_path {
-//         Box::new(File::create(&out_p)?)
-//     } else {
-//         Box::new(io::stdout())
-//     };
-
-//     let mut writer = BufWriter::with_capacity(1024 * 1024, writer_target);
-//     for line in processed_results {
-//         writeln!(writer, "{}", line)?;
-//     }
-//     writer.flush()?;
-
-//     // 4. 性能报告
-//     let total_time = global_start.elapsed();
-//     let throughput = (file_size as f64 / 1024.0 / 1024.0) / total_time.as_secs_f64();
-
-//     println!("\n--- ⚡ SafeMask 性能分析报告 ---");
-//     println!("📂 IO 读取/映射耗时: {:?}", load_time);
-//     println!("⚙️  并行保序计算耗时: {:?}", process_time);
-//     println!("⏱️  总计运行时间    : {:?}", total_time);
-//     println!("🚀 平均保序吞吐量  : {:.2} MB/s", throughput);
-//     println!("--------------------------------------");
-
-//     Ok(())
-// }
+<file path="Cargo.toml">
+[package]
+name = "SafeMask"
+version = "1.0.0"
+edition = "2024" # 2024最新版语法规范
+authors = ["xiaosheng <xiaosheng.tech@outlook.com>"]
+description = "A high-performance, ordered data masking tool written in Rust."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/AiToByte/SafeMask.git"
+
+[dependencies]
+aho-corasick = "1.1.4"
+anyhow = "1.0.100"
+arboard = "3.6.1"
+clap = { version = "4.5.54", features = ["derive"] }
+memmap2 = "0.9.9"
+once_cell = "1.21.3"
+rayon = "1.11.0"
+regex = "1.12.2"
+serde = {version = "1.0", features = ["derive"]}
+serde_yaml = "0.9"
+walkdir = "2.4" # 用于递归遍历目录
+mimalloc = "0.1" # 引入 mimaloc提升频繁内存分配性能
+crossbeam-channel = "0.5"
+
+# 极致性能优化配置: 当运行 cargo build --release 时生效
+[profile.release]
+opt-level = 3
+lto = true # 启用链接时优化
+codegen-units = 1 # 减少代码生成单元以提高优化效果
+panic = "abort" # 减少二进制文件大小
 </file>
 
 </files>

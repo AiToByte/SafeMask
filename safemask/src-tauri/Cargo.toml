@@ -1,0 +1,47 @@
+[package]
+name = "safemask"
+version = "1.0.0"
+description = "A Tauri App"
+authors = ["you"]
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "safemask_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# 原有核心
+aho-corasick = "1.1.4"
+regex = "1.12.2"
+rayon = "1.11.0"
+memmap2 = "0.9.9"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+walkdir = "2.4"
+mimalloc = "0.1"
+once_cell = "1.21.3"
+anyhow = "1.0"
+arboard = "3.6.1"
+crossbeam-channel = "0.5"
+# 方案一：原生事件驱动剪贴板监听
+clipboard-master = "4.0.0"
+
+# 方案二：全局热键支持 (Tauri v2 官方插件)
+tauri-plugin-global-hotkey = "2.0.0"
+# 用于发送系统通知
+tauri-plugin-notification = "2.0.0"
+
+# Tauri 增强
+tokio = { version = "1", features = ["full"] }
+tauri = { version = "2", features = ["all"] }
+tauri-plugin-opener = "2"
+serde_json = "1"
+

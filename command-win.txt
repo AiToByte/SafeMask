@@ -1,9 +1,0 @@
-$start = Get-Date
-Write-Host "🚀 开始脱敏处理: $start" -ForegroundColor Cyan
-
-./target/release/safemask --mode file --path test_perf.log > output.txt
-
-$end = Get-Date
-$duration = $end - $start
-Write-Host "✅ 处理完成: $end" -ForegroundColor Green
-Write-Host "⏱️ 总共耗时: $($duration.TotalSeconds) 秒" -ForegroundColor Yellow
