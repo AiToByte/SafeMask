@@ -1,5 +1,5 @@
 use clipboard_master::{ClipboardHandler, CallbackResult};
-use arboard::Clipboard;
+use arboard::{Clipboard, Error as ArboardError}; // 重命名以防冲突
 use std::sync::{Arc, Mutex};
 use crate::engine::MaskEngine;
 use tauri::AppHandle;
@@ -36,11 +36,11 @@ impl ClipboardHandler for GlobalClipboardHandler {
 
                 let mut last = self.last_content.lock().unwrap();
 
-                // 4. 防循环校验
+                // 4. 关键：防震荡机制（防止脱敏写回操作再次触发变动事件）
                 if current_text != *last && !current_text.is_empty() {
                     let masked_bytes = self.engine.mask_line(current_text.as_bytes());
                     let masked_text = String::from_utf8_lossy(&masked_bytes).into_owned();
-
+                    // 5. 只有内容真正发生脱敏替换时才执行操作
                     if masked_text != current_text {
                         *last = masked_text.clone();
                         // 尝试写回脱敏后的文本
@@ -50,26 +50,15 @@ impl ClipboardHandler for GlobalClipboardHandler {
                     }
                 }
             },
-            // 5. 重点：处理非文本错误（图片、文件列表等）
-            Err(e) => {
-                match e {
-                    ClipboardError::ContentNotAvailable => {
-                        // 这种情况通常是用户复制了图片、文件或二进制数据
-                        // 我们保持沉默，不做任何处理，直接跳过
-                    },
-                    _ => {
-                        // 记录其他可能的系统级错误
-                        eprintln!("剪贴板访问异常: {:?}", e);
-                    }
-                }
-            }
+            // 修复：使用正确的 Arboard 错误类型
+            Err(ArboardError::ContentNotAvailable) => {},
+            Err(e) => eprintln!("剪贴板处理异常: {:?}", e),
         }
         CallbackResult::Next
     }
 
     fn on_clipboard_error(&mut self, error: std::io::Error) -> CallbackResult {
-        // 这里的错误通常是底层的系统信号异常
-        eprintln!("OS 剪贴板事件流中断: {}", error);
+        eprintln!("剪贴板监听流异常: {}", error);
         CallbackResult::Next
     }
 }

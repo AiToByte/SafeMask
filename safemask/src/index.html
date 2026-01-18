@@ -1,39 +1,74 @@
 <!doctype html>
-<html lang="en">
-  <head>
+<html lang="zh">
+<head>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" href="styles.css" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri App</title>
-    <script type="module" src="/main.js" defer></script>
-  </head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass { background: rgba(18, 18, 23, 0.8); backdrop-filter: blur(12px); }
+        .drag-active { border-color: #3b82f6 !important; background: rgba(59, 130, 246, 0.05); }
+    </style>
+</head>
+<body class="bg-[#09090b] text-zinc-100 font-sans select-none overflow-hidden h-screen">
+    <div class="flex h-full">
+        <!-- 侧边栏 -->
+        <nav class="w-16 flex flex-col items-center py-8 bg-[#121217] border-r border-zinc-800">
+            <div class="text-blue-500 text-xl mb-12">🛡️</div>
+            <div class="space-y-8 text-zinc-500">
+                <button class="hover:text-white transition-colors">🏠</button>
+                <button class="hover:text-white transition-colors">⚙️</button>
+            </div>
+        </nav>
 
-  <body>
-    <main class="container">
-      <h1>Welcome to Tauri</h1>
+        <!-- 主面板 -->
+        <main class="flex-1 p-10 flex flex-col">
+            <header class="flex justify-between items-end mb-12">
+                <div>
+                    <h1 class="text-3xl font-bold tracking-tight">SafeMask 仪表盘</h1>
+                    <p class="text-zinc-500 mt-2">实时保护您的剪贴板与大规模日志隐私</p>
+                </div>
+                <div class="glass border border-zinc-800 px-5 py-3 rounded-2xl flex items-center gap-4">
+                    <span class="text-sm font-medium">自动监听</span>
+                    <input type="checkbox" id="monitor-switch" checked class="w-5 h-5 accent-blue-500">
+                </div>
+            </header>
 
-      <div class="row">
-        <a href="https://tauri.app" target="_blank">
-          <img src="/assets/tauri.svg" class="logo tauri" alt="Tauri logo" />
-        </a>
-        <a
-          href="https://developer.mozilla.org/en-US/docs/Web/JavaScript"
-          target="_blank"
-        >
-          <img
-            src="/assets/javascript.svg"
-            class="logo vanilla"
-            alt="JavaScript logo"
-          />
-        </a>
-      </div>
-      <p>Click on the Tauri logo to learn more about the framework</p>
+            <!-- 统计卡片区 -->
+            <div class="grid grid-cols-3 gap-6 mb-10">
+                <div class="glass border border-zinc-800 p-6 rounded-3xl">
+                    <p class="text-zinc-500 text-xs uppercase tracking-widest mb-2">引擎状态</p>
+                    <p class="text-green-400 font-mono text-xl">ACTIVE</p>
+                </div>
+                <div class="glass border border-zinc-800 p-6 rounded-3xl">
+                    <p class="text-zinc-500 text-xs uppercase tracking-widest mb-2">保序流水线</p>
+                    <p class="font-mono text-xl text-blue-400">ORDERED</p>
+                </div>
+                <div class="glass border border-zinc-800 p-6 rounded-3xl">
+                    <p class="text-zinc-500 text-xs uppercase tracking-widest mb-2">全局热键</p>
+                    <p class="font-mono text-sm text-zinc-300">ALT + SHIFT + D</p>
+                </div>
+            </div>
 
-      <form class="row" id="greet-form">
-        <input id="greet-input" placeholder="Enter a name..." />
-        <button type="submit">Greet</button>
-      </form>
-      <p id="greet-msg"></p>
-    </main>
-  </body>
+            <!-- 文件处理区 -->
+            <div id="drop-zone" class="flex-1 border-2 border-dashed border-zinc-800 rounded-[2rem] flex flex-col items-center justify-center transition-all">
+                <div id="idle-view" class="text-center">
+                    <div class="text-4xl mb-4 text-zinc-700">📂</div>
+                    <p class="text-zinc-400">将日志文件拖拽至此进行极致性能脱敏</p>
+                    <p class="text-zinc-600 text-xs mt-2">支持多 GB 级文件且保证行序一致</p>
+                </div>
+
+                <!-- 进度显示 -->
+                <div id="progress-view" class="hidden w-2/3">
+                    <div class="flex justify-between mb-2 text-sm">
+                        <span id="progress-text">处理中...</span>
+                        <span id="progress-percent">0%</span>
+                    </div>
+                    <div class="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="bg-blue-500 h-full w-0 transition-all duration-300"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script type="module" src="/main.js"></script>
+</body>
 </html>

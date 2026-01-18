@@ -1,32 +1,7 @@
-[package]
-name = "SafeMask"
-version = "1.0.0"
-edition = "2024" # 2024最新版语法规范
-authors = ["xiaosheng <xiaosheng.tech@outlook.com>"]
-description = "A high-performance, ordered data masking tool written in Rust."
-license = "MIT"
-readme = "README.md"
-repository = "https://github.com/AiToByte/SafeMask.git"
-
-[dependencies]
-aho-corasick = "1.1.4"
-anyhow = "1.0.100"
-arboard = "3.6.1"
-clap = { version = "4.5.54", features = ["derive"] }
-memmap2 = "0.9.9"
-once_cell = "1.21.3"
-rayon = "1.11.0"
-regex = "1.12.2"
-serde = {version = "1.0", features = ["derive"]}
-serde_yaml = "0.9"
-walkdir = "2.4" # 用于递归遍历目录
-mimalloc = "0.1" # 引入 mimaloc提升频繁内存分配性能
-crossbeam-channel = "0.5"
-
-# 极致性能优化配置: 当运行 cargo build --release 时生效
-[profile.release]
-opt-level = 3
-lto = true # 启用链接时优化
-codegen-units = 1 # 减少代码生成单元以提高优化效果
-panic = "abort" # 减少二进制文件大小
-
+[workspace]
+# 指定工作区成员，包括你的桌面版项目
+members = [
+    "safemask/src-tauri",
+]
+# 使用最新的解析器
+resolver = "2"
