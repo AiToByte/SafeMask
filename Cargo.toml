@@ -1,7 +1,7 @@
 [workspace]
 # 指定工作区成员，包括你的桌面版项目
 members = [
-    "safemask/src-tauri",
+    "src-tauri",
 ]
 # 使用最新的解析器
 resolver = "2"
