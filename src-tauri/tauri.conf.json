@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
-    "devUrl": "http://localhost:5173",
+    "devUrl": "http://127.0.0.1:5173",
     "frontendDist": "../dist"
   },
   "app": {
@@ -42,15 +42,6 @@
   },
   "plugins": {
     "opener": {
-      "default": true
-    },
-    "dialog": {
-      "default": true
-    },
-    "notification": {
-      "default": true
-    },
-    "global-shortcut": {
       "default": true
     }
   }
