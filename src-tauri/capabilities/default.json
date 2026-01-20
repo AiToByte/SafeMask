@@ -5,6 +5,12 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default"
+    "opener:default",
+    "dialog:allow-open",
+    "notification:allow-notify",
+    "global-shortcut:allow-is-registered",
+    "global-shortcut:allow-register",
+    "core:event:allow-listen",
+    "core:event:allow-emit"
   ]
 }

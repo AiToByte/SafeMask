@@ -12,7 +12,7 @@ export const useAppStore = defineStore('app', () => {
   // 初始化统计
   const fetchStats = async () => {
     const stats = await MaskAPI.getStats();
-    ruleCount.ref = stats.rule_count;
+    ruleCount.value = stats.rule_count;
   };
 
   // 切换监控
