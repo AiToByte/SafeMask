@@ -16,7 +16,7 @@ use crate::state::{AppState};
 use crate::clipboard::GlobalClipboardHandler;
 use crate::engine::MaskEngine;
 use tauri::{ 
-    menu::{Menu, MenuItem}
+    menu::{MenuBuilder, MenuItemBuilder},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
     Emitter, WindowEvent
 };
