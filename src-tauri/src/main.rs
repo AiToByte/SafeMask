@@ -15,7 +15,7 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, Modifiers, Code,
 use crate::state::{AppState};
 use crate::clipboard::GlobalClipboardHandler;
 use crate::engine::MaskEngine;
-use tauri::{ 
+use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
     Emitter, WindowEvent
@@ -58,41 +58,37 @@ fn main() {
         ])
         .setup(move |app| {
             
-             // 1. 创建托盘菜单
-            let quit_i = MenuItem::with_id(app, "quit", "退出 SafeMask", true, None::<&str>)?;
-            let show_i = MenuItem::with_id(app, "show", "显示主界面", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
+           // 1. 创建托盘菜单
+    let quit_i = MenuItemBuilder::with_id("quit", "退出 SafeMask").build(app)?;
+    let show_i = MenuItemBuilder::with_id("show", "显示主界面").build(app)?;
+    let menu = MenuBuilder::new(app).items(&[&show_i, &quit_i]).build()?;
 
-            // 2. 初始化托盘图标
-            let _tray = TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone()) // 使用默认图标
-                .menu(&menu)
-                .menu_on_left_click(false) // 左键通常用来显示窗口，右键显式菜单
-                .on_menu_event(|app, event| {
-                    match event.id.as_ref() {
-                        "quit" => {
-                            app.exit(0);
-                        }
-                        "show" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
-                        }
-                        _ => {}
-                    }
-                })
-                .on_tray_icon_event(|tray, event| {
-                     // 逻辑：左键点击托盘图标时还原窗口
-                    if let TrayIconEvent::Click { button: tauri::tray::MouseButton::Left, .. } = event {
-                        let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    }
-                })
-                .build(app)?;
+    // 2. 初始化托盘图标
+    let _tray = TrayIconBuilder::new()
+        .icon(app.default_window_icon().unwrap().clone()) // 使用默认图标
+        .menu(&menu)
+        .menu_on_left_click(false) // 左键通常用来显示窗口，右键显式菜单
+        .on_menu_event(|app, event| match event.id().as_ref() {
+            "quit" => { app.exit(0); }
+            "show" => {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            // 逻辑：左键点击托盘图标时还原窗口
+            if let TrayIconEvent::Click { button: MouseButton::Left, .. } = event {
+                let app = tray.app_handle();
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+        })
+        .build(app)?;
 
 
             let handle = app.handle().clone();
