@@ -4,6 +4,8 @@ use std::fs::File;
 use tauri::{AppHandle, Emitter};
 use crate::state::{ProgressPayload, ENGINE, MACRO_CHUNK_SIZE, BUFFER_SIZE};
 use rayon::prelude::*;
+use std::time::{Instant, Duration};
+
 
 pub struct FileProcessor;
 
@@ -28,20 +30,51 @@ impl FileProcessor {
             let mut next_idx = 0;
             let mut pending_map = BTreeMap::new();
             let mut processed_count = 0;
+            
+             // 🚀 性能优化：进度节流变量
+            let mut last_emit_time = Instant::now();
+            let mut last_percentage = -1.0;
 
-            while let Ok((idx, data)) = rx.recv() {
+        //     while let Ok((idx, data)) = rx.recv() {
+        //         pending_map.insert(idx, data);
+        //         while let Some(data) = pending_map.remove(&next_idx) {
+        //             writer.write_all(&data).map_err(|e| e.to_string())?;
+        //             next_idx += 1;
+        //             processed_count += 1;
+                    
+        //             let _ = app_handle.emit("file-progress", ProgressPayload {
+        //                 percentage: (processed_count as f32 / total_chunks as f32) * 100.0,
+        //                 processed_mb: (processed_count * MACRO_CHUNK_SIZE) as f64 / 1024.0 / 1024.0,
+        //             });
+        //         }
+        //     }
+        //     writer.flush().map_err(|e| e.to_string())?;
+        //     Ok(())
+        // });
+
+        while let Ok((idx, data)) = rx.recv() {
                 pending_map.insert(idx, data);
                 while let Some(data) = pending_map.remove(&next_idx) {
                     writer.write_all(&data).map_err(|e| e.to_string())?;
                     next_idx += 1;
                     processed_count += 1;
                     
-                    let _ = app_handle.emit("file-progress", ProgressPayload {
-                        percentage: (processed_count as f32 / total_chunks as f32) * 100.0,
-                        processed_mb: (processed_count * MACRO_CHUNK_SIZE) as f64 / 1024.0 / 1024.0,
-                    });
+                    let percentage = (processed_count as f32 / total_chunks as f32) * 100.0;
+                    
+                    // 🚀 核心优化逻辑：
+                    // 只有当时间超过 100ms 且进度确实有显著变化时才发射事件
+                    if last_emit_time.elapsed() > Duration::from_millis(100) && (percentage - last_percentage).abs() >= 2.0 {
+                        let _ = app_handle.emit("file-progress", ProgressPayload {
+                            percentage,
+                            processed_mb: (processed_count * MACRO_CHUNK_SIZE) as f64 / 1024.0 / 1024.0,
+                        });
+                        last_emit_time = Instant::now();
+                        last_percentage = percentage;
+                    }
                 }
             }
+            // 确保最后完成时发送 100%
+            let _ = app_handle.emit("file-progress", ProgressPayload { percentage: 100.0, processed_mb: file_size as f64 / 1024.0 / 1024.0 });
             writer.flush().map_err(|e| e.to_string())?;
             Ok(())
         });
