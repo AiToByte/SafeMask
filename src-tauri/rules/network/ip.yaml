@@ -1,5 +1,15 @@
 group: "SENSITIVE_INFO"
 rules:
+  - name: "IPv6_With_Port"
+    pattern: '\[(?:[0-9a-fA-F:]{2,40})\]:\d{1,5}'
+    mask: "<IPv6_Port>"
+    priority: 90
+    
+  - name: "IPv4_With_Port"
+    pattern: '\b(?:(?:25[0-5]|2[0-4]\d|1?\d{1,2})\.){3}(?:25[0-5]|2[0-4]\d|1?\d{1,2}):\d{1,5}\b'
+    mask: "<IPv4_Port>"
+    priority: 80 # 设置为最高优先级
+
   - name: "IPv4_Address"
     # 兼顾准确性与性能的写法
     pattern: '\b(?:(?:25[0-5]|2[0-4]\d|1?\d{1,2})\.){3}(?:25[0-5]|2[0-4]\d|1?\d{1,2})\b'
