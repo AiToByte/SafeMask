@@ -10,13 +10,16 @@ mod processor;
 
 use std::sync::{Arc, Mutex};
 // 修复核心：显式导入 Emitter Trait
-use tauri::{Emitter}; 
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, Modifiers, Code, Builder as ShortcutBuilder};
 
 use crate::state::{AppState};
 use crate::clipboard::GlobalClipboardHandler;
 use crate::engine::MaskEngine;
-use tauri::{WindowEvent};
+use tauri::{ 
+    menu::{Menu, MenuItem}
+    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
+    Emitter, WindowEvent
+};
 
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
@@ -28,6 +31,9 @@ fn main() {
 
     // 2. 启动并构建应用
     tauri::Builder::default()
+        // 🚀 新增：使用 tauri-plugin-dialog
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .plugin(ShortcutBuilder::new()
             .with_handler(move |app, s, _event| {
                 // 热键逻辑：Alt + Shift + S
@@ -51,6 +57,44 @@ fn main() {
             commands::get_rules_stats
         ])
         .setup(move |app| {
+            
+             // 1. 创建托盘菜单
+            let quit_i = MenuItem::with_id(app, "quit", "退出 SafeMask", true, None::<&str>)?;
+            let show_i = MenuItem::with_id(app, "show", "显示主界面", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
+
+            // 2. 初始化托盘图标
+            let _tray = TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone()) // 使用默认图标
+                .menu(&menu)
+                .menu_on_left_click(false) // 左键通常用来显示窗口，右键显式菜单
+                .on_menu_event(|app, event| {
+                    match event.id.as_ref() {
+                        "quit" => {
+                            app.exit(0);
+                        }
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                     // 逻辑：左键点击托盘图标时还原窗口
+                    if let TrayIconEvent::Click { button: tauri::tray::MouseButton::Left, .. } = event {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+
+
             let handle = app.handle().clone();
             
             // 方案一：启动系统级原生监听线程
@@ -78,10 +122,14 @@ fn main() {
         // 🚀 新增：拦截窗口关闭按钮
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
-                // 阻止默认的关闭行为，将控制权交给前端 Vue
+                // 1. 阻止立即关闭
                 api.prevent_close();
-                // 通知前端显示确认弹窗
-                let _ = window.emit("request-close", ());
+                
+                // 2. 打印调试信息（如果你在终端运行，能看到这个说明 Rust 拦截成功了）
+                println!("⚠️ 检测到关闭请求，正在通知前端...");
+
+                // 3. 使用全局发射（emit）确保所有监听者都能收到，payload 传一个简单的字符串
+                let _ = window.emit("request-close", "OPEN_MODAL");
             }
         })
         .run(tauri::generate_context!())

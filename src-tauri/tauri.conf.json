@@ -41,9 +41,5 @@
     "publisher": "AiToByte"
   },
   "plugins": {
-    "opener": { "default": true },
-    "dialog": { "default": true },
-    "notification": { "default": true },
-    "global-shortcut": { "default": true }
   }
 }

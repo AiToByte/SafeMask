@@ -7,6 +7,7 @@ import { useAppStore } from './stores/useAppStore';
 import Sidebar from './components/Sidebar.vue';
 import StatCard from './components/StatCard.vue';
 import FileProcessor from './components/FileProcessor.vue';
+import ExitConfirm from './components/ExitConfirm.vue';
 
 const store = useAppStore();
 

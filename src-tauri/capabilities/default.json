@@ -12,6 +12,16 @@
     "global-shortcut:allow-is-registered",
     "global-shortcut:allow-register",
     "core:event:allow-listen",
-    "core:event:allow-emit"
+    "core:event:allow-emit",
+    "core:window:allow-hide",
+    "core:window:allow-destroy",
+    {
+      "identifier": "core:event:allow-listen",
+      "allow": [{ "event": "request-close" }] 
+    },
+    {
+      "identifier": "core:event:allow-emit",
+      "allow": [{ "event": "request-close" }]
+    }
   ]
 }

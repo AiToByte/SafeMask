@@ -1,35 +1,55 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { listen } from '@tauri-apps/api/event';
+import { listen, type UnlistenFn} from '@tauri-apps/api/event';
+import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 
 const show = ref(false);
 const remember = ref(false);
 const appWindow = getCurrentWindow();
+let unlisten: UnlistenFn;
 
 const handleAction = async (action: 'quit' | 'tray') => {
-  if (remember.value) {
-    localStorage.setItem('close-behavior', action);
-  }
-  
-  if (action === 'quit') {
-    await appWindow.destroy(); // 真正关闭
-  } else {
-    show.value = false;
-    await appWindow.hide(); // 隐藏到后台
-  }
+    if (remember.value) {
+        localStorage.setItem('close-behavior', action);
+    }
+    
+    if (action === 'quit') {
+        await appWindow.destroy(); // 真正关闭
+    } else {
+        show.value = false;
+        await appWindow.hide(); // 隐藏到后台
+    }
+
+    // 发送系统通知告知用户位置
+    let permission = await isPermissionGranted();
+    if (!permission) {
+        permission = await requestPermission() === 'granted';
+    }
+    if (permission) {
+        sendNotification({ title: 'SafeMask', body: '程序已最小化到系统托盘，继续为您守护隐私。' });
+    }
 };
 
 onMounted(async () => {
   // 监听 Rust 发来的关闭请求
-  await listen('request-close', () => {
+  unlisten = await listen('request-close', (event) => {
+    console.log("📥 收到来自 Rust 的关闭信号:", event.payload);
+    // 💡 暴力调试：如果这行代码运行了，说明通信是通的
+    window.alert("收到关闭请求！"); 
+    // 检查本地存储的用户偏好
     const savedAction = localStorage.getItem('close-behavior');
+
     if (savedAction === 'quit' || savedAction === 'tray') {
       handleAction(savedAction as 'quit' | 'tray');
     } else {
       show.value = true;
     }
   });
+});
+
+onUnmounted(() => {
+  if (unlisten) unlisten();
 });
 </script>
 
@@ -61,9 +81,9 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.scale-in-center { animation: scale-in-center 0.2s cubic-bezier(0.250, 0.460, 0.450, 0.940) both; }
-@keyframes scale-in-center {
-  0% { transform: scale(0.9); opacity: 0; }
+.scale-up { animation: scaleUp 0.2s ease-out forwards; }
+@keyframes scaleUp {
+  0% { transform: scale(0.95); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
 </style>
