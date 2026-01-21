@@ -44,6 +44,7 @@ The content is organized as follows:
 Cargo.toml
 LICENSE
 package.json
+postcss.config.js
 README.md
 src-tauri/build.rs
 src-tauri/capabilities/default.json
@@ -93,151 +94,25 @@ src/READMD.md
 src/services/api.ts
 src/stores/useAppStore.ts
 src/style.css
+tailwind.config.js
+vite.config.ts
 </directory_structure>
 
 <files>
 This section contains the contents of the repository's files.
 
-<file path="src-tauri/tauri.conf.json.md">
-由于你已经将前端升级到了 **Vue 3 + Vite** 架构，原有的 `tauri.conf.json` 需要针对 **开发服务器地址**、**构建产物路径** 以及 **Tauri v2 的安全权限体系** 进行大幅度优化。
-
-以下是为你优化后的完整版本，它能够完美适配 Vite 的开发流，并提升了桌面的交互质感。
-
-### 优化后的 `safemask/src-tauri/tauri.conf.json`
-
-```json
-{
-  "$schema": "https://schema.tauri.app/config/2",
-  "productName": "SafeMask",
-  "version": "1.0.0",
-  "identifier": "com.aitobyte.safemask",
-  "build": {
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
-    "devUrl": "http://localhost:5173",
-    "frontendDist": "../dist"
+<file path="postcss.config.js">
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
   },
-  "app": {
-    "withGlobalTauri": true,
-    "windows": [
-      {
-        "title": "SafeMask - 极致性能隐私脱敏控制台",
-        "width": 1024,
-        "height": 720,
-        "minWidth": 800,
-        "minHeight": 600,
-        "resizable": true,
-        "fullscreen": false,
-        "center": true,
-        "theme": "Dark"
-      }
-    ],
-    "security": {
-      "csp": null
-    }
-  },
-  "bundle": {
-    "active": true,
-    "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ],
-    "publisher": "AiToByte"
-  },
-  "plugins": {
-    "opener": {
-      "default": true
-    },
-    "dialog": {
-      "default": true
-    },
-    "notification": {
-      "default": true
-    },
-    "global-shortcut": {
-      "default": true
-    }
-  }
 }
-```
-
----
-
-### 核心改进说明（针对 Vue 3 升级）：
-
-1.  **构建流程对齐 (`build` 节点)**：
-    *   **`beforeDevCommand`**: 设置为 `npm run dev`。当你运行 `cargo tauri dev` 时，它会自动帮你启动 Vite 开发服务器。
-    *   **`devUrl`**: 设置为 `http://localhost:5173`。这是 Vite 默认的预览地址，Tauri 会将 Webview 挂载到该地址。
-    *   **`frontendDist`**: 修改为 `../dist`。Vue 3 打包后的默认输出目录是 `dist` 而非原来的 `src`。
-
-2.  **窗体质感提升 (`windows` 节点)**：
-    *   **尺寸调整**: 将默认尺寸增大到 `1024x720`，更适合展示仪表盘和复杂的统计图表。
-    *   **限制最小尺寸**: 设置 `minWidth` 和 `minHeight`，防止用户缩放窗体过小导致 Vue 组件布局崩坏。
-    *   **主题锁定**: 强制 `Dark` 主题，确保界面始终符合你设计的深色工业风。
-
-3.  **插件显式声明 (`plugins` 节点)**：
-    *   Tauri v2 要求在配置文件中开启对应的插件。我已经帮你加上了 `dialog`（文件选择）、`notification`（脱敏成功通知）和 `global-shortcut`（热键功能）。
-
----
-
-### ⚠️ 必须配套执行的操作
-
-在 Tauri v2 中，仅仅修改 `tauri.conf.json` 还是不够的，你还需要确保**权限能力（Capabilities）**文件已同步更新。
-
-请检查 `safemask/src-tauri/capabilities/default.json`，确保包含以下权限，否则 Vue 前端无法调用 Rust 命令：
-
-```json
-{
-  "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "default",
-  "description": "Capability for the main window",
-  "windows": ["main"],
-  "permissions": [
-    "core:default",
-    "opener:default",
-    "dialog:allow-open",
-    "notification:allow-notify",
-    "global-shortcut:allow-is-registered",
-    "global-shortcut:allow-register",
-    "core:event:allow-listen",
-    "core:event:allow-emit"
-  ]
-}
-```
-
-### 接下来建议执行：
-1.  **清理缓存**：`cargo clean`（特别是你修改了 `identifier` 后）。
-2.  **正式运行**：`npx tauri dev`。
-
-现在的配置已经完全工程化，足以支撑你后续增加的所有 Vue 3 功能。
 </file>
 
 <file path="src-tauri/build.rs">
 fn main() {
     tauri_build::build()
-}
-</file>
-
-<file path="src-tauri/capabilities/default.json">
-{
-  "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "default",
-  "description": "Capability for the main window",
-  "windows": ["main"],
-  "permissions": [
-    "core:default",
-    "opener:default",
-    "dialog:allow-open",
-    "notification:allow-notify",
-    "global-shortcut:allow-is-registered",
-    "global-shortcut:allow-register",
-    "core:event:allow-listen",
-    "core:event:allow-emit"
-  ]
 }
 </file>
 
@@ -826,7 +701,14 @@ pub struct ProgressPayload {
 }
 </file>
 
-<file path="src-tauri/tauri.conf.json">
+<file path="src-tauri/tauri.conf.json.md">
+由于你已经将前端升级到了 **Vue 3 + Vite** 架构，原有的 `tauri.conf.json` 需要针对 **开发服务器地址**、**构建产物路径** 以及 **Tauri v2 的安全权限体系** 进行大幅度优化。
+
+以下是为你优化后的完整版本，它能够完美适配 Vite 的开发流，并提升了桌面的交互质感。
+
+### 优化后的 `safemask/src-tauri/tauri.conf.json`
+
+```json
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "SafeMask",
@@ -884,6 +766,57 @@ pub struct ProgressPayload {
     }
   }
 }
+```
+
+---
+
+### 核心改进说明（针对 Vue 3 升级）：
+
+1.  **构建流程对齐 (`build` 节点)**：
+    *   **`beforeDevCommand`**: 设置为 `npm run dev`。当你运行 `cargo tauri dev` 时，它会自动帮你启动 Vite 开发服务器。
+    *   **`devUrl`**: 设置为 `http://localhost:5173`。这是 Vite 默认的预览地址，Tauri 会将 Webview 挂载到该地址。
+    *   **`frontendDist`**: 修改为 `../dist`。Vue 3 打包后的默认输出目录是 `dist` 而非原来的 `src`。
+
+2.  **窗体质感提升 (`windows` 节点)**：
+    *   **尺寸调整**: 将默认尺寸增大到 `1024x720`，更适合展示仪表盘和复杂的统计图表。
+    *   **限制最小尺寸**: 设置 `minWidth` 和 `minHeight`，防止用户缩放窗体过小导致 Vue 组件布局崩坏。
+    *   **主题锁定**: 强制 `Dark` 主题，确保界面始终符合你设计的深色工业风。
+
+3.  **插件显式声明 (`plugins` 节点)**：
+    *   Tauri v2 要求在配置文件中开启对应的插件。我已经帮你加上了 `dialog`（文件选择）、`notification`（脱敏成功通知）和 `global-shortcut`（热键功能）。
+
+---
+
+### ⚠️ 必须配套执行的操作
+
+在 Tauri v2 中，仅仅修改 `tauri.conf.json` 还是不够的，你还需要确保**权限能力（Capabilities）**文件已同步更新。
+
+请检查 `safemask/src-tauri/capabilities/default.json`，确保包含以下权限，否则 Vue 前端无法调用 Rust 命令：
+
+```json
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "dialog:allow-open",
+    "notification:allow-notify",
+    "global-shortcut:allow-is-registered",
+    "global-shortcut:allow-register",
+    "core:event:allow-listen",
+    "core:event:allow-emit"
+  ]
+}
+```
+
+### 接下来建议执行：
+1.  **清理缓存**：`cargo clean`（特别是你修改了 `identifier` 后）。
+2.  **正式运行**：`npx tauri dev`。
+
+现在的配置已经完全工程化，足以支撑你后续增加的所有 Vue 3 功能。
 </file>
 
 <file path="src/App.vue">
@@ -1133,10 +1066,6 @@ defineProps<Props>();
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
 </style>
-</file>
-
-<file path="src/main.ts">
-
 </file>
 
 <file path="src/READMD.md">
@@ -1449,39 +1378,55 @@ export const MaskAPI = {
 };
 </file>
 
-<file path="src/stores/useAppStore.ts">
-import { defineStore } from 'pinia';
-import { ref } from 'vue';
-import { MaskAPI } from '../services/api';
-
-export const useAppStore = defineStore('app', () => {
-  const isMonitorOn = ref(true);
-  const ruleCount = ref(0);
-  const isProcessing = ref(false);
-  const progress = ref(0);
-  const currentFileName = ref("");
-
-  // 初始化统计
-  const fetchStats = async () => {
-    const stats = await MaskAPI.getStats();
-    ruleCount.value = stats.rule_count;
-  };
-
-  // 切换监控
-  const toggleMonitor = async () => {
-    isMonitorOn.value = !isMonitorOn.value;
-    await MaskAPI.toggleMonitor(isMonitorOn.value);
-  };
-
-  return { 
-    isMonitorOn, ruleCount, isProcessing, 
-    progress, currentFileName, fetchStats, toggleMonitor 
-  };
-});
-</file>
-
 <file path="src/style.css">
 
+</file>
+
+<file path="tailwind.config.js">
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{vue,js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        // 定义符合隐私工具气质的深色系
+        background: "#09090b",
+        secondary: "#121217",
+        accent: "#3b82f6",
+      },
+      animation: {
+        // 增加一个微弱的呼吸灯动画，用于“引擎活跃”状态
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      }
+    },
+  },
+  plugins: [],
+}
+</file>
+
+<file path="vite.config.ts">
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
+
+// https://vitejs.dev/config/
+export default defineConfig(async () => ({
+  plugins: [vue()],
+
+  // Vite 选项定制，优化 Tauri 开发体验
+  clearScreen: false,
+  server: {
+    host: "127.0.0.1", // 强制使用 IPv4 地址
+    port: 5173,
+    strictPort: true,
+    watch: {
+      // 告诉 Vite 忽略监听 src-tauri 文件夹，避免循环触发重绘
+      ignored: ["**/src-tauri/**"],
+    },
+  },
+}));
 </file>
 
 <file path="LICENSE">
@@ -1508,31 +1453,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 </file>
 
-<file path="package.json">
+<file path="src-tauri/capabilities/default.json">
 {
-  "name": "safemask",
-  "version": "1.0.0",
-  "description": "Enabling every line of data to safely embrace AI.\r After your content is processed by SafeMask, all private information will be anonymized, allowing your information to be safely transmitted and processed on the internet, by AI, etc.",
-  "main": "index.js",
-  "directories": {
-    "test": "test"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "tauri": "tauri"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@tauri-apps/api": "^2.9.1",
-    "@tauri-apps/cli": "^2.9.6"
-  },
-  "dependencies": {
-    "lucide-vue-next": "^0.562.0",
-    "pinia": "^3.0.4",
-    "vue": "^3.5.27"
-  }
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "dialog:allow-open",
+    "notification:allow-notify",
+    "global-shortcut:allow-is-registered",
+    "global-shortcut:allow-register",
+    "core:event:allow-listen",
+    "core:event:allow-emit"
+  ]
 }
 </file>
 
@@ -1668,6 +1604,163 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("Tauri 应用启动失败");
+}
+</file>
+
+<file path="src/main.ts">
+/**
+ * SafeMask Desktop - 前端入口文件
+ * 负责初始化 Vue 3 运行环境、Pinia 状态管理以及全局样式加载
+ */
+
+import { createApp } from "vue";
+import { createPinia } from "pinia";
+
+// 引入全局样式（包含 Tailwind CSS 指令）
+import "./style.css";
+
+// 引入根组件
+import App from "./App.vue";
+
+/**
+ * 启动应用逻辑
+ */
+async function bootstrap() {
+  // 1. 创建 Vue 应用实例
+  const app = createApp(App);
+
+  // 2. 创建并挂载 Pinia 状态管理 (用于跨组件共享脱敏开关、规则数等)
+  const pinia = createPinia();
+  app.use(pinia);
+
+  // 3. 错误处理机制（全局捕获，增强 App 鲁棒性）
+  app.config.errorHandler = (err, instance, info) => {
+    console.error("Vue Global Error:", err);
+    console.info("Error Info:", info);
+    // 此处未来可以集成 Tauri 的日志库，将错误写入本地文件
+  };
+
+  // 4. 挂载到 index.html 中的 #app 节点
+  app.mount("#app");
+
+}
+
+// 启动
+bootstrap();
+</file>
+
+<file path="src/stores/useAppStore.ts">
+import { defineStore } from 'pinia';
+import { ref } from 'vue';
+import { MaskAPI } from '../services/api';
+
+export const useAppStore = defineStore('app', () => {
+  const isMonitorOn = ref(true);
+  const ruleCount = ref(0);
+  const isProcessing = ref(false);
+  const progress = ref(0);
+  const currentFileName = ref("");
+
+  // 初始化统计
+  const fetchStats = async () => {
+    const stats = await MaskAPI.getStats();
+    ruleCount.value = stats.rule_count;
+  };
+
+  // 切换监控
+  const toggleMonitor = async () => {
+    isMonitorOn.value = !isMonitorOn.value;
+    await MaskAPI.toggleMonitor(isMonitorOn.value);
+  };
+
+  return { 
+    isMonitorOn, ruleCount, isProcessing, 
+    progress, currentFileName, fetchStats, toggleMonitor 
+  };
+});
+</file>
+
+<file path="package.json">
+{
+  "name": "safemask",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.1.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
+    "@tauri-apps/plugin-notification": "^2.0.0",
+    "@tauri-apps/plugin-opener": "^2.0.0",
+    "lucide-vue-next": "^0.471.0",
+    "pinia": "^2.3.1",
+    "vue": "^3.5.27"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "vue-tsc": "^2.2.0"
+  }
+}
+</file>
+
+<file path="src-tauri/tauri.conf.json">
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "SafeMask",
+  "version": "1.0.0",
+  "identifier": "com.aitobyte.safemask",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://127.0.0.1:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "SafeMask - 极致性能隐私脱敏控制台",
+        "width": 1024,
+        "height": 720,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "theme": "Dark"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "publisher": "AiToByte"
+  },
+  "plugins": {
+    "opener": {
+      "default": true
+    }
+  }
 }
 </file>
 

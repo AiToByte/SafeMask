@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/assets/tauri.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SafeMask - 极致性能脱敏控制台</title>
+    <!-- 这里的路径必须指向 src/main.ts -->
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+  <body>
+    <!-- Vue 挂载点 -->
+    <div id="app"></div>
+    
+    <style>
+      /* 防止页面加载前的白屏闪烁 */
+      html, body {
+        background-color: #09090b;
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+  </body>
+</html>
