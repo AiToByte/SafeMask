@@ -117,6 +117,8 @@ onUnmounted(() => {
         </footer>
       </div>
     </main>
+     <!-- 退出确认组件 -->
+    <ExitConfirm />
   </div>
 </template>
 

@@ -4,7 +4,7 @@ use crate::engine::MaskEngine;
 use crate::config::RuleManager;
 
 // 常量配置抽取
-pub const MACRO_CHUNK_SIZE: usize = 4 * 1024 * 1024; 
+pub const MACRO_CHUNK_SIZE: usize = 16 * 1024 * 1024; 
 pub const BUFFER_SIZE: usize = 8 * 1024 * 1024;    
 
 /// 全局静态引擎单例

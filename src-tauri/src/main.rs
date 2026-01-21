@@ -16,6 +16,7 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, Modifiers, Code,
 use crate::state::{AppState};
 use crate::clipboard::GlobalClipboardHandler;
 use crate::engine::MaskEngine;
+use tauri::{WindowEvent};
 
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
@@ -73,6 +74,15 @@ fn main() {
             app.global_shortcut().register(shortcut)?;
 
             Ok(())
+        })
+        // 🚀 新增：拦截窗口关闭按钮
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                // 阻止默认的关闭行为，将控制权交给前端 Vue
+                api.prevent_close();
+                // 通知前端显示确认弹窗
+                let _ = window.emit("request-close", ());
+            }
         })
         .run(tauri::generate_context!())
         .expect("Tauri 应用启动失败");
