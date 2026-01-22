@@ -15,9 +15,7 @@
     "core:event:allow-emit",
     "core:window:allow-hide",
     "core:window:allow-destroy",
-    "tray:allow-create", 
-    "tray:allow-set-menu",
-    "tray:allow-on-event",
+    "tray:default",
     {
       "identifier": "core:event:allow-listen",
       "allow": [{ "event": "request-close" }] 
