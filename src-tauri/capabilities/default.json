@@ -15,7 +15,11 @@
     "core:event:allow-emit",
     "core:window:allow-hide",
     "core:window:allow-destroy",
-    "tray:default",
+    "core:tray:allow-new",
+    "core:tray:allow-set-icon",
+    "core:tray:allow-set-menu",
+    "core:tray:allow-set-show-menu-on-left-click",
+    "core:tray:allow-set-visible",
     {
       "identifier": "core:event:allow-listen",
       "allow": [{ "event": "request-close" }] 

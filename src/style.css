@@ -128,3 +128,20 @@ button:active {
   right: 2rem;
   z-index: 9999;
 }
+
+/* 🚀 核心修复：消除所有交互元素的默认焦点框 */
+*:focus {
+    outline: none !important;
+}
+
+/* 针对按钮点击时的特殊处理，防止系统级别的蓝色/白色高亮 */
+button {
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+}
+
+/* 侧边栏按钮基础样式优化 */
+.sidebar-item {
+    @apply w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 text-zinc-500 relative border border-transparent;
+    /* 预设透明边框，防止切换时产生 1px 的位置跳动 */
+}

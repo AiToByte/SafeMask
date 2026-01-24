@@ -18,7 +18,7 @@ use crate::engine::MaskEngine;
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
-    Emitter, WindowEvent
+    Emitter, Manager, WindowEvent
 };
 
 #[global_allocator]
@@ -67,7 +67,7 @@ fn main() {
     let _tray = TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone()) // 使用默认图标
         .menu(&menu)
-        .menu_on_left_click(false) // 左键通常用来显示窗口，右键显式菜单
+        .show_menu_on_left_click(false) // 左键通常用来显示窗口，右键显式菜单A
         .on_menu_event(|app, event| match event.id().as_ref() {
             "quit" => { app.exit(0); }
             "show" => {

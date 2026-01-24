@@ -2,43 +2,28 @@
 interface Props {
   title: string;
   value: string | number;
-  color?: string; // 可选的文字颜色类名
+  color?: string;
+  unit?: string;
 }
-
 defineProps<Props>();
 </script>
 
 <template>
-  <div class="glass p-8 rounded-[2.5rem] relative overflow-hidden group transition-all duration-500 hover:border-zinc-700">
-    <!-- 背景微光特效 -->
+  <div class="glass p-8 rounded-[2.5rem] relative overflow-hidden group transition-all duration-500 hover:border-zinc-700/50 border border-white/5">
     <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-colors"></div>
     
-    <p class="text-zinc-500 text-xs uppercase tracking-[0.2em] mb-3 font-semibold">
-      {{ title }}
-    </p>
+    <div class="flex justify-between items-start mb-3">
+      <p class="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-bold">
+        {{ title }}
+      </p>
+      <div v-if="color" class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
+    </div>
     
     <div class="flex items-baseline gap-2">
-      <p 
-        class="text-4xl font-bold font-mono tracking-tighter transition-all"
-        :class="color || 'text-zinc-100'"
-      >
+      <p class="text-4xl font-bold font-mono tracking-tighter" :class="color || 'text-zinc-100'">
         {{ value }}
       </p>
-      
-      <!-- 如果是 ACTIVE 状态，增加一个小呼吸灯 -->
-      <span v-if="value === 'HYBRID'" class="flex h-2 w-2 relative">
-        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-        <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-      </span>
+      <span v-if="unit" class="text-[10px] text-zinc-600 font-mono font-bold">{{ unit }}</span>
     </div>
   </div>
 </template>
-
-<style scoped>
-.glass {
-  background: rgba(18, 18, 23, 0.6);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-}
-</style>
