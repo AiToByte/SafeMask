@@ -45,6 +45,22 @@ impl ClipboardHandler for GlobalClipboardHandler {
                         *last = masked_text.clone();
                         // 尝试写回脱敏后的文本
                         if let Ok(_) = ctx.set_text(masked_text) {
+                            // 🚀 生成历史记录
+                            let history_item = MaskHistoryItem {
+                                id: Uuid::new_v4().to_string(),
+                                timestamp: Local::now().format("%H:%M:%S").to_string(),
+                                original: current_text.clone(),
+                                masked: masked_text,
+                            };
+
+                            // 更新状态中的历史记录
+                            let state = self.app_handle.state::<AppState>();
+                            let mut history = state.history.lock().unwrap();
+                            history.insert(0, history_item.clone());
+                            if history.len() > 50 { history.pop(); } // 保持容量
+
+                            // 通知前端有新历史和 Toast
+                            let _ = self.app_handle.emit("new-history", history_item);
                             let _ = self.app_handle.emit("masked-event", "🛡️ 隐私内容已自动脱敏");
                         }
                     }

@@ -13,6 +13,15 @@ pub static ENGINE: Lazy<MaskEngine> = Lazy::new(|| {
     MaskEngine::new(rules)
 });
 
+/// 历史记录项结构
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MaskHistoryItem {
+    pub id: String,
+    pub timestamp: String,
+    pub original: String,
+    pub masked: String,
+}
+
 /// 应用全局状态结构体
 pub struct AppState {
     #[allow(dead_code)]
@@ -20,6 +29,8 @@ pub struct AppState {
     pub is_monitor_on: Arc<Mutex<bool>>,
     #[allow(dead_code)]
     pub last_content: Arc<Mutex<String>>,
+    // 🚀 新增：最近 50 条脱敏历史记录
+    pub history: Arc<Mutex<Vec<MaskHistoryItem>>>,
 }
 
 /// 进度负载结构（用于跨模块序列化）

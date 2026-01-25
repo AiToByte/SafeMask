@@ -36,3 +36,9 @@ pub fn get_rules_stats() -> serde_json::Value {
         "rule_count": rules.len(),
     })
 }
+
+#[tauri::command]
+pub async fn get_mask_history(state: tauri::State<'_, AppState>) -> Result<Vec<MaskHistoryItem>, String> {
+    let history = state.history.lock().unwrap();
+    Ok(history.clone())
+}

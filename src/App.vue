@@ -109,11 +109,12 @@ onUnmounted(() => {
           </div>
           <FileProcessor class="min-h-[320px]" />
         </div>
-
+         <!-- 🚀 历史记录页面 -->
+        <HistoryList v-else-if="store.activeTab === 'rules'" />
         <!-- 页脚备注 -->
         <footer class="text-center pb-4">
           <p class="text-[10px] text-zinc-700 font-mono uppercase tracking-widest">
-            Powered by Rust Engine v0.4.2 · 100% Offline Security
+            Powered by Rust Engine v1.0.0 · 100% Offline Security
           </p>
         </footer>
       </div>

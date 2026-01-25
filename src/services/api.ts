@@ -12,6 +12,12 @@ export const MaskAPI = {
     return await invoke("get_rules_stats");
   },
 
+
+  // 获取历史记录
+  async getHistory(): Promise<any[]> {
+    return await invoke("get_mask_history");
+  },
+
   // 切换监控开关
   async toggleMonitor(enabled: boolean): Promise<void> {
     await invoke("toggle_monitor", { enabled });
