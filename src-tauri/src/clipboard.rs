@@ -2,8 +2,14 @@ use clipboard_master::{ClipboardHandler, CallbackResult};
 use arboard::{Clipboard, Error as ArboardError}; // 重命名以防冲突
 use std::sync::{Arc, Mutex};
 use crate::engine::MaskEngine;
-use tauri::AppHandle;
-use tauri::Emitter; // Tauri v2 
+// 🚀 导入 AppState 和 MaskHistoryItem
+use crate::state::{AppState, MaskHistoryItem}; 
+// 🚀 必须导入 Manager 才能使用 .state() 方法
+use tauri::{AppHandle, Emitter, Manager}; 
+
+// 🚀 必须导入这两个 Trait/Struct
+use chrono::Local;
+use uuid::Uuid;
 
 pub struct GlobalClipboardHandler {
     pub app_handle: AppHandle,
@@ -44,7 +50,7 @@ impl ClipboardHandler for GlobalClipboardHandler {
                     if masked_text != current_text {
                         *last = masked_text.clone();
                         // 尝试写回脱敏后的文本
-                        if let Ok(_) = ctx.set_text(masked_text) {
+                        if let Ok(_) = ctx.set_text(masked_text.clone()) {
                             // 🚀 生成历史记录
                             let history_item = MaskHistoryItem {
                                 id: Uuid::new_v4().to_string(),
@@ -53,15 +59,16 @@ impl ClipboardHandler for GlobalClipboardHandler {
                                 masked: masked_text,
                             };
 
-                            // 更新状态中的历史记录
-                            let state = self.app_handle.state::<AppState>();
-                            let mut history = state.history.lock().unwrap();
-                            history.insert(0, history_item.clone());
-                            if history.len() > 50 { history.pop(); } // 保持容量
+                            // 🚀 获取全局状态并存入历史
+                            if let Some(state) = self.app_handle.try_state::<AppState>() {
+                                let mut history = state.history.lock().unwrap();
+                                history.insert(0, history_item.clone());
+                                if history.len() > 50 { history.pop(); }
 
-                            // 通知前端有新历史和 Toast
-                            let _ = self.app_handle.emit("new-history", history_item);
-                            let _ = self.app_handle.emit("masked-event", "🛡️ 隐私内容已自动脱敏");
+                                // 发送事件给前端
+                                let _ = self.app_handle.emit("new-history", history_item);
+                                let _ = self.app_handle.emit("masked-event", "🛡️ 隐私内容已自动脱敏");
+                            }
                         }
                     }
                 }

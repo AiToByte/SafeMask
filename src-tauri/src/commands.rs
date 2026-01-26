@@ -1,5 +1,5 @@
 use tauri::{State, AppHandle};
-use crate::state::{AppState, ENGINE};
+use crate::state::{AppState, ENGINE, MaskHistoryItem};
 use crate::processor::FileProcessor;
 use crate::config::RuleManager;
 
@@ -38,7 +38,7 @@ pub fn get_rules_stats() -> serde_json::Value {
 }
 
 #[tauri::command]
-pub async fn get_mask_history(state: tauri::State<'_, AppState>) -> Result<Vec<MaskHistoryItem>, String> {
+pub async fn get_mask_history(state: State<'_, AppState>) -> Result<Vec<MaskHistoryItem>, String> {
     let history = state.history.lock().unwrap();
     Ok(history.clone())
 }

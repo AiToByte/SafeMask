@@ -25,9 +25,22 @@ use tauri::{
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 fn main() {
-    // 1. 准备全局状态
+    // 1. 加载规则
+    let rules = crate::config::RuleManager::load_all_rules();
+    
+    // 2. 🚀 定义核心引擎变量 (确保变量名是 engine_arc 且在最前面)
+    let engine_arc = Arc::new(MaskEngine::new(rules));
+    
+    // 3. 初始化共享状态
     let is_monitor_on = Arc::new(Mutex::new(true));
     let last_content = Arc::new(Mutex::new(String::new()));
+    let history = Arc::new(Mutex::new(Vec::new()));
+
+    // 4. 为不同的闭包（Closure）准备克隆引用
+    let engine_for_setup = engine_arc.clone();
+    let is_monitor_on_setup = is_monitor_on.clone();
+    let last_content_setup = last_content.clone();
+    let history_setup = history.clone();
 
     // 2. 启动并构建应用
     tauri::Builder::default()
@@ -46,15 +59,17 @@ fn main() {
         )
         .plugin(tauri_plugin_notification::init())
         .manage(AppState {
-            engine: Arc::new(MaskEngine::new(vec![])), // 占位，实际逻辑通过 Lazy ENGINE
-            is_monitor_on: is_monitor_on.clone(),
-            last_content: last_content.clone(),
+            engine: engine_for_setup, // 占位，实际逻辑通过 Lazy ENGINE
+            is_monitor_on: is_monitor_on_setup,
+            last_content: last_content_setup,
+            history: history_setup,
         })
         .invoke_handler(tauri::generate_handler![
             commands::manual_mask_cmd,
             commands::toggle_monitor,
             commands::process_file_gui,
-            commands::get_rules_stats
+            commands::get_rules_stats,
+            commands::get_mask_history
         ])
         .setup(move |app| {
             

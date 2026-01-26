@@ -8,6 +8,7 @@ import Sidebar from './components/Sidebar.vue';
 import StatCard from './components/StatCard.vue';
 import FileProcessor from './components/FileProcessor.vue';
 import ExitConfirm from './components/ExitConfirm.vue';
+import HistoryList from './components/HistoryList.vue';
 
 const store = useAppStore();
 
@@ -79,43 +80,28 @@ onUnmounted(() => {
         </div>
       </header>
 
-      <!-- 核心仪表盘内容区 -->
-      <div class="flex-1 p-12 overflow-y-auto space-y-10">
-        
-        <!-- 第一行：状态统计卡片 (3列布局) -->
-        <div class="grid grid-cols-3 gap-6">
-          <StatCard 
-            title="已加载规则" 
-            :value="store.ruleCount" 
-            unit="REG_RULES"
-          />
-          <StatCard 
-            title="计算架构" 
-            value="HYBRID" 
-            color="text-blue-400"
-          />
-          <StatCard 
-            title="内存策略" 
-            value="ZERO-COPY" 
-            color="text-emerald-400"
-          />
-        </div>
-
-        <!-- 第二行：文件处理交互区 (占据剩余高度) -->
-        <div class="flex flex-col gap-4">
-          <div class="flex items-center gap-2 px-1">
-            <div class="w-1 h-4 bg-blue-600 rounded-full"></div>
-            <h2 class="text-sm font-bold text-zinc-300 uppercase tracking-widest">文件处理流水线</h2>
+       <!-- 动态内容区 -->
+      <div class="flex-1 p-12 overflow-y-auto custom-scroll">
+        <!-- 页面 1: 仪表盘 -->
+        <div v-if="store.activeTab === 'dashboard'" class="space-y-10 animate-in fade-in slide-in-from-bottom-2">
+          <div class="grid grid-cols-3 gap-6">
+            <StatCard title="已加载规则" :value="store.ruleCount" unit="REG_RULES" />
+            <StatCard title="历史拦截" :value="store.historyList.length" color="text-amber-400" />
+            <StatCard title="引擎架构" value="HYBRID" color="text-blue-400" />
           </div>
           <FileProcessor class="min-h-[320px]" />
         </div>
-         <!-- 🚀 历史记录页面 -->
-        <HistoryList v-else-if="store.activeTab === 'rules'" />
-        <!-- 页脚备注 -->
-        <footer class="text-center pb-4">
-          <p class="text-[10px] text-zinc-700 font-mono uppercase tracking-widest">
-            Powered by Rust Engine v1.0.0 · 100% Offline Security
-          </p>
+        <!-- 页面 2: 历史记录 (这里必须紧跟上面的 v-if) -->
+        <HistoryList v-else-if="store.activeTab === 'history'" />
+
+        <!-- 规则库管理页面（预留） -->
+        <div v-else-if="store.activeTab === 'rules'" class="text-zinc-500">
+          规则配置功能研发中...
+        </div>
+        
+        <!-- 页脚（仅在 Dashboard 显示） -->
+        <footer v-if="store.activeTab === 'dashboard'" class="text-center pt-10 opacity-30">
+          <p class="text-[10px] font-mono uppercase tracking-widest">Powered by SafeMask Rust Engine v1.0.0</p>
         </footer>
       </div>
     </main>

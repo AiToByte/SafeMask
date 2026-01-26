@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { useAppStore } from '../stores/useAppStore';
-import { ClipboardCopy, Clock } from 'lucide-vue-next';
+import { ClipboardCopy, Clock, Trash2 } from 'lucide-vue-next';
+import { onMounted } from 'vue';
 
 const store = useAppStore();
+
+// 🚀 核心：进入页面时立即拉取后端存储的历史
+onMounted(async () => {
+  await store.fetchHistory();
+});
 
 const copyToClipboard = (text: string) => {
   navigator.clipboard.writeText(text);

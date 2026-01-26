@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Home, Library, Settings, ShieldCheck } from 'lucide-vue-next';
+import { Home, Library, Settings, ShieldCheck, ClipboardCopy } from 'lucide-vue-next';
+import { useAppStore } from '../stores/useAppStore';
 
+// 🚀 获取全局状态 Store
+const store = useAppStore();
 const activeTab = ref('dashboard');
 
+/**
+ * 菜单配置项
+ * id 必须与 App.vue 中 v-if 的判断条件字符串严格对应
+ */
 const menuItems = [
   { id: 'dashboard', icon: Home, label: '仪表盘' },
-  { id: 'rules', icon: Library, label: '规则库' },
+  { id: 'history', icon: ClipboardCopy, label: '记录对比' }, // 修改 ID 为 history 以匹配 App.vue
+  { id: 'rules', icon: Library, label: '规则管理' },
 ];
 </script>
 
@@ -22,22 +30,27 @@ const menuItems = [
       <button 
         v-for="item in menuItems" 
         :key="item.id"
-        @click="activeTab = item.id"
+        @click="store.activeTab = item.id"
         :title="item.label"
         class="sidebar-item group"
         :class="[
-          activeTab === item.id 
+          store.activeTab === item.id 
             ? 'bg-blue-600/10 text-blue-400 !border-blue-500/30 shadow-[inset_0_0_12px_rgba(59,130,246,0.1)]' 
             : 'hover:bg-zinc-800/50 hover:text-zinc-200 border-transparent'
         ]"
       >
-        <component :is="item.icon" class="w-6 h-6" :stroke-width="activeTab === item.id ? 2.5 : 2" />
+        <component :is="item.icon" class="w-6 h-6" :stroke-width="store.activeTab === item.id ? 2.5 : 2" />
         
-        <!-- 活动指示条 -->
+        <!-- 活动指示条 (左侧蓝条) -->
         <div 
-          v-if="activeTab === item.id" 
+          v-if="store.activeTab === item.id" 
           class="absolute -left-4 w-1 h-6 bg-blue-500 rounded-r-full shadow-[0_0_15px_rgba(59,130,246,0.8)]"
         ></div>
+
+        <!-- 悬浮 Tooltip 提示 -->
+        <span class="absolute left-full ml-4 px-2 py-1 bg-zinc-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+          {{ item.label }}
+        </span>
       </button>
     </div>
 

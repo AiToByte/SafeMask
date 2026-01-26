@@ -34,8 +34,9 @@ export const useAppStore = defineStore('app', () => {
     await MaskAPI.toggleMonitor(isMonitorOn.value);
   };
 
-  return { 
-    isMonitorOn,fetchHistory, ruleCount, isProcessing, 
-    progress, currentFileName, fetchStats, toggleMonitor 
+return { 
+    isMonitorOn, ruleCount, isProcessing, progress, 
+    currentFileName, historyList, activeTab,
+    fetchStats, fetchHistory, toggleMonitor 
   };
 });
