@@ -2,10 +2,10 @@ use std::collections::BTreeMap;
 use std::io::{BufWriter, Write};
 use std::fs::File;
 use tauri::{AppHandle, Emitter};
-use crate::state::{ProgressPayload, ENGINE, MACRO_CHUNK_SIZE, BUFFER_SIZE};
+use crate::state::{ProgressPayload, MACRO_CHUNK_SIZE, BUFFER_SIZE};
 use rayon::prelude::*;
 use std::time::{Instant, Duration};
-
+use std::sync::{Arc, Mutex, RwLock};
 
 pub struct FileProcessor;
 
@@ -15,6 +15,8 @@ impl FileProcessor {
         input_path: String,
         output_path: String,
         app_handle: AppHandle,
+         // 🚀 新增参数：从 State 中获取的引擎引用
+        engine: Arc<std::sync::RwLock<crate::engine::MaskEngine>>,
     ) -> Result<String, String> {
         let file = File::open(&input_path).map_err(|e| e.to_string())?;
         let mmap = unsafe { memmap2::Mmap::map(&file).map_err(|e| e.to_string())? };
@@ -84,9 +86,11 @@ impl FileProcessor {
             .enumerate()
             .for_each(|(idx, chunk)| {
                 let mut out = Vec::with_capacity(chunk.len() + 2048);
+                 // 🚀 获取读锁
+                let engine_lock = engine.read().unwrap();
                 for line in chunk.split(|&b| b == b'\n') {
                     if !line.is_empty() {
-                        out.extend_from_slice(&ENGINE.mask_line(line));
+                        out.extend_from_slice(&engine_lock.mask_line(line));
                     }
                     out.push(b'\n');
                 }

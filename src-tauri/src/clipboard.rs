@@ -1,6 +1,6 @@
 use clipboard_master::{ClipboardHandler, CallbackResult};
 use arboard::{Clipboard, Error as ArboardError}; // 重命名以防冲突
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use crate::engine::MaskEngine;
 // 🚀 导入 AppState 和 MaskHistoryItem
 use crate::state::{AppState, MaskHistoryItem}; 
@@ -13,7 +13,7 @@ use uuid::Uuid;
 
 pub struct GlobalClipboardHandler {
     pub app_handle: AppHandle,
-    pub engine: Arc<MaskEngine>,
+    pub engine: Arc<RwLock<MaskEngine>>,
     pub last_content: Arc<Mutex<String>>,
     pub is_enabled: Arc<Mutex<bool>>,
 }
@@ -44,7 +44,9 @@ impl ClipboardHandler for GlobalClipboardHandler {
 
                 // 4. 关键：防震荡机制（防止脱敏写回操作再次触发变动事件）
                 if current_text != *last && !current_text.is_empty() {
-                    let masked_bytes = self.engine.mask_line(current_text.as_bytes());
+                     // 🚀 核心修复：因为 engine 现在在锁里，需要先获取“读锁”
+                    let engine_lock = self.engine.read().expect("无法读取引擎锁");
+                    let masked_bytes = engine_lock.mask_line(current_text.as_bytes());
                     let masked_text = String::from_utf8_lossy(&masked_bytes).into_owned();
                     // 5. 只有内容真正发生脱敏替换时才执行操作
                     if masked_text != current_text {

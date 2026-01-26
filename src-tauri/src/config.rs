@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize}; // 🚀 增加 Serialize
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 use anyhow::{Result, Context};
+// 🚀 核心修复：导入必要类型
+use tauri::{AppHandle, Manager}; 
 
 #[derive(Debug, Deserialize, Serialize, Clone)] // 🚀 增加 Serialize
 pub struct Rule {
@@ -31,13 +33,14 @@ pub struct RuleManager;
 
 impl RuleManager {
     /// 核心功能：自动加载内置规则目录和用户自定义目录
-    pub fn load_all_rules() -> Vec<Rule> {
+    pub fn load_all_rules(app_handle: &AppHandle) -> Vec<Rule> {
         let mut all_rules = Vec::new();
-        
+         // 🚀 动态获取打包后的资源目录
+        let resource_dir = app_handle.path().resource_dir().expect("无法获取资源目录");
         // 规定两个加载路径
         let paths = vec![
-            PathBuf::from("rules"),  // 内置目录
-            PathBuf::from("custom"), // 用户自定义目录
+            resource_dir.join("rules"),  // 内置目录
+            resource_dir.join("custom"), // 用户自定义目录
         ];
 
         for path in paths {
@@ -50,7 +53,7 @@ impl RuleManager {
     }
 
     /// 🚀 新增：保存自定义规则到 custom/user_rules.yaml
-    pub fn save_custom_rule(rule: Rule) -> Result<()> {
+    pub fn save_custom_rule(app_handle: &AppHandle, rule: Rule) -> Result<()> {
         let custom_dir = PathBuf::from("custom");
         if !custom_dir.exists() {
             std::fs::create_dir_all(&custom_dir)?;
