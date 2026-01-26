@@ -1,7 +1,0 @@
-group: "MY_INFO"
-rules:
-  - name: "MY_NAME"
-    # 简化了逻辑，重点在于匹配 @ 和域名
-    pattern: 'xiaosheng'
-    mask: "<MY_NAME>"
-    priority: 30 # 较高优先级
