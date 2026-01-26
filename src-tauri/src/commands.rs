@@ -1,8 +1,8 @@
 use tauri::{State, AppHandle};
 use crate::state::{AppState, ENGINE, MaskHistoryItem};
 use crate::processor::FileProcessor;
-use crate::config::RuleManager;
-
+use crate::config::{Rule, RuleManager};
+use arboard::Clipboard;
 #[tauri::command]
 pub async fn manual_mask_cmd() -> Result<String, String> {
     let mut ctx = arboard::Clipboard::new().map_err(|e| e.to_string())?;
@@ -41,4 +41,40 @@ pub fn get_rules_stats() -> serde_json::Value {
 pub async fn get_mask_history(state: State<'_, AppState>) -> Result<Vec<MaskHistoryItem>, String> {
     let history = state.history.lock().unwrap();
     Ok(history.clone())
+}
+
+
+#[tauri::command]
+pub async fn save_rule_api(rule: Rule) -> Result<String, String> {
+    RuleManager::save_custom_rule(rule).map_err(|e| e.to_string())?;
+    // 💡 保存后，建议通过某种方式通知引擎重新加载，这里我们先返回成功
+    Ok("规则已保存至 custom 目录".into())
+}
+
+#[tauri::command]
+pub async fn copy_original_cmd(text: String, state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let mut ctx = Clipboard::new().map_err(|e| e.to_string())?;
+    
+    // 🚀 核心优化：在写入剪贴板前，先把内容注入到 last_content 缓存中
+    // 这样后台监听线程检测到内容变化时，会发现 current == last，从而直接跳过脱敏
+    {
+        let mut last = state.last_content.lock().unwrap();
+        *last = text.clone();
+    }
+
+    // 执行真实的剪贴板写入
+    ctx.set_text(text).map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_all_detailed_rules() -> Vec<Rule> {
+    RuleManager::load_all_rules()
+}
+
+#[tauri::command]
+pub async fn delete_rule_api(name: String) -> Result<String, String> {
+    RuleManager::delete_custom_rule(name).map_err(|e| e.to_string())?;
+    Ok("规则已删除".into())
 }

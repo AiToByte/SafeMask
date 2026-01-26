@@ -1,0 +1,6 @@
+group: CUSTOM
+rules:
+- name: MY_NAME
+  pattern: XiaoSheng
+  mask: <NAME>
+  priority: 10

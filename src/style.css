@@ -1,147 +1,37 @@
+/* --- 引入 Inter (UI) 和 JetBrains Mono (数据) --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
 /* --- 基础 Tailwind 指令 --- */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* --- 全局样式重置与变量 --- */
-:root {
-  font-family: 'Inter', 'JetBrains Mono', system-ui, -apple-system, sans-serif;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  :root {
+    /* 默认使用 Inter */
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11"; /* 开启 Inter 的高级字形优化 */
+    background-color: #09090b;
+    -webkit-font-smoothing: antialiased;
+  }
 
-  /* 品牌色定义 */
-  --color-bg: #09090b;
-  --color-sidebar: #0c0c0e;
-  --color-accent: #3b82f6;
-  --color-emerald: #10b981;
+  /* 强制所有输入框和文本域继承字体，解决浏览器默认字体不一的问题 */
+  input, textarea, button, select {
+    font-family: inherit;
+  }
+
+  /* 定义等宽字体类 */
+  .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace !important;
+  }
 }
 
-/* 禁止用户选择文字，增强原生 App 体验 */
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-  background-color: var(--color-bg);
-  color: #fafafa;
-  overflow: hidden;
-  user-select: none;
-}
-
-#app {
-  width: 100%;
-  height: 100vh;
-}
-
-/* --- 高级玻璃拟态组件 (Glassmorphism) --- */
-.glass {
-  background: rgba(24, 24, 27, 0.4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  transition: all 0.3s ease;
-}
-
-.glass:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  background: rgba(30, 30, 35, 0.5);
-}
-
-/* --- 自定义滚动条 (更细、更暗) --- */
+/* --- 全局滚动条样式优化 --- */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
+  height: 5px;
 }
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
 ::-webkit-scrollbar-thumb {
   background: #27272a;
   border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
-}
-
-/* --- 文件拖拽区特殊处理 --- */
-.drop-zone {
-  @apply relative overflow-hidden transition-all duration-500;
-}
-
-/* 当文件悬停在上方时的呼吸灯效果 */
-.drop-zone-active {
-  border-color: var(--color-accent) !important;
-  background: rgba(59, 130, 246, 0.05) !important;
-  box-shadow: 0 0 40px rgba(59, 130, 246, 0.1);
-}
-
-/* --- 进度条动画 --- */
-.progress-fill {
-  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-}
-
-.progress-fill::after {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
-  animation: progress-shine 2s infinite;
-}
-
-@keyframes progress-shine {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-/* --- 侧边栏活动指示器 --- */
-.active-nav-bg {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.02) 100%);
-}
-
-/* --- 统计数值等宽字体 --- */
-.font-mono-numbers {
-  font-family: 'JetBrains Mono', monospace;
-  font-variant-numeric: tabular-nums;
-}
-
-/* --- 按钮点击缩放反馈 --- */
-button:active {
-  transform: scale(0.96);
-}
-
-/* --- 系统通知 Toast 容器（预留） --- */
-.toast-container {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  z-index: 9999;
-}
-
-/* 🚀 核心修复：消除所有交互元素的默认焦点框 */
-*:focus {
-    outline: none !important;
-}
-
-/* 针对按钮点击时的特殊处理，防止系统级别的蓝色/白色高亮 */
-button {
-    -webkit-tap-highlight-color: transparent;
-    outline: none;
-}
-
-/* 侧边栏按钮基础样式优化 */
-.sidebar-item {
-    @apply w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 text-zinc-500 relative border border-transparent;
-    /* 预设透明边框，防止切换时产生 1px 的位置跳动 */
 }

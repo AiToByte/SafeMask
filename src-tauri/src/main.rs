@@ -69,13 +69,18 @@ fn main() {
             commands::toggle_monitor,
             commands::process_file_gui,
             commands::get_rules_stats,
-            commands::get_mask_history
+            commands::get_mask_history,
+            commands::save_rule_api,
+            commands::get_all_detailed_rules,
+            commands::delete_rule_api,
+            commands::copy_original_cmd
         ])
         .setup(move |app| {
             
            // 1. 创建托盘菜单
     let quit_i = MenuItemBuilder::with_id("quit", "退出 SafeMask").build(app)?;
     let show_i = MenuItemBuilder::with_id("show", "显示主界面").build(app)?;
+    
     let menu = MenuBuilder::new(app).items(&[&show_i, &quit_i]).build()?;
 
     // 2. 初始化托盘图标

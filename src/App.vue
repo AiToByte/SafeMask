@@ -9,6 +9,8 @@ import StatCard from './components/StatCard.vue';
 import FileProcessor from './components/FileProcessor.vue';
 import ExitConfirm from './components/ExitConfirm.vue';
 import HistoryList from './components/HistoryList.vue';
+import RuleManager from './components/RuleManager.vue';
+import { Rule } from 'postcss';
 
 const store = useAppStore();
 
@@ -19,6 +21,10 @@ let unlistenMasked: UnlistenFn;
 onMounted(async () => {
   // 1. 初始化从 Rust 后端拉取规则统计信息
   await store.fetchStats();
+  await store.fetchHistory();
+
+  // 2. 🚀 开启全局实时监听（核心修复）
+  await store.initEventListeners();
 
   // 2. 监听文件处理进度事件 (来自 processor.rs 的保序流水线)
   unlistenProgress = await listen<{ percentage: number }>("file-progress", (event) => {
@@ -85,19 +91,18 @@ onUnmounted(() => {
         <!-- 页面 1: 仪表盘 -->
         <div v-if="store.activeTab === 'dashboard'" class="space-y-10 animate-in fade-in slide-in-from-bottom-2">
           <div class="grid grid-cols-3 gap-6">
-            <StatCard title="已加载规则" :value="store.ruleCount" unit="REG_RULES" />
-            <StatCard title="历史拦截" :value="store.historyList.length" color="text-amber-400" />
+            <StatCard title="已加载规则" :value="store.ruleCount" unit="REG_RULES" clickable @click="store.activeTab = 'rules'"/>
+            <StatCard title="历史拦截" :value="store.historyList.length" color="text-amber-400" clickable @click="store.activeTab = 'history'" />
             <StatCard title="引擎架构" value="HYBRID" color="text-blue-400" />
           </div>
           <FileProcessor class="min-h-[320px]" />
         </div>
         <!-- 页面 2: 历史记录 (这里必须紧跟上面的 v-if) -->
         <HistoryList v-else-if="store.activeTab === 'history'" />
+        
 
-        <!-- 规则库管理页面（预留） -->
-        <div v-else-if="store.activeTab === 'rules'" class="text-zinc-500">
-          规则配置功能研发中...
-        </div>
+        <!-- 页面 3:规则库管理页面 -->
+        <RuleManager v-else-if="store.activeTab === 'rules'" />
         
         <!-- 页脚（仅在 Dashboard 显示） -->
         <footer v-if="store.activeTab === 'dashboard'" class="text-center pt-10 opacity-30">

@@ -1,9 +1,25 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 
+// 🚀 1. 定义 Rule 接口，必须与 Rust 端的 struct 字段名严格一致
+export interface Rule {
+  name: string;
+  pattern: string;
+  mask: string;
+  priority: number;
+  is_custom: boolean; // 🚀 新增标记
+}
+
 export interface RuleStats {
   rule_count: number;
   group_count: number;
+}
+
+export interface HistoryItem {
+  id: string;
+  timestamp: string;
+  original: string;
+  masked: string;
 }
 
 export const MaskAPI = {
@@ -14,7 +30,7 @@ export const MaskAPI = {
 
 
   // 获取历史记录
-  async getHistory(): Promise<any[]> {
+  async getHistory(): Promise<HistoryItem[]> {
     return await invoke("get_mask_history");
   },
 
@@ -27,7 +43,23 @@ export const MaskAPI = {
   async processFile(inputPath: string, outputPath: string): Promise<string> {
     return await invoke("process_file_gui", { inputPath, outputPath });
   },
+  async getAllRules(): Promise<Rule[]> {
+    return await invoke("get_all_detailed_rules");
+  },
 
+  async saveRule(rule: Rule): Promise<string> {
+    return await invoke("save_rule_api", { rule });
+  },
+
+  // 🚀 复制原文并绕过脱敏
+  async copyOriginal(text: string): Promise<void> {
+    return await invoke("copy_original_cmd", { text });
+  },
+
+  // 🚀 删除规则
+  async deleteRule(name: string): Promise<string> {
+    return await invoke("delete_rule_api", { name });
+  },
   // 选择文件
   async selectFile() {
     return await open({
@@ -35,4 +67,5 @@ export const MaskAPI = {
       filters: [{ name: 'Log/Text', extensions: ['log', 'txt', 'csv', 'json'] }]
     });
   }
+  
 };
