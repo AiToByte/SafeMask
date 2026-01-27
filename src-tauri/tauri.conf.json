@@ -30,7 +30,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": "all",
     "resources": [
     "rules/**/*",
     "custom/**/*"
@@ -42,7 +42,8 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "publisher": "AiToByte"
+    "publisher": "XiaoSheng",
+    "copyright": "Copyright © 2026 XiaoSheng"
 
   },
   "plugins": { 
