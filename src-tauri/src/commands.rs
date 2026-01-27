@@ -50,8 +50,8 @@ pub async fn get_mask_history(state: State<'_, AppState>) -> Result<Vec<MaskHist
 
 
 #[tauri::command]
-pub async fn save_rule_api(app_handle: AppHandle, rule: Rule) -> Result<String, String> {
-    RuleManager::save_custom_rule(&app_handle, rule).map_err(|e| e.to_string())?;
+pub async fn save_rule_api(rule: Rule) -> Result<String, String> {
+    RuleManager::save_custom_rule(rule).map_err(|e| e.to_string())?;
     // 💡 保存后，建议通过某种方式通知引擎重新加载，这里我们先返回成功
     Ok("规则已保存至 custom 目录".into())
 }

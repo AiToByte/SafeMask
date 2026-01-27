@@ -33,7 +33,6 @@ fn main() {
     let history = Arc::new(Mutex::new(Vec::new()));
 
     // 为闭包克隆引用
-    let engine_for_shortcut = initial_engine.clone();
     let engine_for_setup = initial_engine.clone();
 
     // 2. 启动并构建应用

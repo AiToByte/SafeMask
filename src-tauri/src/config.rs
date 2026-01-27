@@ -53,7 +53,7 @@ impl RuleManager {
     }
 
     /// 🚀 新增：保存自定义规则到 custom/user_rules.yaml
-    pub fn save_custom_rule(app_handle: &AppHandle, rule: Rule) -> Result<()> {
+    pub fn save_custom_rule(rule: Rule) -> Result<()> {
         let custom_dir = PathBuf::from("custom");
         if !custom_dir.exists() {
             std::fs::create_dir_all(&custom_dir)?;

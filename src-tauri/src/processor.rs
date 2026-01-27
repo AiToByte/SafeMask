@@ -5,7 +5,7 @@ use tauri::{AppHandle, Emitter};
 use crate::state::{ProgressPayload, MACRO_CHUNK_SIZE, BUFFER_SIZE};
 use rayon::prelude::*;
 use std::time::{Instant, Duration};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc};
 
 pub struct FileProcessor;
 

@@ -1,7 +1,5 @@
 use std::sync::{Arc, Mutex, RwLock};
-use once_cell::sync::Lazy;
 use crate::engine::MaskEngine;
-use crate::config::RuleManager;
 use serde::{Serialize, Deserialize}; // 🚀 必须显式导入这两个宏
 
 // 常量配置抽取
