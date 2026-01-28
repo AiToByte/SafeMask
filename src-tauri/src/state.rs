@@ -26,6 +26,7 @@ pub struct AppState {
     // 🚀 新增：最近 50 条脱敏历史记录
     pub history: Arc<Mutex<Vec<MaskHistoryItem>>>,// 新增：用于通知监听线程优雅停止的通道
     pub shutdown_tx: watch::Sender<()>,
+    #[allow(dead_code)]
     pub shutdown_rx: watch::Receiver<()>,
 }
 

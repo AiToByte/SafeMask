@@ -55,9 +55,13 @@ const menuItems = [
     </div>
 
     <!-- 设置 -->
-    <button class="sidebar-item mt-auto hover:bg-zinc-800/50 hover:text-zinc-200 border-transparent">
-      <Settings class="w-6 h-6" />
-    </button>
+    <button
+    @click="store.activeTab = 'settings'"
+    class="sidebar-item mt-auto hover:bg-zinc-800/50 hover:text-zinc-200 border-transparent"
+    :class="{ '!text-blue-400 bg-blue-600/10': store.activeTab === 'settings' }"
+    >
+    <Settings class="w-6 h-6" />
+  </button>
   </nav>
 </template>
 

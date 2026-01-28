@@ -83,3 +83,20 @@ pub async fn delete_rule_api(name: String) -> Result<String, String> {
     RuleManager::delete_custom_rule(name).map_err(|e| e.to_string())?;
     Ok("规则已删除".into())
 }
+
+#[tauri::command]
+pub async fn clear_history_cmd(state: State<'_, AppState>) -> Result<(), String> {
+    let mut history = state.history.lock().unwrap();
+    history.clear();
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_app_info() -> serde_json::Value {
+    serde_json::json!({
+        "version": "1.0.0",
+        "author": "XiaoSheng",
+        "github": "https://github.com/AiToByte/SafeMask",
+        "description": "极致性能的本地隐私脱敏引擎"
+    })
+}

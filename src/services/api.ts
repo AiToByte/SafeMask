@@ -22,6 +22,13 @@ export interface HistoryItem {
   masked: string;
 }
 
+export interface AppInfo {
+  version: string;
+  author: string;
+  github: string;
+  description: string;
+}
+
 export const MaskAPI = {
   // 获取规则统计
   async getStats(): Promise<RuleStats> {
@@ -66,6 +73,16 @@ export const MaskAPI = {
       multiple: false,
       filters: [{ name: 'Log/Text', extensions: ['log', 'txt', 'csv', 'json'] }]
     });
+  },
+
+   // 清除脱敏历史
+  async clearHistory(): Promise<void> {
+    return await invoke("clear_history_cmd");
+  },
+
+  // 获取应用信息
+  async getAppInfo(): Promise<AppInfo> {
+    return await invoke("get_app_info");
   }
   
 };

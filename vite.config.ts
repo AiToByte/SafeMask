@@ -9,7 +9,7 @@ export default defineConfig(async () => ({
   clearScreen: false,
   server: {
     host: "127.0.0.1", // 强制使用 IPv4 地址
-    port: 5173,
+    port: 18924,
     strictPort: true,
     watch: {
       // 告诉 Vite 忽略监听 src-tauri 文件夹，避免循环触发重绘

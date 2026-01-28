@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 // 🚀 导入 Rule 和 HistoryItem 类型
-import { MaskAPI, type Rule, type HistoryItem, type RuleStats } from '../services/api';
+import { MaskAPI, type Rule, type HistoryItem, type RuleStats, type AppInfo } from '../services/api';
 import { listen } from "@tauri-apps/api/event"; // 🚀 引入事件监听
 
 export const useAppStore = defineStore('app', () => {
@@ -13,6 +13,7 @@ export const useAppStore = defineStore('app', () => {
   const historyList = ref<HistoryItem[]>([]);
   const activeTab = ref('dashboard'); // 切换页面
   const allRulesList = ref<Rule[]>([]);
+  const appInfo = ref<AppInfo | null>(null);
 
    // 🚀 初始化全局监听：确保只要程序开着，历史记录就在更新
   const initEventListeners = async () => {
@@ -44,10 +45,22 @@ export const useAppStore = defineStore('app', () => {
     await MaskAPI.toggleMonitor(isMonitorOn.value);
   };
 
+  // 获取应用详情
+  const fetchAppInfo = async () => {
+    appInfo.value = await MaskAPI.getAppInfo();
+  };
+
+  // 清除历史记录
+  const clearHistory = async () => {
+    await MaskAPI.clearHistory();
+    historyList.value = [];
+  };
+
 return { 
     isMonitorOn, ruleCount, isProcessing, progress, 
     currentFileName, historyList, activeTab,
     fetchStats, fetchHistory, toggleMonitor ,
-    allRulesList, fetchAllRules, initEventListeners
+    allRulesList, fetchAllRules, initEventListeners,
+    appInfo, fetchAppInfo, clearHistory
   };
 });

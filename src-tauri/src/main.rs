@@ -13,10 +13,8 @@ use std::sync::{Arc, Mutex, RwLock};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, Modifiers, Code, Builder as ShortcutBuilder};
 
 use crate::state::{AppState};
-use rand::Rng;
 use crate::clipboard::GlobalClipboardHandler;
 use crate::engine::MaskEngine;
-use std::time::Duration; // 修复 Duration 找不到的问题
 use tokio::sync::watch;  // 修复 watch::channel 找不到的问题
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
@@ -26,8 +24,7 @@ use tauri::{
 use crate::config::RuleManager;
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
-#[tokio::main]
-async fn main() {
+fn main() {
     // 1. 初始化应用状态容器
     // 注意：初始引擎为空，待 setup 阶段获取到资源路径后再注入真实规则
     let initial_engine = Arc::new(RwLock::new(MaskEngine::new(vec![])));
@@ -77,7 +74,9 @@ async fn main() {
             commands::save_rule_api,
             commands::get_all_detailed_rules,
             commands::delete_rule_api,
-            commands::copy_original_cmd
+            commands::copy_original_cmd,
+            commands::clear_history_cmd,
+            commands::get_app_info
         ])
         // --- 应用引导初始化 (Setup) ---
         .setup(move |app| {
@@ -197,79 +196,44 @@ async fn main() {
             //         }
             //     }
             // });
-            // 采用tokio进行重写
-            // 在 setup 里面（setup 已经是 async 上下文了）
+             // 修改 setup 闭包内的监听部分
             let handle_clone = app.handle().clone();
             let engine_for_monitor = engine_for_setup.clone();
             let is_on_monitor = is_monitor_on.clone();
             let last_c_monitor = last_content.clone();
-            let mut shutdown_rx_task = app.state::<AppState>().shutdown_rx.clone();  // clone receiver
-             // 使用 tauri 的异步运行时派发任务
-            tauri::async_runtime::spawn(async move {
-                const INITIAL_BACKOFF: Duration = Duration::from_secs(1);
-                const MAX_BACKOFF: Duration = Duration::from_secs(30);
-                let mut backoff = INITIAL_BACKOFF;
-                let mut retry_count: u32 = 0;
 
+            // 使用标准线程，不阻塞主线程，也不占用异步 Runtime
+            std::thread::spawn(move || {
+                let mut retry_count = 0;
                 loop {
-                         // 🚀 修复点 2: 优化 select! 逻辑
-                    tokio::select! {
-                        // 退出信号
-                        _ = shutdown_rx_task.changed() => {
-                            println!("[Clipboard] 收到停止信号，优雅退出监听循环");
-                            break;
-                        }
+                    println!("[Clipboard] 启动监听器 (第 {} 次尝试)", retry_count + 1);
 
-                        // 正常启动监听
-                        _ = async {
-                            println!(
-                                "[Clipboard] 尝试启动监听器 (第 {} 次，重试间隔约 {}s)",
-                                retry_count + 1,
-                                backoff.as_secs()
-                            );
+                    let handler = GlobalClipboardHandler {
+                        app_handle: handle_clone.clone(),
+                        engine: engine_for_monitor.clone(),
+                        last_content: last_c_monitor.clone(),
+                        is_enabled: is_on_monitor.clone(),
+                    };
 
-                            match clipboard_master::Master::new(GlobalClipboardHandler {
-                                app_handle: handle_clone.clone(),
-                                engine: engine_for_monitor.clone(),
-                                last_content: last_c_monitor.clone(),
-                                is_enabled: is_on_monitor.clone(),
-                            }) {
-                                Ok(mut master) => {
-                                    println!("[Clipboard] 监听器创建成功，进入 run() 阻塞循环");
+                     // 给系统窗口一点缓冲时间，防止抢占主线程初始化
+                    std::thread::sleep(std::time::Duration::from_millis(500));
 
-                                    if let Err(e) = master.run() {
-                                        eprintln!("[Clipboard] run() 异常退出: {:?}", e);
-                                    } else {
-                                        println!("[Clipboard] run() 正常返回（可能是外部中断）");
-                                    }
-                                }
-
-                                Err(e) => {
-                                    eprintln!("[Clipboard] 创建 Master 失败 (尝试 #{}): {:?}", retry_count + 1, e);
-                                }
+                    match clipboard_master::Master::new(handler) {
+                        Ok(mut master) => {
+                            // 这里会一直阻塞，直到出错或进程结束
+                            if let Err(e) = master.run() {
+                                eprintln!("[Clipboard] 监听异常退出: {:?}", e);
                             }
-
-                            // 指数退避 + jitter
-                            let sleep_duration = backoff.min(MAX_BACKOFF);
-                            let jitter_ms = rand::thread_rng().gen_range(0..500);
-                            let total_sleep = sleep_duration + Duration::from_millis(jitter_ms);
-
-                            println!(
-                                "[Clipboard] 监听失败/退出，将在 {:.1}s 后重试...",
-                                total_sleep.as_secs_f32()
-                            );
-
-                            tokio::time::sleep(total_sleep).await;
-
-                            // 增长 backoff
-                            backoff = (backoff * 2).min(MAX_BACKOFF);
-                            retry_count += 1;
-                        } => {}
+                        }
+                        Err(e) => eprintln!("[Clipboard] 创建失败: {:?}", e),
                     }
-            }
 
-        println!("[Clipboard] 监听任务已完全退出");
-    });
+                    // 退避重试
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+                    retry_count += 1;
+                    if retry_count > 50 { break; }
+                }
+            });   
 
 
 
