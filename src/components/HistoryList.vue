@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useAppStore } from '../stores/useAppStore';
-import { ClipboardCopy, ClipboardCheck, History, CornerDownRight } from 'lucide-vue-next';
+import { ClipboardCopy, ClipboardCheck, History, CornerDownRight, Clock } from 'lucide-vue-next';
 import { onMounted, ref } from 'vue';
 import { MaskAPI } from '../services/api';
 

@@ -10,7 +10,7 @@ import FileProcessor from './components/FileProcessor.vue';
 import ExitConfirm from './components/ExitConfirm.vue';
 import HistoryList from './components/HistoryList.vue';
 import RuleManager from './components/RuleManager.vue';
-import SettingsComp from './components/Settings.vue'; // 避免与图标重名
+import SettingsPage from './components/Settings.vue';
 import { Rule } from 'postcss';
 
 const store = useAppStore();
@@ -106,7 +106,7 @@ onUnmounted(() => {
         <RuleManager v-else-if="store.activeTab === 'rules'" />
         
         <!-- 🚀 新增：设置页面 -->
-        <SettingsComp v-else-if="store.activeTab === 'settings'" />
+        <SettingsPage  v-else-if="store.activeTab === 'settings'" />
 
         <!-- 页脚（仅在 Dashboard 显示） -->
         <footer v-if="store.activeTab === 'dashboard'" class="text-center pt-10 opacity-30">

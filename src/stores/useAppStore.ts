@@ -57,10 +57,10 @@ export const useAppStore = defineStore('app', () => {
   };
 
 return { 
-    isMonitorOn, ruleCount, isProcessing, progress, 
-    currentFileName, historyList, activeTab,
-    fetchStats, fetchHistory, toggleMonitor ,
-    allRulesList, fetchAllRules, initEventListeners,
-    appInfo, fetchAppInfo, clearHistory
+     isMonitorOn, ruleCount, isProcessing, progress, 
+    currentFileName, historyList, activeTab, allRulesList,
+    appInfo, // 🚀 必须返回
+    fetchStats, fetchHistory, toggleMonitor, fetchAllRules, 
+    initEventListeners, fetchAppInfo, clearHistory // 🚀 必须返回
   };
 });

@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "ESNext",
     "useDefineForClassFields": true,
+    // "noEmit": true,  // 🚀 核心：告诉 TS 不要生成 JS 文件
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
