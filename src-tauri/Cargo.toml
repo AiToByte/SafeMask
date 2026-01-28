@@ -38,6 +38,7 @@ arboard = "3.6.1"
 crossbeam-channel = "0.5"
 # 方案一：原生事件驱动剪贴板监听
 clipboard-master = "4.0.0"
+rand = "0.8.5"   # 用于 jitter 随机抖动，防止雷鸣群效应
 
 
 # Tauri 增强

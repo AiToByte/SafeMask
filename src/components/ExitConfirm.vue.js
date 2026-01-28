@@ -31,8 +31,6 @@ onMounted(async () => {
     // 监听 Rust 发来的关闭请求
     unlisten = await listen('request-close', (event) => {
         console.log("📥 收到来自 Rust 的关闭信号:", event.payload);
-        // 💡 暴力调试：如果这行代码运行了，说明通信是通的
-        window.alert("收到关闭请求！");
         // 检查本地存储的用户偏好
         const savedAction = localStorage.getItem('close-behavior');
         if (savedAction === 'quit' || savedAction === 'tray') {

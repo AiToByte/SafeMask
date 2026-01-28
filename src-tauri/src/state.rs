@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 use crate::engine::MaskEngine;
+use tokio::sync::watch;
 use serde::{Serialize, Deserialize}; // 🚀 必须显式导入这两个宏
 
 // 常量配置抽取
@@ -23,7 +24,9 @@ pub struct AppState {
     #[allow(dead_code)]
     pub last_content: Arc<Mutex<String>>,
     // 🚀 新增：最近 50 条脱敏历史记录
-    pub history: Arc<Mutex<Vec<MaskHistoryItem>>>,
+    pub history: Arc<Mutex<Vec<MaskHistoryItem>>>,// 新增：用于通知监听线程优雅停止的通道
+    pub shutdown_tx: watch::Sender<()>,
+    pub shutdown_rx: watch::Receiver<()>,
 }
 
 /// 进度负载结构（用于跨模块序列化）
