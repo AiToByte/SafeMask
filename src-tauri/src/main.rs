@@ -183,6 +183,7 @@ fn main() {
 
 // 辅助扩展：为了能让 Handler 在多轮重试中保持状态
 impl GlobalClipboardHandler {
+    #[allow(dead_code)]
     fn clone_context(&self) -> Self {
         Self::new(self.app_handle.clone())
     }

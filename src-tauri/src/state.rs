@@ -28,6 +28,7 @@ pub struct AppState {
     pub history: Arc<Mutex<Vec<MaskHistoryItem>>>,// 新增：用于通知监听线程优雅停止的通道
      // 🚀 新增：内部写回标记，防止脱敏后的写回操作触发“监听风暴”
     pub is_internal_changing: Arc<AtomicBool>, 
+    #[allow(dead_code)]
     pub shutdown_tx: watch::Sender<()>,
     #[allow(dead_code)]
     pub shutdown_rx: watch::Receiver<()>,
