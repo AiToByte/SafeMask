@@ -1,4 +1,5 @@
 use std::sync::{Arc, Mutex, RwLock};
+use std::sync::atomic::AtomicBool; // 导入原子类型
 use crate::engine::MaskEngine;
 use tokio::sync::watch;
 use serde::{Serialize, Deserialize}; // 🚀 必须显式导入这两个宏
@@ -25,6 +26,8 @@ pub struct AppState {
     pub last_content: Arc<Mutex<String>>,
     // 🚀 新增：最近 50 条脱敏历史记录
     pub history: Arc<Mutex<Vec<MaskHistoryItem>>>,// 新增：用于通知监听线程优雅停止的通道
+     // 🚀 新增：内部写回标记，防止脱敏后的写回操作触发“监听风暴”
+    pub is_internal_changing: Arc<AtomicBool>, 
     pub shutdown_tx: watch::Sender<()>,
     #[allow(dead_code)]
     pub shutdown_rx: watch::Receiver<()>,
