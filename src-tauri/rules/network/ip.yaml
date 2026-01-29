@@ -1,9 +1,9 @@
 group: "SENSITIVE_INFO"
 rules:
-  - name: "IPv6_With_Port"
-    pattern: '\[(?:[0-9a-fA-F:]{2,40})\]:\d{1,5}'
-    mask: "<IPv6_Port>"
-    priority: 90
+  # - name: "IPv6_With_Port"
+  #   pattern: '\[(?:[0-9a-fA-F:]{2,40})\]:\d{1,5}'
+  #   mask: "<IPv6_Port>"
+  #   priority: 90
     
   - name: "IPv4_With_Port"
     pattern: '\b(?:(?:25[0-5]|2[0-4]\d|1?\d{1,2})\.){3}(?:25[0-5]|2[0-4]\d|1?\d{1,2}):\d{1,5}\b'
@@ -17,7 +17,7 @@ rules:
     mask: "<IPv4>"
     priority: 60
 
-  - name: "IPv6_Address"
-    pattern: '\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b|\b(?:[0-9a-fA-F]{1,4}:){1,7}:|:[:0-9a-fA-F]{1,7}\b'
-    mask: "<IPv6>"
-    priority: 10
+  # - name: "IPv6_Address"
+  #   pattern: '\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b|\b(?:[0-9a-fA-F]{1,4}:){1,7}:|:[:0-9a-fA-F]{1,7}\b'
+  #   mask: "<IPv6>"
+  #   priority: 10
