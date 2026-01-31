@@ -9,12 +9,15 @@ dependencies = [
  "aho-corasick",
  "anyhow",
  "arboard",
+ "bytecount",
  "chrono",
  "clipboard-master",
  "crossbeam-channel",
+ "memchr",
  "memmap2",
  "mimalloc",
  "once_cell",
+ "parking_lot",
  "rand 0.8.5",
  "rayon",
  "regex",
@@ -27,6 +30,7 @@ dependencies = [
  "tauri-plugin-global-shortcut",
  "tauri-plugin-notification",
  "tauri-plugin-opener",
+ "thiserror 1.0.69",
  "tokio",
  "uuid",
  "walkdir",
@@ -347,6 +351,12 @@ name = "bumpalo"
 version = "3.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5dd9dc738b7a8311c7ade152424974d8115f2cdad61e8dab8dac9f2362298510"
+
+[[package]]
+name = "bytecount"
+version = "0.6.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "175812e0be2bccb6abe50bb8d566126198344f707e304f45c648fd8f2cc0365e"
 
 [[package]]
 name = "bytemuck"

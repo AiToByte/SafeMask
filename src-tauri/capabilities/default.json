@@ -22,6 +22,7 @@
     "core:tray:allow-set-menu",
     "core:tray:allow-set-show-menu-on-left-click",
     "core:tray:allow-set-visible",
+    "core:path:allow-resolve-directory",
     {
       "identifier": "core:event:allow-listen",
       "allow": [{ "event": "request-close" }] 

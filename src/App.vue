@@ -11,7 +11,6 @@ import ExitConfirm from './components/ExitConfirm.vue';
 import HistoryList from './components/HistoryList.vue';
 import RuleManager from './components/RuleManager.vue';
 import SettingsPage from './components/Settings.vue';
-import { Rule } from 'postcss';
 
 const store = useAppStore();
 
@@ -20,12 +19,17 @@ let unlistenProgress: UnlistenFn;
 let unlistenMasked: UnlistenFn;
 
 onMounted(async () => {
-  // 1. 初始化从 Rust 后端拉取规则统计信息
-  await store.fetchStats();
-  await store.fetchHistory();
+  try {
+    // 1. 初始化从 Rust 后端拉取规则统计信息
+    await store.fetchStats();
+    await store.fetchHistory();
 
-  // 2. 🚀 开启全局实时监听（核心修复）
-  await store.initEventListeners();
+    // 2. 🚀 开启全局实时监听（核心修复）
+    await store.initEventListeners();
+  } catch (e) {
+    console.error("初始化事件监听器失败:", e);
+  }
+  
 
   // 2. 监听文件处理进度事件 (来自 processor.rs 的保序流水线)
   unlistenProgress = await listen<{ percentage: number }>("file-progress", (event) => {

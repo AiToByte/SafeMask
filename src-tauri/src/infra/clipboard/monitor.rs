@@ -1,0 +1,58 @@
+use crate::infra::clipboard::handler::GlobalClipboard;
+#[warn(unused_imports)]
+use crate::common::state::AppState;
+use clipboard_master::{CallbackResult, ClipboardHandler, Master};
+use std::sync::Arc;
+use tauri::{AppHandle};
+// 🚀 导入 Tauri 的运行时句柄类型
+use tauri::async_runtime::RuntimeHandle;
+
+struct ClipboardHandlerImpl {
+    handler: Arc<GlobalClipboard>,
+    // 🚀 修改此处：使用 RuntimeHandle 而不是 tokio::runtime::Handle
+    rt: RuntimeHandle,
+}
+
+impl ClipboardHandler for ClipboardHandlerImpl {
+    fn on_clipboard_change(&mut self) -> CallbackResult {
+        let h = self.handler.clone();
+        // RuntimeHandle 同样提供了 spawn 方法，用法一致
+        self.rt.spawn(async move {
+            h.process_change().await;
+        });
+        CallbackResult::Next
+    }
+
+    fn on_clipboard_error(&mut self, error: std::io::Error) -> CallbackResult {
+        eprintln!("⚠️ [Clipboard] 监听错误: {}", error);
+        CallbackResult::Next
+    }
+}
+
+pub fn start_listener(app: AppHandle) {
+    // 确保 GlobalClipboard 初始化
+    let handler_logic = Arc::new(GlobalClipboard::new(app.clone()));
+    
+    // 🚀 获取 Tauri 维护的全局运行时句柄
+    let rt = tauri::async_runtime::handle().clone();
+
+    // 在独立线程中运行阻塞的剪贴板监听器
+    std::thread::spawn(move || {
+        let handler = ClipboardHandlerImpl { 
+            handler: handler_logic, 
+            rt 
+        };
+        
+        match Master::new(handler) {
+            Ok(mut master) => {
+                println!("🎧 [Clipboard] 监听服务已启动");
+                if let Err(e) = master.run() {
+                    eprintln!("❌ [Clipboard] 监听循环异常中断: {}", e);
+                }
+            }
+            Err(e) => {
+                eprintln!("❌ [Clipboard] 无法初始化 Master: {}", e);
+            }
+        }
+    });
+}

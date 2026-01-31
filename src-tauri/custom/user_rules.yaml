@@ -1,2 +1,8 @@
 group: CUSTOM
-rules: []
+rules:
+- name: 名字
+  pattern: xiaosheng
+  mask: <Name>
+  priority: 10
+  enabled: true
+  is_custom: true

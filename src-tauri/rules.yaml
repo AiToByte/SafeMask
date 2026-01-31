@@ -1,0 +1,18 @@
+
+- name: "手机号"
+  pattern: "(?P<prefix>1[3-9]\\d{1})(?P<mask>\\d{4})(?P<suffix>\\d{4})"
+  mask: "<CHINA_PHONE>"
+  priority: 10
+  enabled: true
+
+- name: "身份证号"
+  pattern: "(?P<prefix>\\d{6})(?P<mask>\\d{8})(?P<suffix>\\d{3}[0-9Xx])"
+  mask: "<ID_CARD>"
+  priority: 20
+  enabled: true
+
+- name: "Email"
+  pattern: "(?P<prefix>[\\w\\.-]+)@(?P<suffix>[\\w\\.-]+\\.\\w+)"
+  mask: "<EMAIL>"
+  priority: 5
+  enabled: true
