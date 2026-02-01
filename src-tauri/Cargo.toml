@@ -41,6 +41,8 @@ crossbeam-channel = "0.5" # 高性能通道 (用于背压控制)
 clipboard-master = "4.0.0" # 系统级剪贴板事件监听
 rand = "0.8.5"   # 用于 jitter 随机抖动，防止雷鸣群效应
 parking_lot = "0.12"      # 比 std::sync::Mutex 更快更小的锁
+env_logger = "0.11"  # 添加日志库
+log = "0.4"
 
 # --- 错误处理 ---
 thiserror = "1.0" # 库级别错误定义

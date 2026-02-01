@@ -2,6 +2,7 @@ use crate::core::rules::Rule;
 use aho_corasick::{AhoCorasick, MatchKind};
 use regex::bytes::{Regex};
 use std::borrow::Cow;
+use log::{info, error};  // 添加导入
 
 /// 内部结构：存储编译后的单个正则规则
 struct CompiledRegex {
@@ -30,6 +31,7 @@ pub struct MaskEngine {
 impl MaskEngine {
     /// 构造引擎：自动分类规则并预编译
     pub fn new(mut rules: Vec<Rule>) -> Self {
+        info!("⚙️ 引擎构建开始，规则数: {}", rules.len());
         // 1. 过滤未启用的规则并按优先级降序排列
         rules.retain(|r| r.enabled);
         rules.sort_by(|a, b| b.priority.cmp(&a.priority));

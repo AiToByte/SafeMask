@@ -6,6 +6,7 @@ use std::sync::atomic::Ordering;
 use tauri::{AppHandle, Manager, Emitter};
 use chrono::Local;
 use uuid::Uuid;
+use log::{info, error};
 
 pub struct GlobalClipboard {
     app: AppHandle,
@@ -21,6 +22,16 @@ impl GlobalClipboard {
         }
     }
 
+    // 公开方法：获取当前剪贴板文本
+    pub fn get_text(&self) -> Result<String, arboard::Error> {
+        self.backend.lock().get_text()
+    }
+
+    // 公开方法：设置剪贴板文本
+    pub fn set_text(&self, text: String) -> Result<(), arboard::Error> {
+        self.backend.lock().set_text(text)
+    }
+
     pub async fn process_change(&self) {
         let state = self.app.state::<AppState>();
 
@@ -29,10 +40,16 @@ impl GlobalClipboard {
             return;
         }
 
-        // 2. 读取内容
-        let text = match self.backend.lock().get_text() {
-            Ok(t) => t,
-            Err(_) => return,
+        // 2. 读取内容（使用公开方法）
+        let text = match self.get_text() {
+            Ok(t) => {
+                info!("[Clipboard] 读取成功，长度: {}", t.len());
+                t
+            }
+            Err(e) => {
+                error!("[Clipboard] 读取失败: {}", e);
+                return;
+            }
         };
 
         if text.trim().is_empty() || text.len() > 1024 * 1024 { return; } // 忽略过大内容
@@ -50,30 +67,38 @@ impl GlobalClipboard {
             (masked, changed)
         };
 
-        if !has_changed { return; }
+        if !has_changed {
+            info!("[Clipboard] 内容无敏感信息，无需替换");
+            return;
+        }
 
         // 4. 写回并记录历史
         state.is_internal_changing.store(true, Ordering::Release);
         
-        if let Ok(_) = self.backend.lock().set_text(masked_text.clone()) {
-            let history_item = MaskHistoryItem {
-                id: Uuid::new_v4().to_string(),
-                timestamp: Local::now().format("%H:%M:%S").to_string(),
-                original: text,
-                masked: masked_text,
-            };
-
-             // 🚀 ：使用 .inner() 明确调用 AppState 上的方法
-            state.inner().add_history(history_item.clone());
-            let _ = self.app.emit(AppEvents::NEW_HISTORY, history_item);
-            let _ = self.app.emit(AppEvents::MASKED_EVENT, "🛡️ 隐私信息已自动脱敏");
+        if let Err(e) = self.set_text(masked_text.clone()) {
+            error!("[Clipboard] 写回失败: {}", e);
+            state.is_internal_changing.store(false, Ordering::Release);
+            return;
         }
 
-        // 🚀 核心修复：使用 tauri::async_runtime::spawn
+        let history_item = MaskHistoryItem {
+            id: Uuid::new_v4().to_string(),
+            timestamp: Local::now().format("%H:%M:%S").to_string(),
+            original: text,
+            masked: masked_text.clone(),
+        };
+
+        state.add_history(history_item.clone());
+        let _ = self.app.emit(AppEvents::NEW_HISTORY, history_item);
+        let _ = self.app.emit(AppEvents::MASKED_EVENT, "🛡️ 隐私信息已自动脱敏");
+
+        // 延迟重置标志，防止循环触发
         let is_changing = state.is_internal_changing.clone();
         tauri::async_runtime::spawn(async move {
             tokio::time::sleep(std::time::Duration::from_millis(300)).await;
             is_changing.store(false, Ordering::Release);
         });
+
+        info!("[Clipboard] 脱敏完成，已写回");
     }
 }

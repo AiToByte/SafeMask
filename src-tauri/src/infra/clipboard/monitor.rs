@@ -6,6 +6,8 @@ use std::sync::Arc;
 use tauri::{AppHandle};
 // 🚀 导入 Tauri 的运行时句柄类型
 use tauri::async_runtime::RuntimeHandle;
+use std::time::Duration;
+use log::{info, error};
 
 struct ClipboardHandlerImpl {
     handler: Arc<GlobalClipboard>,
@@ -29,30 +31,62 @@ impl ClipboardHandler for ClipboardHandlerImpl {
     }
 }
 
+// pub fn start_listener(app: AppHandle) {
+//     // 确保 GlobalClipboard 初始化
+//     let handler_logic = Arc::new(GlobalClipboard::new(app.clone()));
+    
+//     // 🚀 获取 Tauri 维护的全局运行时句柄
+//     let rt = tauri::async_runtime::handle().clone();
+
+//     // 在独立线程中运行阻塞的剪贴板监听器
+//     std::thread::spawn(move || {
+//         let handler = ClipboardHandlerImpl { 
+//             handler: handler_logic, 
+//             rt 
+//         };
+        
+//         match Master::new(handler) {
+//             Ok(mut master) => {
+//                 if let Err(e) = master.run() {
+//                     eprintln!("❌ [Clipboard] 监听循环异常中断: {}", e);
+//                 }
+//             }
+//             Err(e) => {
+//                 eprintln!("❌ [Clipboard] 无法初始化 Master: {}", e);
+//             }
+//         }
+//     });
+// }
+
+
 pub fn start_listener(app: AppHandle) {
-    // 确保 GlobalClipboard 初始化
     let handler_logic = Arc::new(GlobalClipboard::new(app.clone()));
     
-    // 🚀 获取 Tauri 维护的全局运行时句柄
-    let rt = tauri::async_runtime::handle().clone();
-
-    // 在独立线程中运行阻塞的剪贴板监听器
-    std::thread::spawn(move || {
-        let handler = ClipboardHandlerImpl { 
-            handler: handler_logic, 
-            rt 
-        };
+    // 使用 Tauri 的 async runtime，直接 spawn polling loop（无需独立线程）
+    tauri::async_runtime::spawn(async move {
+        let mut last_content = String::new();  // 缓存上次内容，避免重复处理
         
-        match Master::new(handler) {
-            Ok(mut master) => {
-                println!("🎧 [Clipboard] 监听服务已启动");
-                if let Err(e) = master.run() {
-                    eprintln!("❌ [Clipboard] 监听循环异常中断: {}", e);
+        info!("🎧 [Clipboard] Polling 监听服务已启动 (间隔 500ms)");
+        
+        loop {
+            // 安全读取剪贴板
+            let current = match handler_logic.get_text() {
+                Ok(text) => text,
+                Err(e) => {
+                    error!("⚠️ [Clipboard] 读取失败: {}", e);
+                    String::new()
                 }
+            };
+            
+            // 如果变化，处理
+            if !current.is_empty() && current != last_content {
+                info!("🔔 [Clipboard] 检测到变化: {} 字节", current.len());
+                last_content = current.clone();
+                handler_logic.process_change().await;
             }
-            Err(e) => {
-                eprintln!("❌ [Clipboard] 无法初始化 Master: {}", e);
-            }
+            
+            // 等待下次 poll（可调 300-1000ms）
+            tokio::time::sleep(Duration::from_millis(500)).await;
         }
     });
 }

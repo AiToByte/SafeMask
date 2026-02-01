@@ -3,13 +3,14 @@ use crate::common::errors::AppResult;
 use crate::core::rules::Rule;
 use crate::core::engine::MaskEngine;
 use crate::infra::config::loader::ConfigLoader;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, State, Manager}; // 🚀 确保引入 Manager 以便使用 .state()
 use std::sync::Arc;
 
 /// 获取规则统计信息 (仪表盘使用)
 #[tauri::command]
 pub async fn get_rules_stats(app: AppHandle) -> AppResult<serde_json::Value> {
-    let rules = ConfigLoader::load_all_rules(&app)?;
+    // 🚀 修复：load_all_rules 返回的是 Vec<Rule>，不需要 '?'
+    let rules = ConfigLoader::load_all_rules(&app);
     Ok(serde_json::json!({
         "rule_count": rules.len(),
     }))
@@ -18,8 +19,10 @@ pub async fn get_rules_stats(app: AppHandle) -> AppResult<serde_json::Value> {
 /// 获取所有详细规则列表 (规则管理页面使用)
 #[tauri::command]
 pub async fn get_all_detailed_rules(app: AppHandle) -> AppResult<Vec<Rule>> {
-    ConfigLoader::load_all_rules(&app)
+    // 🚀 修复：包装在 Ok() 中返回
+    Ok(ConfigLoader::load_all_rules(&app))
 }
+
 
 /// 保存或更新规则
 #[tauri::command]
@@ -43,10 +46,11 @@ pub async fn delete_rule_api(app: AppHandle, state: State<'_, AppState>, name: S
 
 /// 内部函数：重新加载规则并替换引擎
 async fn reload_engine_internal(app: AppHandle, state: State<'_, AppState>) -> AppResult<()> {
-    let rules = ConfigLoader::load_all_rules(&app)?;
+    // 🚀 修复：load_all_rules 返回的是 Vec<Rule>，不需要 '?'
+    let rules = ConfigLoader::load_all_rules(&app);
     let new_engine = Arc::new(MaskEngine::new(rules));
     
-    // 🚀 parking_lot 不需要 unwrap，直接拿到 guard
+    // parking_lot 不需要 unwrap
     let mut guard = state.engine.write();
     *guard = new_engine; 
     Ok(())
