@@ -22,7 +22,7 @@ After your content is processed by SafeMask, all private information will be ano
 | 形态 | 分支 | 状态 | 核心能力 |
 | :--- | :--- | :--- | :--- |
 | 🐚 **CLI 命令行** | [`main-cmd`](https://github.com/AiToByte/safemask/tree/main-cmd) | **稳定版 (Stable)** | 高性能文件脱敏、混合引擎、保序流水线 |
-| 🖥️ **Desktop 桌面** | `main` | **研发中 (WIP)** | **Tauri 驱动**、剪贴板实时监听、静默脱敏、可视化配置 |
+| 🖥️ **Desktop 桌面** | `main` | **可以使用** | **Tauri 驱动**、剪贴板实时监听、静默脱敏、可视化配置 |
 
 
 > **📢 立即开始使用：**
