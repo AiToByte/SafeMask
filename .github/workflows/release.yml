@@ -23,6 +23,15 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+      
+       # 🚀 新增步骤：移除本地代理配置，防止 CI 环境连接失败
+      - name: Remove local cargo proxy
+        run: |
+          if [ -d ".cargo" ]; then
+            rm -rf .cargo
+            echo "Removed .cargo directory to prevent proxy errors in CI"
+          fi
+        shell: bash
 
       # 1. 环境准备：Node.js
       - name: setup node
