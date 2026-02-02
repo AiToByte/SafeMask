@@ -19,10 +19,8 @@ use tauri::{
     Emitter,
     Manager,
     image::Image,
-    menu::{MenuBuilder, MenuItemBuilder},  // ← 一次性导入 MenuBuilder 和 MenuItemBuilder
-    tray::{TrayIconEvent}, // ← TrayIconEvent 用于 match
+    menu::{MenuBuilder, MenuItemBuilder}  // ← 一次性导入 MenuBuilder 和 MenuItemBuilder
 };
-use std::path::Path;
 
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
@@ -170,7 +168,7 @@ fn setup_system_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>>
     // ────────────────────────────────
     let tray_id = "safemask-main-tray";
 
-    let _tray = TrayIconBuilder::with_id(tray_id)
+    let _tray = tauri::tray::TrayIconBuilder::with_id(tray_id)
         .icon(icon)
         .tooltip("SafeMask - 隐私保护中")
         .menu(&menu)
@@ -191,10 +189,9 @@ fn setup_system_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>>
             }
         })
         // 左键点击直接显示窗口（推荐！）
-        .on_tray_icon_event(move |tray, event| {   // 注意：第一个参数是 &TrayIcon，不是 &AppHandle
-            use tauri::tray::TrayIconEvent;       
+        .on_tray_icon_event(move |tray, event| {   // 注意：第一个参数是 &TrayIcon，不是 &AppHandle       
 
-            if let TrayIconEvent::Click { button, .. } = event {
+            if let tauri::tray::TrayIconEvent::Click { button, .. } = event {
                 if button == tauri::tray::MouseButton::Left {
                     if let Some(window) = tray.app_handle().get_webview_window("main") {
                         if window.is_visible().unwrap_or(false) {
