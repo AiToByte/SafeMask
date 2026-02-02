@@ -52,7 +52,7 @@ impl GlobalClipboard {
             }
         };
 
-        if text.trim().is_empty() || text.len() > 1024 * 1024 { return; } // 忽略过大内容
+        if text.trim().is_empty() || text.len() > 2 * 1024 * 1024 { return; } // 忽略过大内容
 
         // 3. 执行脱敏
         let (masked_text, has_changed) = {

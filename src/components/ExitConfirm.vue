@@ -1,87 +1,156 @@
+<!-- src/components/ExitConfirm.vue -->
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { listen, type UnlistenFn} from '@tauri-apps/api/event';
-import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
+import { ref, onMounted, onUnmounted } from 'vue'
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import { listen } from '@tauri-apps/api/event'
+import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification'
+import { emit } from '@tauri-apps/api/event' // 如果需要通知其他组件
 
-const show = ref(false);
-const remember = ref(false);
-const appWindow = getCurrentWindow();
-let unlisten: UnlistenFn;
+const appWindow = getCurrentWindow()
 
-const handleAction = async (action: 'quit' | 'tray') => {
-    if (remember.value) {
-        localStorage.setItem('close-behavior', action);
-    }
-    
-    if (action === 'quit') {
-        await appWindow.destroy(); // 真正关闭
-    } else {
-        show.value = false;
-        await appWindow.hide(); // 隐藏到后台
-    }
+// 是否显示对话框
+const showConfirm = ref(false)
+// 是否记住本次选择
+const rememberChoice = ref(false)
+// 当前选中的行为：'minimize' | 'quit' | null
+const selectedAction = ref<'minimize' | 'quit' | null>(null)
 
-    // 发送系统通知告知用户位置
-    let permission = await isPermissionGranted();
-    if (!permission) {
-        permission = await requestPermission() === 'granted';
-    }
-    if (permission) {
-        sendNotification({ title: 'SafeMask', body: '程序已最小化到系统托盘，继续为您守护隐私。' });
-    }
-};
+// 监听后端发来的关闭请求
+let unlistenClose: (() => void) | null = null
 
 onMounted(async () => {
-  // 监听 Rust 发来的关闭请求
-  unlisten = await listen('request-close', (event) => {
-    console.log("📥 收到来自 Rust 的关闭信号:", event.payload);
-    // 检查本地存储的用户偏好
-    const savedAction = localStorage.getItem('close-behavior');
+  // 读取用户之前的选择（如果有）
+  const saved = localStorage.getItem('exit-preference')
+  if (saved === 'minimize' || saved === 'quit') {
+    selectedAction.value = saved as 'minimize' | 'quit'
+  }
 
-    if (savedAction === 'quit' || savedAction === 'tray') {
-      handleAction(savedAction as 'quit' | 'tray');
+  unlistenClose = await listen<string>('request-close', () => {
+    // 如果用户已经记住选择，直接执行
+    if (selectedAction.value) {
+      handleExit(selectedAction.value)
     } else {
-      show.value = true;
+      showConfirm.value = true
     }
-  });
-});
+  })
+})
 
 onUnmounted(() => {
-  if (unlisten) unlisten();
-});
+  if (unlistenClose) unlistenClose()
+})
+
+/**
+ * 执行退出/最小化逻辑
+ * @param action 'minimize' 或 'quit'
+ */
+const handleExit = async (action: 'minimize' | 'quit') => {
+  // 是否需要记住选择
+  if (rememberChoice.value) {
+    localStorage.setItem('exit-preference', action)
+  }
+
+  if (action === 'minimize') {
+    // 最小化到托盘
+    await appWindow.hide()
+
+    // 可选：发送系统通知（提升体验）
+    try {
+      let permission = await isPermissionGranted()
+      if (!permission) {
+        permission = (await requestPermission()) === 'granted'
+      }
+      if (permission) {
+        await sendNotification({
+          title: 'SafeMask',
+          body: '程序已最小化到系统托盘，继续为您保护剪贴板隐私',
+          icon: 'icons/128x128.png' // 可选：使用应用图标
+        })
+      }
+    } catch (err) {
+      console.warn('发送托盘通知失败:', err)
+    }
+  } else {
+    // 彻底退出
+    await appWindow.destroy() // 或 close()，destroy 更彻底
+  }
+
+  // 关闭对话框
+  showConfirm.value = false
+}
 </script>
 
 <template>
-  <div v-if="show" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-    <div class="glass w-[400px] p-8 rounded-[2.5rem] border border-white/10 shadow-2xl scale-in-center">
-      <h3 class="text-xl font-bold mb-4">退出 SafeMask</h3>
-      <p class="text-zinc-400 text-sm mb-8 leading-relaxed">
-        您希望直接关闭程序，还是让它在后台继续保护您的剪贴板隐私？
-      </p>
+  <div
+    v-if="showConfirm"
+    class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+  >
+    <div
+      class="
+        glass-card
+        w-full max-w-md mx-4 p-8 rounded-3xl
+        border border-zinc-700/50
+        shadow-2xl shadow-black/60
+        transform transition-all duration-300 scale-100
+      "
+    >
+      <h2 class="text-2xl font-bold text-white mb-3">退出 SafeMask？</h2>
       
-      <div class="space-y-3 mb-8">
-        <button @click="handleAction('tray')" class="w-full py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold transition-all">
-          最小化到系统托盘
+      <p class="text-zinc-400 mb-8 leading-relaxed">
+        程序将继续在后台保护您的剪贴板隐私，您可以随时从系统托盘重新打开。
+      </p>
+
+      <div class="space-y-4">
+        <!-- 最小化选项 -->
+        <button
+          @click="handleExit('minimize')"
+          class="
+            w-full py-4 px-6 rounded-2xl font-medium text-lg
+            bg-gradient-to-r from-blue-600 to-indigo-600
+            hover:from-blue-500 hover:to-indigo-500
+            transition-all duration-300 transform hover:scale-[1.02]
+            focus:outline-none focus:ring-2 focus:ring-blue-500/40
+          "
+        >
+          最小化到系统托盘（推荐）
         </button>
-        <button @click="handleAction('quit')" class="w-full py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl font-bold transition-all text-zinc-400">
+
+        <!-- 彻底退出 -->
+        <button
+          @click="handleExit('quit')"
+          class="
+            w-full py-4 px-6 rounded-2xl font-medium text-lg
+            bg-zinc-800 hover:bg-zinc-700
+            border border-zinc-600 hover:border-zinc-500
+            transition-all duration-300
+            focus:outline-none focus:ring-2 focus:ring-zinc-500/40
+          "
+        >
           彻底退出程序
         </button>
-      </div>
 
-      <div class="flex items-center gap-2 cursor-pointer" @click="remember = !remember">
-        <div class="w-4 h-4 border border-zinc-600 rounded flex items-center justify-center transition-colors" :class="{'bg-blue-600 border-blue-600': remember}">
-          <span v-if="remember" class="text-[10px]">✓</span>
-        </div>
-        <span class="text-xs text-zinc-500">记住我的选择，下次不再提示</span>
+        <!-- 记住选择 -->
+        <label class="flex items-center mt-6 cursor-pointer select-none">
+          <input
+            v-model="rememberChoice"
+            type="checkbox"
+            class="
+              w-5 h-5 rounded border-zinc-600 bg-zinc-800
+              text-blue-500 focus:ring-blue-500/30
+            "
+          />
+          <span class="ml-3 text-sm text-zinc-400">
+            记住我的选择，下次不再询问
+          </span>
+        </label>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.scale-up { animation: scaleUp 0.2s ease-out forwards; }
-@keyframes scaleUp {
-  0% { transform: scale(0.95); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+.glass-card {
+  background: rgba(24, 24, 27, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 </style>

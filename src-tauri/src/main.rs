@@ -5,68 +5,38 @@ mod common;
 mod core;
 mod infra;
 
-// 🚀 修复核心：必须导入 Manager 才能使用 .manage()
-use tauri::Manager; 
 use crate::common::state::AppState;
 use crate::core::engine::MaskEngine;
 use crate::infra::config::loader::ConfigLoader;
 use std::sync::{Arc, atomic::AtomicBool};
 // 统一使用 parking_lot
 // 🚀 显式从 parking_lot 导入
-use parking_lot::{Mutex};
+use parking_lot::{Mutex, RwLock};
 use log::{info, error, LevelFilter};
 use {tauri_plugin_dialog, tauri_plugin_opener};  // ← 新增这一行导入 
+use tauri::{
+    Manager,
+    Emitter,
+    image::Image,
+};
+use std::path::Path;                    // ← 加上这个！
+use tauri::tray::{TrayIcon, TrayIconBuilder};  // ← 改成这样导入（最推荐）
 
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
+/// 应用程序入口函数
+/// 职责：初始化日志、创建 Tauri 应用构建器、注册插件和命令、启动应用
 fn main() {
-    
-    // 更健壮的初始化方式
-    env_logger::builder()
-        .filter_level(LevelFilter::Info)           // 默认 info 级别
-        .filter_module("SafeMask", LevelFilter::Trace)  // 你的 crate 名强制 trace
-        .target(env_logger::Target::Stdout)        // 强制输出到 stdout（终端更容易看到）
-        .init();
-
-    info!("🚀 env_logger 已初始化，级别: info+");
+    // 初始化日志系统（放在最前面，便于后续所有模块都能输出日志）
+    init_logger();
 
     info!("🚀 Tauri 应用启动中...");
-    tauri::Builder::default()
-        .plugin(tauri_plugin_dialog::init())   // ← 这里添加这一行！！
-        .plugin(tauri_plugin_opener::init())
-        .setup(|app| {
-            info!("🛠️ Setup 开始...");
-            let handle = app.handle();
-            info!("📂 加载规则...");
-            // 1. 加载规则 (🚀 修正点：直接获取 Vec<Rule>，不再需要 unwrap)
-            let rules = ConfigLoader::load_all_rules(handle);
-            info!("✅ 加载规则完成: {} 条", rules.len());
 
-            // 初始化引擎...
-            info!("🧠 引擎初始化完成");
-            // 2. 初始化引擎实体
-            let engine_instance = Arc::new(MaskEngine::new(rules));
-            
-            // 3. 构建全局状态
-            // 🚀 这里显式使用 parking_lot 的构造方式
-            let app_state = AppState {
-                engine: Arc::new(parking_lot::RwLock::new(engine_instance)),  
-                is_monitor_on: Arc::new(Mutex::new(true)),
-                history: Arc::new(Mutex::new(Vec::new())),
-                is_internal_changing: Arc::new(AtomicBool::new(false)),
-                last_content: Arc::new(Mutex::new(String::new())),
-            };
-            // 4. 注入状态
-            app.manage(app_state);
-            // 注入状态...
-            info!("🔗 状态注入完成");
-            // 5. 启动剪贴板监听
-            info!("🎧 启动剪贴板监听...");
-            infra::clipboard::monitor::start_listener(handle.clone());
-            info!("✅ Setup 完成");
-            Ok(())
-        })
+    if let Err(e) = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
+        .setup(setup_application)
         .invoke_handler(tauri::generate_handler![
             api::system::get_rules_stats,
             api::system::get_all_detailed_rules,
@@ -81,5 +51,127 @@ fn main() {
             api::files::process_file_gui,
         ])
         .run(tauri::generate_context!())
-        .expect("Tauri 运行失败");
+    {
+        error!("Tauri 运行失败: {}", e);
+        std::process::exit(1);
+    }
+}
+
+/// 初始化日志系统
+/// - 默认级别：Info
+/// - 对本项目（SafeMask）模块强制使用 Trace 级别，便于调试
+/// - 输出到标准输出（stdout）
+fn init_logger() {
+    env_logger::builder()
+        .filter_level(LevelFilter::Info)
+        .filter_module("SafeMask", LevelFilter::Trace)
+        .target(env_logger::Target::Stdout)
+        .init();
+
+    info!("🚀 env_logger 已初始化，级别: info+ (SafeMask 模块为 trace)");
+}
+
+/// Tauri 应用初始化核心逻辑
+/// 所有需要在应用启动时完成的初始化工作都集中在此函数中
+fn setup_application(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    info!("🛠️ Setup 开始...");
+
+    let handle = app.handle();
+
+    // 1. 加载所有规则（系统规则 + 用户自定义规则）
+    info!("📂 加载规则...");
+    let rules = ConfigLoader::load_all_rules(&handle);
+    info!("✅ 加载规则完成: {} 条", rules.len());
+
+    // 2. 创建脱敏引擎实例
+    info!("🧠 初始化脱敏引擎...");
+    let engine_instance = Arc::new(MaskEngine::new(rules));
+    info!("✅ 引擎初始化完成");
+
+    // 3. 构建并注入全局应用状态
+    info!("🔗 准备全局状态...");
+    let app_state = AppState {
+        engine: Arc::new(RwLock::new(engine_instance)),
+        is_monitor_on: Arc::new(Mutex::new(true)),
+        history: Arc::new(Mutex::new(Vec::new())),
+        is_internal_changing: Arc::new(AtomicBool::new(false)),
+        last_content: Arc::new(Mutex::new(String::new())),
+    };
+
+    app.manage(app_state);
+    info!("✅ 全局状态注入完成");
+
+    // 4. 启动剪贴板实时监控（自动脱敏）
+    info!("🎧 启动剪贴板监听...");
+    infra::clipboard::monitor::start_listener(handle.clone());
+    info!("✅ 剪贴板监听已启动");
+
+    // 5. 设置窗口关闭拦截（显示退出确认对话框）
+    info!("🪟 设置窗口关闭拦截...");
+    init_window_close_handler(handle.clone())?;
+
+    info!("🎉 Setup 完成！SafeMask 已就绪");
+    // 创建托盘...
+    setup_system_tray(app)?;
+    Ok(())
+}
+
+/// 为主窗口注册关闭事件拦截
+/// 当用户点击窗口关闭按钮时，不直接退出，而是发出 "request-close" 事件给前端
+/// 让前端显示退出确认对话框（最小化到托盘 / 彻底退出）
+fn init_window_close_handler(handle: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    let window = handle
+        .get_webview_window("main")
+        .ok_or("未找到主窗口 'main'")?;
+
+    // Clone 给闭包使用（cheap 操作）
+    let window_for_closure = window.clone();
+
+    window.on_window_event(move |event| {
+        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+            api.prevent_close();
+
+            // 使用克隆的 window 发出事件
+            let _ = window_for_closure.emit("request-close", ());
+            info!("捕获到关闭请求，已转发给前端处理");
+        }
+    });
+    Ok(())
+}
+
+fn setup_system_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    info!("🛡️ 初始化系统托盘图标...");
+
+    // 推荐：使用 tauri 上下文来获取资源路径（更可靠）
+    // 如果你确定 icons/32x32.png 已经放在 tauri.conf.json 的 "resources" 里
+    // 则可以用 app.path().resource_dir().unwrap().join("icons/32x32.png")
+    //
+    // 这里先用你原来的相对路径写法（但记得 cargo 运行时的工作目录）
+    let icon_path = Path::new("icons/32x32.png");
+
+    let icon = Image::from_path(icon_path)
+        .map_err(|e| format!("无法加载托盘图标 {}: {}", icon_path.display(), e))?;
+
+    // ────────────────────────────────────────────────
+    //  正确写法：with_xxx 都是关联函数，需要用 :: 语法
+    // ────────────────────────────────────────────────
+    let tray = match TrayIconBuilder::with_id("safemask-main-tray")
+    .icon(icon)
+    .tooltip("SafeMask - 隐私保护中")
+    .build(app)
+    {
+        Ok(t) => t,
+        Err(e) => {
+            error!("托盘创建失败: {}", e);
+            return Err(e.into());
+        }
+    };
+
+    // 如果你一定要构建后再 set_xxx，也可以，但不推荐（部分平台不支持）
+    // tray.set_icon(Some(icon))?;
+    // tray.set_tooltip(Some("SafeMask - 隐私保护中"))?;
+
+    info!("✅ 系统托盘图标已创建 (ID: safemask-main-tray)");
+
+    Ok(())
 }
