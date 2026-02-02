@@ -2,7 +2,7 @@ use crate::core::rules::Rule;
 use aho_corasick::{AhoCorasick, MatchKind};
 use regex::bytes::{Regex};
 use std::borrow::Cow;
-use log::{info, error};  // 添加导入
+use log::{info};  // 添加导入
 
 /// 内部结构：存储编译后的单个正则规则
 struct CompiledRegex {

@@ -15,12 +15,14 @@ use parking_lot::{Mutex, RwLock};
 use log::{info, error, LevelFilter};
 use {tauri_plugin_dialog, tauri_plugin_opener};  // ← 新增这一行导入 
 use tauri::{
-    Manager,
+    AppHandle,                  // ← 新增，用于闭包参数类型
     Emitter,
+    Manager,
     image::Image,
+    menu::{MenuBuilder, MenuItemBuilder},  // ← 一次性导入 MenuBuilder 和 MenuItemBuilder
+    tray::{TrayIconEvent}, // ← TrayIconEvent 用于 match
 };
-use std::path::Path;                    // ← 加上这个！
-use tauri::tray::{TrayIcon, TrayIconBuilder};  // ← 改成这样导入（最推荐）
+use std::path::Path;
 
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
@@ -142,36 +144,73 @@ fn init_window_close_handler(handle: tauri::AppHandle) -> Result<(), Box<dyn std
 fn setup_system_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     info!("🛡️ 初始化系统托盘图标...");
 
-    // 推荐：使用 tauri 上下文来获取资源路径（更可靠）
-    // 如果你确定 icons/32x32.png 已经放在 tauri.conf.json 的 "resources" 里
-    // 则可以用 app.path().resource_dir().unwrap().join("icons/32x32.png")
-    //
-    // 这里先用你原来的相对路径写法（但记得 cargo 运行时的工作目录）
-    let icon_path = Path::new("icons/32x32.png");
+    let _handle = app.handle().clone();
 
-    let icon = Image::from_path(icon_path)
-        .map_err(|e| format!("无法加载托盘图标 {}: {}", icon_path.display(), e))?;
+    // 加载图标（建议用资源路径，更可靠）
+    let icon_path = app.path().resource_dir()?.join("icons/32x32.png");
+    let icon = Image::from_path(&icon_path)
+        .map_err(|e| format!("托盘图标加载失败 {}: {}", icon_path.display(), e))?;
 
-    // ────────────────────────────────────────────────
-    //  正确写法：with_xxx 都是关联函数，需要用 :: 语法
-    // ────────────────────────────────────────────────
-    let tray = match TrayIconBuilder::with_id("safemask-main-tray")
-    .icon(icon)
-    .tooltip("SafeMask - 隐私保护中")
-    .build(app)
-    {
-        Ok(t) => t,
-        Err(e) => {
-            error!("托盘创建失败: {}", e);
-            return Err(e.into());
-        }
-    };
+    // ────────────────────────────────
+    // 创建菜单项
+    // ────────────────────────────────
+    let show_item = MenuItemBuilder::with_id("show", "显示窗口")
+        .build(app)?;
 
-    // 如果你一定要构建后再 set_xxx，也可以，但不推荐（部分平台不支持）
-    // tray.set_icon(Some(icon))?;
-    // tray.set_tooltip(Some("SafeMask - 隐私保护中"))?;
+    let quit_item = MenuItemBuilder::with_id("quit", "退出程序")
+        .build(app)?;
 
-    info!("✅ 系统托盘图标已创建 (ID: safemask-main-tray)");
+    // 构建菜单
+    let menu = MenuBuilder::new(app)
+        .items(&[&show_item, &quit_item])
+        .build()?;
+
+    // ────────────────────────────────
+    // 创建托盘 + 附加菜单 + 事件处理
+    // ────────────────────────────────
+    let tray_id = "safemask-main-tray";
+
+    let _tray = TrayIconBuilder::with_id(tray_id)
+        .icon(icon)
+        .tooltip("SafeMask - 隐私保护中")
+        .menu(&menu)
+        .on_menu_event(move |app: &AppHandle, event| {
+            match event.id().as_ref() {
+                "show" => {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                        info!("托盘菜单：显示主窗口");
+                    }
+                }
+                "quit" => {
+                    info!("托盘菜单：用户选择退出");
+                    app.exit(0);
+                }
+                _ => {}
+            }
+        })
+        // 左键点击直接显示窗口（推荐！）
+        .on_tray_icon_event(move |tray, event| {   // 注意：第一个参数是 &TrayIcon，不是 &AppHandle
+            use tauri::tray::TrayIconEvent;       
+
+            if let TrayIconEvent::Click { button, .. } = event {
+                if button == tauri::tray::MouseButton::Left {
+                    if let Some(window) = tray.app_handle().get_webview_window("main") {
+                        if window.is_visible().unwrap_or(false) {
+                            let _ = window.hide();
+                        } else {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                        info!("托盘左键：切换窗口可见性");
+                    }
+                }
+            }
+        })
+        .build(app)?;
+
+    info!("✅ 系统托盘已初始化 (带菜单 & 左键切换)");
 
     Ok(())
 }

@@ -3,7 +3,7 @@ use crate::common::errors::AppResult;
 use crate::core::rules::Rule;
 use crate::core::engine::MaskEngine;
 use crate::infra::config::loader::ConfigLoader;
-use tauri::{AppHandle, State, Manager}; // 🚀 确保引入 Manager 以便使用 .state()
+use tauri::{AppHandle, State}; // 🚀 确保引入 Manager 以便使用 .state()
 use std::sync::Arc;
 
 /// 获取规则统计信息 (仪表盘使用)

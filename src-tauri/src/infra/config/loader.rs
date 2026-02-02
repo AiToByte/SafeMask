@@ -6,7 +6,7 @@ use tauri::{AppHandle, Manager};
 use walkdir::WalkDir; 
 // 🚀 核心修复：引入 anyhow 的 Context Trait 以使用 with_context
 use anyhow::Context; 
-use log::{info, error};  // 添加导入
+use log::{info};  // 添加导入
 
 pub struct ConfigLoader;
 
@@ -35,6 +35,7 @@ impl ConfigLoader {
 
 
     /// 递归扫描目录下的所有 YAML 文件
+    #[allow(dead_code)]
     fn scan_directory<P: AsRef<Path>>(path: P, is_custom: bool) -> Vec<Rule> {
         let mut rules = Vec::new();
         for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {

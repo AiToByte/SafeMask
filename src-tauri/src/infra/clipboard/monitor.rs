@@ -1,7 +1,5 @@
 use crate::infra::clipboard::handler::GlobalClipboard;
-#[warn(unused_imports)]
-use crate::common::state::AppState;
-use clipboard_master::{CallbackResult, ClipboardHandler, Master};
+use clipboard_master::{CallbackResult, ClipboardHandler};
 use std::sync::Arc;
 use tauri::{AppHandle};
 // 🚀 导入 Tauri 的运行时句柄类型
@@ -9,6 +7,7 @@ use tauri::async_runtime::RuntimeHandle;
 use std::time::Duration;
 use log::{info, error};
 
+#[allow(dead_code)]
 struct ClipboardHandlerImpl {
     handler: Arc<GlobalClipboard>,
     // 🚀 修改此处：使用 RuntimeHandle 而不是 tokio::runtime::Handle
