@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Performance](https://img.shields.io/badge/throughput-300MB%2Fs+-brightgreen.svg)](#-性能基准)
 
-[**立即下载最新版**](https://github.com/AiToByte/SafeMask/releases) | [**架构详解**](ARCHITECTURE.md) | [**贡献指南**](CONTRIBUTING.md)
+[**立即下载最新版**](https://github.com/AiToByte/SafeMask/releases) | [**英文文档**](README.md)
 
 ---
 

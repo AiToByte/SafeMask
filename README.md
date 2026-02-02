@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Performance](https://img.shields.io/badge/throughput-300MB%2Fs+-brightgreen.svg)](#-performance-benchmarks)
 
-[**Download Latest**](https://github.com/AiToByte/SafeMask/releases) | [**Architecture**](ARCHITECTURE.md) | [**Contributing**](CONTRIBUTING.md) | [**简体中文文档**](README_CN.md)
+[**Download Latest**](https://github.com/AiToByte/SafeMask/releases) | [**简体中文文档**](README_CN.md)
 
 ---
 
