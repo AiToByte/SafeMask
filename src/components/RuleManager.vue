@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useAppStore } from '../stores/useAppStore';
 import { MaskAPI } from '../services/api';
-import { Plus, Info, Layers, Trash2, ShieldCheck, Search, Hash } from 'lucide-vue-next';
+import { Plus, Info, Layers, Trash2, ShieldCheck, Search, Hash, AlignLeft, Fingerprint, ArrowUpDown, Save, Loader2 } from 'lucide-vue-next';
 import { confirm } from '@tauri-apps/plugin-dialog';
 
 const store = useAppStore();
@@ -35,15 +35,12 @@ const handleDelete = async (name: string) => {
     `确定要永久删除自定义规则 [${name}] 吗？`, 
     { title: '删除确认', kind: 'warning', okLabel: '确定删除', cancelLabel: '取消' }
   );
-
   if (confirmation) {
     try {
       await MaskAPI.deleteRule(name);
       await store.fetchAllRules();
       await store.fetchStats();
-    } catch (e) {
-      console.error("删除失败:", e);
-    }
+    } catch (e) { console.error("删除失败:", e); }
   }
 };
 
@@ -60,69 +57,72 @@ const sortedRules = computed(() => {
 </script>
 
 <template>
-  <div class="flex items-stretch gap-8 h-full max-h-[680px] animate-in fade-in duration-500 font-sans">
+  <div class="flex items-stretch gap-6 h-full max-h-[680px] animate-in fade-in duration-500 font-sans p-1">
     
     <!-- 左侧列表 -->
-    <div class="flex-1 flex flex-col glass rounded-[2.5rem] border-white/5 overflow-hidden">
-      <!-- 列表头部 -->
-      <div class="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
+    <div class="flex-[1.5] min-w-0 flex flex-col glass rounded-[2rem] border border-white/5 overflow-hidden shadow-2xl shadow-black/20">
+      <!-- 搜索头部 -->
+      <div class="px-6 py-5 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
         <div class="flex items-center gap-3">
-          <div class="p-2 bg-blue-500/20 rounded-lg">
+          <div class="p-2 bg-blue-500/10 rounded-xl border border-blue-500/10">
             <Layers :size="18" class="text-blue-400" />
           </div>
-          <h3 class="font-bold text-zinc-200 tracking-tight">规则库列表</h3>
+          <div>
+            <h3 class="font-bold text-zinc-200 tracking-tight text-base">规则列表</h3>
+            <p class="text-[10px] text-zinc-500 font-medium">Manage Masking Rules</p>
+          </div>
         </div>
-        <div class="relative">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" :size="14" />
-          <input v-model="searchQuery" placeholder="搜索规则名称..." 
-                 class="bg-black/40 border border-zinc-800 rounded-xl py-2 pl-10 pr-4 text-xs outline-none focus:border-blue-500/50 w-48 transition-all focus:w-64 text-zinc-300" />
+        <div class="relative group">
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-blue-400 transition-colors" :size="14" />
+          <input v-model="searchQuery" placeholder="搜索..." 
+                 class="bg-black/20 border border-white/5 rounded-xl py-2 pl-9 pr-4 text-xs outline-none focus:border-blue-500/30 focus:bg-black/40 w-40 transition-all focus:w-56 text-zinc-300 placeholder:text-zinc-600" />
         </div>
       </div>
       
       <!-- 列表滚动区 -->
-      <div class="flex-1 overflow-y-auto p-6 space-y-3 custom-scroll">
+      <div class="flex-1 overflow-y-auto p-4 space-y-2.5 custom-scroll">
         <div v-for="rule in sortedRules" :key="rule.name" 
-             class="group p-4 rounded-2xl border transition-all flex items-center bg-white/[0.02] border-white/5 hover:bg-white/[0.04] hover:border-white/10">
+             class="group relative p-4 rounded-xl border transition-all duration-300 flex items-center bg-white/[0.02] border-white/5 hover:bg-white/[0.06] hover:border-blue-500/20 hover:shadow-lg hover:shadow-black/20 overflow-hidden cursor-default">
           
-          <!-- 1. 核心信息区：使用 min-w-0 允许 flex 项收缩以触发布断 -->
-          <div class="flex-1 min-w-0 flex flex-col gap-1.5">
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-bold truncate text-zinc-200" :title="rule.name">
+          <!-- 选中高亮条 -->
+          <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+          <!-- 信息主体 -->
+          <div class="flex-1 min-w-0 pr-4">
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="text-sm font-bold truncate text-zinc-200 group-hover:text-white transition-colors">
                 {{ rule.name }}
               </span>
-              <span v-if="rule.is_custom" class="shrink-0 text-[8px] bg-blue-600/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/30 font-black uppercase italic">
+              <span v-if="rule.is_custom" class="shrink-0 text-[9px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/20 font-bold uppercase tracking-wider">
                 Custom
               </span>
-              <span v-else class="shrink-0 text-[8px] bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded font-black uppercase">System</span>
+              <span v-else class="shrink-0 text-[9px] bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-700/50 font-bold uppercase tracking-wider">
+                System
+              </span>
             </div>
             
-            <!-- 模式展示：增加背景代码块，强制单行截断 -->
             <div class="flex items-center gap-2">
-               <code class="text-[10px] font-mono text-zinc-500 bg-black/30 px-2 py-0.5 rounded border border-white/5 truncate max-w-[90%]" :title="rule.pattern">
+               <code class="text-[10px] font-mono text-zinc-500 bg-black/30 px-2 py-0.5 rounded border border-white/5 truncate max-w-full block" :title="rule.pattern">
                  {{ rule.pattern }}
                </code>
             </div>
           </div>
 
-          <!-- 2. 右侧对齐 Meta 区：固定宽度确保整齐 -->
-          <div class="flex items-center gap-4 shrink-0 ml-4">
-            <!-- 脱敏标签：固定最小宽度 -->
-            <div class="hidden sm:flex items-center justify-end min-w-[100px]">
-              <span class="text-[10px] font-mono font-bold text-blue-400/80 bg-blue-500/5 px-2.5 py-1 rounded-lg border border-blue-500/10">
-                {{ rule.mask }}
-              </span>
-            </div>
+          <!-- 右侧状态与操作 -->
+          <div class="flex items-center gap-3 shrink-0 ml-auto pl-2">
+            <span class="text-[10px] font-mono font-medium text-emerald-400 bg-emerald-500/5 px-2 py-1 rounded border border-emerald-500/10 whitespace-nowrap">
+              {{ rule.mask }}
+            </span>
 
-            <!-- 操作按钮列 -->
-            <div class="w-10 flex justify-center">
+            <div class="w-8 flex justify-center">
               <button v-if="rule.is_custom" 
                       @click.stop="handleDelete(rule.name)"
-                      class="p-2 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
-                      title="删除自定义规则">
-                <Trash2 :size="16" />
+                      class="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                      title="删除规则">
+                <Trash2 :size="15" />
               </button>
-              <div v-else class="text-zinc-800 opacity-40" title="系统内置规则不可删除">
-                <ShieldCheck :size="16" />
+              <div v-else class="text-zinc-700" title="系统内置规则不可删除">
+                <ShieldCheck :size="15" />
               </div>
             </div>
           </div>
@@ -130,82 +130,130 @@ const sortedRules = computed(() => {
       </div>
     </div>
 
-    <!-- 右侧：配置面板 -->
-    <div class="w-[380px] flex flex-col gap-6">
-      <div class="glass p-8 rounded-[2.5rem] border-blue-500/20 flex-1 relative overflow-hidden">
-        <!-- 装饰背景 -->
-        <div class="absolute -right-10 -top-10 w-32 h-32 bg-blue-600/5 blur-3xl rounded-full"></div>
-        
-        <h3 class="text-xl font-bold mb-8 flex items-center gap-3 text-white">
-           <div class="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/20">
-             <Plus :size="18" class="text-white" />
-           </div>
-           新增脱敏规则
+    <!-- 右侧面板：宽度固定，改为Flex布局解决溢出 -->
+    <div class="w-[380px] shrink-0 flex flex-col glass rounded-[2rem] border border-blue-500/10 overflow-hidden relative shadow-2xl shadow-blue-900/5">
+      <!-- 动态背景 -->
+      <div class="absolute -right-20 -top-20 w-64 h-64 bg-blue-600/5 blur-[100px] rounded-full pointer-events-none"></div>
+      <div class="absolute -left-20 bottom-0 w-64 h-64 bg-indigo-600/5 blur-[100px] rounded-full pointer-events-none"></div>
+
+      <!-- 1. 头部：固定 -->
+      <div class="shrink-0 px-8 pt-8 pb-4">
+        <h3 class="text-lg font-bold flex items-center gap-3 text-white">
+          <div class="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg shadow-blue-500/20 text-white">
+            <Plus :size="18" stroke-width="3" />
+          </div>
+          <span>新增规则</span>
         </h3>
+        <p class="text-zinc-500 text-xs mt-2 pl-1">配置新的敏感数据脱敏策略。</p>
+      </div>
 
-        <div class="space-y-5 relative z-10">
-          <div class="space-y-2">
-            <label class="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-              <Hash :size="10" /> 规则名称
-            </label>
+      <!-- 2. 表单主体：可滚动 (flex-1 overflow-y-auto) -->
+      <div class="flex-1 overflow-y-auto px-8 py-2 custom-scroll space-y-5">
+        
+        <!-- Name Input -->
+        <div class="space-y-1.5 group">
+          <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">规则名称</label>
+          <div class="relative">
+            <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-500 transition-colors">
+              <Hash :size="14" />
+            </div>
             <input v-model="form.name" 
-                   class="w-full bg-black/40 border border-white/10 p-3.5 rounded-xl text-sm focus:border-blue-500/50 outline-none transition-all text-zinc-200 placeholder:text-zinc-700" 
-                   placeholder="例如：华为工号" />
+                   class="w-full bg-black/20 border border-white/10 hover:border-white/20 focus:border-blue-500/50 p-3 pl-10 rounded-xl text-sm outline-none transition-all text-zinc-200 placeholder:text-zinc-700" 
+                   placeholder="例如：身份证号" />
           </div>
+        </div>
 
-          <div class="space-y-2">
-            <label class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">匹配模式 (正则)</label>
+        <!-- Pattern Input -->
+        <div class="space-y-1.5 group">
+          <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">正则表达式 (RegEx)</label>
+          <div class="relative">
+             <div class="absolute left-3.5 top-4 text-zinc-600 group-focus-within:text-blue-500 transition-colors">
+              <AlignLeft :size="14" />
+            </div>
             <textarea v-model="form.pattern" 
-                      class="w-full bg-black/40 border border-white/10 p-3.5 rounded-xl text-xs font-mono focus:border-blue-500/50 outline-none transition-all h-28 text-zinc-300 resize-none" 
-                      placeholder="\bHW-[0-9]{5}\b" />
+                      class="w-full bg-black/20 border border-white/10 hover:border-white/20 focus:border-blue-500/50 p-3 pl-10 rounded-xl text-xs font-mono outline-none transition-all h-28 text-zinc-300 resize-none leading-relaxed" 
+                      placeholder="输入匹配模式..." />
           </div>
+        </div>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div class="space-y-2">
-              <label class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">替换标签</label>
-              <input v-model="form.mask" class="w-full bg-black/40 border border-white/10 p-3 rounded-xl text-xs font-mono text-blue-400 outline-none focus:border-blue-500/50" />
-            </div>
-            <div class="space-y-2">
-              <label class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">优先级</label>
-              <input type="number" v-model="form.priority" class="w-full bg-black/40 border border-white/10 p-3 rounded-xl text-xs text-zinc-300 outline-none focus:border-blue-500/50" />
+        <!-- Grid Inputs -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-1.5 group">
+            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">替换内容</label>
+            <div class="relative">
+              <div class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-500 transition-colors">
+                <Fingerprint :size="14" />
+              </div>
+              <input v-model="form.mask" class="w-full bg-black/20 border border-white/10 focus:border-blue-500/50 p-3 pl-9 rounded-xl text-xs font-mono text-blue-400 outline-none transition-all text-center" />
             </div>
           </div>
-
-          <button @click="handleSave" :disabled="isSubmitting"
-                  class="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded-2xl font-bold transition-all mt-4 shadow-lg shadow-blue-600/10 flex items-center justify-center gap-2">
-            <span v-if="!isSubmitting">编译并保存规则</span>
-            <span v-else class="flex items-center gap-2">
-              <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              引擎正在重新编译...
-            </span>
-          </button>
           
-          <p v-if="message" :class="message.includes('❌') ? 'text-red-400' : 'text-emerald-400'" class="text-center text-[11px] font-bold animate-pulse">
+          <div class="space-y-1.5 group">
+            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">优先级</label>
+            <div class="relative">
+              <div class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-500 transition-colors">
+                <ArrowUpDown :size="14" />
+              </div>
+              <input type="number" v-model="form.priority" class="w-full bg-black/20 border border-white/10 focus:border-blue-500/50 p-3 pl-8 rounded-xl text-xs text-zinc-300 outline-none transition-all text-center" />
+            </div>
+          </div>
+        </div>
+        
+        <!-- 底部留白，防止滚动到底部太贴边 -->
+        <div class="h-2"></div>
+      </div>
+
+      <!-- 3. 底部按钮：固定 -->
+      <div class="shrink-0 p-6 pt-4 border-t border-white/5 bg-black/20 backdrop-blur-sm z-10">
+        <button @click="handleSave" :disabled="isSubmitting"
+                class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 hover:shadow-lg hover:shadow-blue-500/25 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 group">
+          <span v-if="!isSubmitting" class="flex items-center gap-2">
+            <Save :size="16" class="group-hover:-translate-y-0.5 transition-transform" /> 
+            编译并注入
+          </span>
+          <Loader2 v-else class="animate-spin" :size="18" />
+        </button>
+
+        <div class="h-6 flex items-center justify-center mt-2">
+          <p v-if="message" 
+             :class="message.includes('❌') ? 'text-red-400' : 'text-emerald-400'" 
+             class="text-[11px] font-medium flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2">
             {{ message }}
           </p>
         </div>
       </div>
-      
-      <!-- 温馨提示 -->
-      <div class="glass p-5 rounded-3xl bg-blue-500/[0.02] border-blue-500/10 flex gap-4">
-        <Info class="text-blue-500/50 shrink-0" :size="18" />
-        <p class="text-[10px] text-zinc-500 leading-relaxed italic">
-          <strong>提示：</strong> 为了保证性能，请尽量使用 <code class="text-zinc-400">\b</code> 词边界。正则表达式错误将导致脱敏引擎自动回滚到上一个稳定版本。
-        </p>
-      </div>
+
     </div>
   </div>
 </template>
 
 <style scoped>
+/* 玻璃拟态基础样式 - 如果你有全局类可以删除这个 */
+.glass {
+  background: rgba(22, 22, 24, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* 自定义滚动条 */
 .custom-scroll::-webkit-scrollbar {
   width: 4px;
 }
 .custom-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
+}
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 .custom-scroll::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* 隐藏数字输入框箭头 */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 </style>
