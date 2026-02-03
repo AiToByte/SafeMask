@@ -126,7 +126,7 @@ const openGithub = async () => {
         <div class="space-y-4">
           <div class="flex justify-between items-baseline">
             <span class="text-xs text-zinc-500 font-bold uppercase tracking-widest">版本号</span>
-            <span class="text-sm font-mono text-blue-400">{{ store.appInfo?.version || '1.0.0' }}</span>
+            <span class="text-sm font-mono text-blue-400">{{ store.appInfo?.version || '1.0.2' }}</span>
           </div>
           <div class="flex justify-between items-baseline">
             <span class="text-xs text-zinc-500 font-bold uppercase tracking-widest">架构</span>

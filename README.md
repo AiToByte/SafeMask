@@ -1,4 +1,4 @@
-# 🛡️ SafeMask (v1.0.0)
+# 🛡️ SafeMask (v1.0.2)
 
 **Enabling every line of data to safely embrace AI.**
 

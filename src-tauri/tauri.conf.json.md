@@ -8,7 +8,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "SafeMask",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "identifier": "com.aitobyte.safemask",
   "build": {
     "beforeDevCommand": "npm run dev",
