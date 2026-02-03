@@ -23,6 +23,7 @@
     "core:tray:allow-set-show-menu-on-left-click",
     "core:tray:allow-set-visible",
     "core:path:allow-resolve-directory",
+    "core:window:allow-set-always-on-top",
     {
       "identifier": "core:event:allow-listen",
       "allow": [{ "event": "request-close" }] 

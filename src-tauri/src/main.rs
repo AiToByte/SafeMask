@@ -49,6 +49,7 @@ fn main() {
             api::system::get_app_info,
             api::text::mask_text,
             api::files::process_file_gui,
+            api::system::toggle_always_on_top, // 新增
         ])
         .run(tauri::generate_context!())
     {

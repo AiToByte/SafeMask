@@ -152,9 +152,9 @@ const openGithub = async () => {
       <div class="md:col-span-2 glass p-6 rounded-[2rem] bg-emerald-500/5 border border-emerald-500/10 flex gap-4">
         <Shield class="text-emerald-500 shrink-0" :size="24" />
         <div class="space-y-1">
-          <p class="text-sm font-bold text-emerald-200">100% 离线隐私保证</p>
+          <p class="text-sm font-bold text-emerald-200">100% 隐私保证</p>
           <p class="text-xs text-emerald-200/50 leading-relaxed italic">
-            SafeMask 不会连接互联网，所有的正则表达式匹配和脱敏计算均在您的计算机本地完成。
+            SafeMask 脱敏工作不会连接互联网，所有的正则表达式匹配和脱敏计算均在您的计算机本地完成。
             我们不收集、不上传任何原始记录。
           </p>
         </div>

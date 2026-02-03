@@ -14,6 +14,7 @@ export const useAppStore = defineStore('app', () => {
   const activeTab = ref('dashboard'); // 切换页面
   const allRulesList = ref<Rule[]>([]);
   const appInfo = ref<AppInfo | null>(null);
+  const isAlwaysOnTop = ref(false);
 
    // 🚀 初始化全局监听：确保只要程序开着，历史记录就在更新
   const initEventListeners = async () => {
@@ -56,11 +57,17 @@ export const useAppStore = defineStore('app', () => {
     historyList.value = [];
   };
 
+  const toggleAlwaysOnTop = async () => {
+    isAlwaysOnTop.value = !isAlwaysOnTop.value;
+    await MaskAPI.setAlwaysOnTop(isAlwaysOnTop.value);
+  };
+
 return { 
      isMonitorOn, ruleCount, isProcessing, progress, 
     currentFileName, historyList, activeTab, allRulesList,
-    appInfo, // 🚀 必须返回
+    appInfo, isAlwaysOnTop, // 🚀 必须返回
     fetchStats, fetchHistory, toggleMonitor, fetchAllRules, 
-    initEventListeners, fetchAppInfo, clearHistory // 🚀 必须返回
+    initEventListeners, fetchAppInfo, clearHistory, // 🚀 必须返回
+    toggleAlwaysOnTop
   };
 });

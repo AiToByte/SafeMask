@@ -103,3 +103,11 @@ pub fn get_app_info() -> serde_json::Value {
         "description": "极致性能的本地隐私脱敏引擎"
     })
 }
+
+#[tauri::command]
+pub async fn toggle_always_on_top(window: tauri::Window, enabled: bool) -> AppResult<()> {
+    // 调用窗口的原生方法设置置顶
+    window.set_always_on_top(enabled)
+        .map_err(|e| crate::common::errors::AppError::Internal(e.to_string()))?;
+    Ok(())
+}

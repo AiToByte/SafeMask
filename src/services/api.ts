@@ -83,6 +83,11 @@ export const MaskAPI = {
   // 获取应用信息
   async getAppInfo(): Promise<AppInfo> {
     return await invoke("get_app_info");
+  },
+
+  // 切换窗口置顶状态
+  async setAlwaysOnTop(enabled: boolean): Promise<void> {
+    await invoke("toggle_always_on_top", { enabled });
   }
   
 };

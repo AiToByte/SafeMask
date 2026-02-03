@@ -2,8 +2,9 @@
 import { onMounted, onUnmounted } from 'vue';
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useAppStore } from './stores/useAppStore';
+import { Pin, PinOff, Shield, ShieldOff, Activity } from 'lucide-vue-next';
 
-// 导入重构后的高质量组件
+// 导入组件
 import Sidebar from './components/Sidebar.vue';
 import StatCard from './components/StatCard.vue';
 import FileProcessor from './components/FileProcessor.vue';
@@ -14,37 +15,27 @@ import SettingsPage from './components/Settings.vue';
 
 const store = useAppStore();
 
-// 存储监听器卸载函数，防止内存泄漏
 let unlistenProgress: UnlistenFn;
 let unlistenMasked: UnlistenFn;
 
 onMounted(async () => {
   try {
-    // 1. 初始化从 Rust 后端拉取规则统计信息
     await store.fetchStats();
     await store.fetchHistory();
-
-    // 2. 🚀 开启全局实时监听（核心修复）
     await store.initEventListeners();
   } catch (e) {
-    console.error("初始化事件监听器失败:", e);
+    console.error("初始化失败:", e);
   }
-  
 
-  // 2. 监听文件处理进度事件 (来自 processor.rs 的保序流水线)
   unlistenProgress = await listen<{ percentage: number }>("file-progress", (event) => {
-    // 自动更新 Pinia Store 中的进度状态，FileProcessor 组件会响应式更新 UI
     store.progress = event.payload.percentage;
   });
 
-  // 3. 监听剪贴板脱敏事件 (方案一：原生钩子触发)
   unlistenMasked = await listen<string>("masked-event", (event) => {
-    // 可以在此处集成 Toast 通知库，目前先打印日志
-    console.info("🛡️ SafeMask Notification:", event.payload);
+    console.info("🛡️ SafeMask 通知:", event.payload);
   });
 });
 
-// 组件销毁时取消系统事件监听
 onUnmounted(() => {
   if (unlistenProgress) unlistenProgress();
   if (unlistenMasked) unlistenMasked();
@@ -52,98 +43,125 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- 主容器：采用 Flex 布局，H-Screen 撑满窗口 -->
   <div class="flex h-screen bg-[#09090b] text-zinc-100 select-none overflow-hidden font-sans">
-    
-    <!-- 左侧：固定宽度侧边栏 (已由 Sidebar.vue 封装) -->
+    <!-- 左侧侧边栏 -->
     <Sidebar />
 
-    <!-- 右侧：内容主体区域 -->
-    <main class="flex-1 flex flex-col min-w-0">
+    <!-- 右侧主体 -->
+    <main class="flex-1 flex flex-col min-w-0 relative">
       
-      <!-- 顶栏：标题与全局状态开关 -->
-      <header class="flex justify-between items-end px-12 pt-12 pb-8 border-b border-zinc-800/30">
-        <div class="space-y-1">
-          <h1 class="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white to-zinc-500">
-            SafeMask 控制台
-          </h1>
-          <p class="text-zinc-500 text-sm font-medium">
-            极致性能隐私治理引擎 · 实时数据脱敏
-          </p>
+      <!-- 🚀 顶栏：强化了控制胶囊的视觉圆润感 -->
+      <header class="h-28 flex items-center justify-between px-10 border-b border-white/[0.03] bg-[#09090b]/50 backdrop-blur-md z-40">
+        <!-- 左侧标题 -->
+        <div class="flex items-center gap-5">
+          <div class="p-3 bg-blue-600/10 rounded-2xl hidden sm:block">
+            <Activity class="text-blue-500 w-6 h-6" />
+          </div>
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight text-white">
+              SafeMask <span class="text-zinc-500 font-medium text-xl ml-1">脱敏控制台</span>
+            </h1>
+            <p class="text-xs text-zinc-500 uppercase tracking-[0.25em] font-bold mt-1">隐私防护引擎 v1.0</p>
+          </div>
         </div>
 
-        <!-- 自动保护控制开关 (右侧对齐) -->
-        <div class="flex items-center gap-4 bg-zinc-900/50 border border-zinc-800 px-5 py-3 rounded-2xl transition-all hover:border-zinc-700">
-          <div class="flex flex-col items-end">
-            <span class="text-xs font-bold uppercase tracking-wider text-zinc-400">实时保护</span>
-            <span class="text-[10px] text-zinc-600 font-mono">{{ store.isMonitorOn ? 'ACTIVE' : 'DISABLED' }}</span>
-          </div>
+        <!-- 右侧系统控制组 -->
+        <div class="flex items-center gap-4">
+          
+          <!-- 置顶按钮 -->
           <button 
-            @click="store.toggleMonitor"
-            class="w-12 h-6 rounded-full relative transition-all duration-300 focus:outline-none shadow-inner"
-            :class="store.isMonitorOn ? 'bg-blue-600 shadow-blue-500/20' : 'bg-zinc-800'"
+            @click="store.toggleAlwaysOnTop"
+            class="p-3.5 rounded-2xl border transition-all duration-300 flex items-center justify-center hover:scale-105 active:scale-95"
+            :class="store.isAlwaysOnTop 
+              ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)]' 
+              : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700'"
+            :title="store.isAlwaysOnTop ? '取消窗口置顶' : '固定窗口至最前'"
           >
-            <div 
-              class="absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm"
-              :class="{ 'translate-x-6': store.isMonitorOn }"
-            ></div>
+            <component :is="store.isAlwaysOnTop ? PinOff : Pin" :size="20" />
           </button>
+
+          <!-- 🛡️ 状态胶囊：文字加大且视觉更圆润 -->
+          <div class="flex items-center gap-5 bg-zinc-900 border border-zinc-800 h-16 px-6 rounded-[1.5rem] shadow-inner">
+            <div class="flex flex-col items-start">
+              <!-- 主状态：字号 text-[15px]，半粗体 font-semibold 显得更柔和 -->
+              <span 
+                class="text-[15px] font-semibold leading-none mb-2 tracking-wide transition-colors duration-300" 
+                :class="store.isMonitorOn ? 'text-blue-400' : 'text-zinc-500'"
+              >
+                {{ store.isMonitorOn ? '自动保护已开启' : '实时防护已关闭' }}
+              </span>
+              <!-- 副标题：字号 text-[12px] -->
+              <span class="text-[12px] font-medium text-zinc-500 leading-none tracking-[0.15em] opacity-80">
+                系统哨兵监控模式
+              </span>
+            </div>
+            
+            <!-- 开关按钮：稍微放大以匹配整体比例 -->
+            <button 
+              @click="store.toggleMonitor"
+              class="w-14 h-7 rounded-full relative transition-all duration-500 focus:outline-none overflow-hidden"
+              :class="store.isMonitorOn ? 'bg-blue-600' : 'bg-zinc-800'"
+            >
+              <!-- 开关轨道内的发光装饰 -->
+              <div v-if="store.isMonitorOn" class="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-transparent"></div>
+              
+              <div 
+                class="absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-transform duration-500 shadow-xl z-10"
+                :class="{ 'translate-x-7': store.isMonitorOn }"
+              ></div>
+            </button>
+          </div>
         </div>
       </header>
 
-       <!-- 动态内容区 -->
-      <div class="flex-1 p-12 overflow-y-auto custom-scroll">
+      <!-- 动态内容区 -->
+      <div class="flex-1 overflow-y-auto custom-scroll px-10 py-10">
         <!-- 页面 1: 仪表盘 -->
-        <div v-if="store.activeTab === 'dashboard'" class="space-y-10 animate-in fade-in slide-in-from-bottom-2">
-          <div class="grid grid-cols-3 gap-6">
-            <StatCard title="已加载规则" :value="store.ruleCount" unit="REG_RULES" clickable @click="store.activeTab = 'rules'"/>
-            <StatCard title="历史拦截" :value="store.historyList.length" color="text-amber-400" clickable @click="store.activeTab = 'history'" />
-            <StatCard title="引擎架构" value="HYBRID" color="text-blue-400" />
+        <div v-if="store.activeTab === 'dashboard'" class="space-y-10 animate-in fade-in duration-500">
+          <div class="grid grid-cols-3 gap-8">
+            <StatCard title="已加载规则" :value="store.ruleCount" unit="条规则" clickable @click="store.activeTab = 'rules'"/>
+            <StatCard title="历史拦截" :value="store.historyList.length" unit="条记录" color="text-amber-400" clickable @click="store.activeTab = 'history'" />
+            <StatCard title="引擎架构" value="HYBRID" unit="ENGINE" color="text-blue-400" />
           </div>
-          <FileProcessor class="min-h-[320px]" />
+          <FileProcessor class="min-h-[380px]" />
         </div>
-        <!-- 页面 2: 历史记录 (这里必须紧跟上面的 v-if) -->
+
         <HistoryList v-else-if="store.activeTab === 'history'" />
-        
-
-        <!-- 页面 3:规则库管理页面 -->
         <RuleManager v-else-if="store.activeTab === 'rules'" />
-        
-        <!-- 🚀 新增：设置页面 -->
-        <SettingsPage  v-else-if="store.activeTab === 'settings'" />
+        <SettingsPage v-else-if="store.activeTab === 'settings'" />
 
-        <!-- 页脚（仅在 Dashboard 显示） -->
-        <footer v-if="store.activeTab === 'dashboard'" class="text-center pt-10 opacity-30">
-          <p class="text-[10px] font-mono uppercase tracking-widest">Powered by SafeMask Rust Engine v1.0.0</p>
+        <!-- 汉化页脚 -->
+        <footer v-if="store.activeTab === 'dashboard'" class="py-12 flex justify-center items-center gap-4 opacity-20">
+          <div class="h-px w-10 bg-zinc-500"></div>
+          <p class="text-[10px] font-mono uppercase tracking-[0.3em] text-zinc-400">全本地化安全运行环境</p>
+          <div class="h-px w-10 bg-zinc-500"></div>
         </footer>
       </div>
+      
+      <!-- 置顶反馈边框 -->
+      <div v-if="store.isAlwaysOnTop" class="absolute inset-0 pointer-events-none border-2 border-blue-500/20 z-50"></div>
     </main>
-     <!-- 退出确认组件 -->
+
     <ExitConfirm />
   </div>
 </template>
 
 <style>
-/* 全局基础样式补丁 */
-
-/* 1. 隐藏所有滚动条但保留滚动功能 (针对桌面端定制) */
+/* 保持滚动条隐藏 */
 ::-webkit-scrollbar {
   display: none;
 }
 
-/* 2. 定义玻璃拟态通用背景类 */
+.custom-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* 统一玻璃背景 */
 .glass {
   background: rgba(18, 18, 23, 0.7);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* 3. 进入/离开动画 */
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
 }
 </style>
