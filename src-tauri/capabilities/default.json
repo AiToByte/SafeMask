@@ -10,6 +10,7 @@
     "dialog:allow-save",
     "dialog:allow-confirm",
     "dialog:allow-message",
+    "dialog:allow-ask", 
     "notification:allow-notify",
     "global-shortcut:allow-is-registered",
     "global-shortcut:allow-register",

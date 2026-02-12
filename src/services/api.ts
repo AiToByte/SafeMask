@@ -29,6 +29,14 @@ export interface AppInfo {
   description: string;
 }
 
+export interface ProcessResponse {
+  message: string;
+  output_path: string;
+  output_dir: string;
+  duration: string;
+  throughput: string;
+}
+
 export const MaskAPI = {
   // 获取规则统计
   async getStats(): Promise<RuleStats> {
@@ -47,8 +55,9 @@ export const MaskAPI = {
   },
 
   // 文件脱敏
-  async processFile(inputPath: string, outputPath: string): Promise<string> {
-    return await invoke("process_file_gui", { inputPath, outputPath });
+  // 🚀 简化：不再需要前端传 output_path，由后端根据输入智能生成
+  async processFile(inputPath: string): Promise<ProcessResponse> {
+    return await invoke("process_file_gui", { inputPath });
   },
   async getAllRules(): Promise<Rule[]> {
     return await invoke("get_all_detailed_rules");
@@ -66,6 +75,12 @@ export const MaskAPI = {
   // 🚀 删除规则
   async deleteRule(name: string): Promise<string> {
     return await invoke("delete_rule_api", { name });
+  },
+
+  // 🚀 新增：打开指定文件夹
+  async openFolder(path: string): Promise<void> {
+    const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
+    await revealItemInDir(path);
   },
   // 选择文件
   async selectFile() {

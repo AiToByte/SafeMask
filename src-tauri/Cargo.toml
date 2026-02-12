@@ -43,10 +43,14 @@ rand = "0.8.5"   # 用于 jitter 随机抖动，防止雷鸣群效应
 parking_lot = "0.12"      # 比 std::sync::Mutex 更快更小的锁
 env_logger = "0.11"  # 添加日志库
 log = "0.4"
-
+smallvec = { version = "1.13", features = ["serde"] }
 # --- 错误处理 ---
 thiserror = "1.0" # 库级别错误定义
-
+zip = "2.2"         # 处理 Office 文档内部结构
+calamine = "0.26"     # 读取 Excel
+rust_xlsxwriter = "0.93" # 写入 Excel
+pdf-extract = "0.7"   # PDF 文本提取
+quick-xml = "0.36"    # 高性能 XML 处理（用于 Docx）
 # Tauri 增强
 tokio = { version = "1", features = ["full"] }
 tauri = { version = "2", features = ["tray-icon", "image-png"] }

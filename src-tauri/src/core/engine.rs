@@ -2,7 +2,10 @@ use crate::core::rules::Rule;
 use aho_corasick::{AhoCorasick, MatchKind};
 use regex::bytes::{Regex};
 use std::borrow::Cow;
+use smallvec::SmallVec;
 use log::{info};  // 添加导入
+
+const LITERAL_PRIORITY: i32 = 999_000_000;  // 远高于普通规则
 
 /// 内部结构：存储编译后的单个正则规则
 struct CompiledRegex {
@@ -81,7 +84,8 @@ impl MaskEngine {
             return Cow::Borrowed(input);
         }
 
-        let mut matches = Vec::new();
+        // 🚀 使用 SmallVec 优化：预留 16 个插槽在栈上，覆盖 99% 的单行匹配场景
+        let mut matches: SmallVec<[MatchSpan; 16]> = SmallVec::new();
 
         // Stage 1: AC 自动机匹配 (固定词)
         if let Some(ref ac) = self.ac_engine {
@@ -89,7 +93,7 @@ impl MaskEngine {
                 matches.push(MatchSpan {
                     start: mat.start(),
                     end: mat.end(),
-                    priority: 999, // 固定词通常拥有最高优先级
+                    priority: LITERAL_PRIORITY, // 固定词通常拥有最高优先级
                     mask: &self.ac_masks[mat.pattern()],
                 });
             }
@@ -112,15 +116,21 @@ impl MaskEngine {
         }
 
         // Stage 3: 冲突解决与结果合并 (关联函数调用)
-        Self::apply_replacements(input, matches)
+        self.apply_replacements(input, matches)
     }
 
     /// 解决覆盖冲突：采用贪婪合并策略
-    fn apply_replacements<'a, 'm>(
-        input: &'a [u8], 
-        mut matches: Vec<MatchSpan<'m>>
-    ) -> Cow<'a, [u8]> {
-        // 排序逻辑：起始位置升序 -> 优先级降序 -> 长度降序
+    fn apply_replacements<'a, 'm, I>(
+        &self,
+        input: &'a [u8],
+        matches: I,
+    ) -> Cow<'a, [u8]>
+    where
+        I: IntoIterator<Item = MatchSpan<'m>>,
+    {
+        // 如果你还需要排序和去重，就必须先收集
+        let mut matches: Vec<MatchSpan<'m>> = matches.into_iter().collect();
+        // 下面排序
         matches.sort_unstable_by(|a, b| {
             a.start.cmp(&b.start)
                 .then(b.priority.cmp(&a.priority))
@@ -131,20 +141,14 @@ impl MaskEngine {
         let mut last_pos = 0;
 
         for m in matches {
-            // 如果当前匹配项与已处理区域重叠，直接跳过（因为排在前面的优先级更高）
             if m.start < last_pos {
                 continue;
             }
-            
-            // 写入原文未匹配部分
             output.extend_from_slice(&input[last_pos..m.start]);
-            // 写入掩码
             output.extend_from_slice(m.mask);
-            
             last_pos = m.end;
         }
 
-        // 写入剩余原文
         if last_pos < input.len() {
             output.extend_from_slice(&input[last_pos..]);
         }
