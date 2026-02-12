@@ -1,0 +1,9 @@
+group: "DATABASE_CONNECTION"
+rules:
+  - name: "Code_Method_Protect"
+    # 匹配 单词.单词( 这种典型的代码调用格式
+    pattern: '\b[a-zA-Z_][a-zA-Z0-9_]*\.(?:info|debug|warn|error|log|print|append|write)\('
+    # 掩码设为原样（或者设为 <CODE>，取决于你是否想看这段代码）
+    # 如果你想完全不脱敏这段代码，目前引擎会替换，建议设为 <API_CALL>
+    mask: "<API_CALL>" 
+    priority: 30 # 必须高于 FQDN_Domain 的 5
