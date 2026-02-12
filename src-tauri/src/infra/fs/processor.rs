@@ -58,7 +58,7 @@ pub fn process_file<P: AsRef<Path>>(
     // 消费者线程：保序写入磁盘
     let writer_handle = std::thread::spawn(move || -> Result<()> {
         let output_file = File::create(output_path_buf).context("无法创建输出文件")?;
-        let mut writer = BufWriter::with_capacity(2 * 1024 * 1024, output_file);
+        let mut writer = BufWriter::with_capacity(4 * 1024 * 1024, output_file);
         
         let mut pending_chunks = BTreeMap::new();
         let mut next_idx = 0;
