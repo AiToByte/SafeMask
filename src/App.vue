@@ -61,7 +61,7 @@ onUnmounted(() => {
             <h1 class="text-2xl font-bold tracking-tight text-white">
               SafeMask <span class="text-zinc-500 font-medium text-xl ml-1">脱敏控制台</span>
             </h1>
-            <p class="text-xs text-zinc-500 uppercase tracking-[0.25em] font-bold mt-1">隐私防护引擎 v1.0</p>
+            <p class="text-xs text-zinc-500 uppercase tracking-[0.25em] font-bold mt-1">隐私防护引擎 v1.1.0</p>
           </div>
         </div>
 

@@ -1,4 +1,4 @@
-# 🛡️ SafeMask (v1.0.2)
+# 🛡️ SafeMask (v1.1.0) Shocking Arrival
 
 **Enabling every line of data to safely embrace AI.**
 

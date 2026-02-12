@@ -97,7 +97,7 @@ pub async fn copy_original_cmd(state: State<'_, AppState>, text: String) -> AppR
 #[tauri::command]
 pub fn get_app_info() -> serde_json::Value {
     serde_json::json!({
-        "version": "1.0.2",
+        "version": "1.1.0",
         "author": "XiaoSheng",
         "github": "https://github.com/AiToByte/SafeMask",
         "description": "极致性能的本地隐私脱敏引擎"
