@@ -42,9 +42,14 @@ pub fn process_file<P: AsRef<Path>>(
     match ext.as_str() {
         // 1. Office Word 文档
         "docx" => process_docx(input, output_path.as_ref(), engine, progress_callback),
-        
+        "doc" => {
+            // 注意：二进制 .doc 格式不是 ZIP 压缩包，process_docx 会报错。
+            // 鉴于目前 Rust 生态对二进制 .doc 写入的支持较弱，
+            // 建议将其路由至文本提取模式（类似 PDF），以保证隐私数据能够被脱敏。
+            process_binary_doc_fallback(input, output_path.as_ref(), engine, progress_callback)
+        }
         // 2. Office Excel 表格
-        "xlsx" => process_xlsx(input, output_path.as_ref(), engine, progress_callback),
+         "xlsx" | "xls" | "xlsm" | "xlsb" => process_xlsx(input, output_path.as_ref(), engine, progress_callback),
 
         // 3. PDF 文档 (通常输出为脱敏后的文本，因为 PDF 逆向修改容易乱码)
         "pdf" => process_pdf(input, output_path.as_ref(), engine, progress_callback),
@@ -102,6 +107,35 @@ fn process_docx(input: &Path, output: &Path, engine: &Arc<MaskEngine>, cb: impl 
     Ok(ProcessStats {
         total_lines: 0, 
         processed_bytes: std::fs::metadata(input)?.len(),
+        duration_secs: start.elapsed().as_secs_f64()
+    })
+}
+
+/// 🚀 针对老旧二进制 .doc 文件的降级处理方案
+/// 逻辑：提取文本 -> 脱敏 -> 保存为 .txt (或简单文本)
+/// 理由：.doc 是闭源二进制格式，直接修改二进制流极易导致文件损坏。
+fn process_binary_doc_fallback(input: &Path, output: &Path, engine: &Arc<MaskEngine>, cb: impl Fn(f64)) -> Result<ProcessStats> {
+    let start = Instant::now();
+    
+    // 尝试使用通用的文本提取引擎（如果系统安装了相应支持）
+    // 这里我们可以重用 PDF 的处理逻辑，将其输出为同名的 .masked.txt
+    // 或者简单报错提示用户转换为 .docx
+    let content = match docx_rust::DocxFile::from_file(input) {
+        Ok(docx) => docx.read_content()?, // 尝试以 docx 解析（部分 doc 其实是 docx 改名）
+        Err(_) => {
+            // 如果确实是二进制 .doc，使用文本读取器读取
+            // 此处通常建议调用外部工具或使用文本提取库
+            return Err(anyhow::anyhow!("暂不支持二进制 .doc 格式的格式保留脱敏，请将其另存为 .docx 后重试。"));
+        }
+    };
+
+    let masked = engine.mask_line(content.as_bytes());
+    std::fs::write(output, &masked)?;
+    
+    cb(1.0);
+    Ok(ProcessStats {
+        total_lines: 0,
+        processed_bytes: content.len() as u64,
         duration_secs: start.elapsed().as_secs_f64()
     })
 }
