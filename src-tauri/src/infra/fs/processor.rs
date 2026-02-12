@@ -5,7 +5,7 @@ use memmap2::MmapOptions;
 use rayon::prelude::*;
 use std::collections::BTreeMap;
 use std::fs::File;
-use std::io::{self, BufWriter, Read, Write};
+use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;

@@ -1,7 +1,7 @@
 use crate::infra::clipboard::handler::GlobalClipboard;
 use clipboard_master::{CallbackResult, ClipboardHandler};
 use std::sync::Arc;
-use tauri::{AppHandle};
+use tauri::{AppHandle, Manager};
 // 🚀 导入 Tauri 的运行时句柄类型
 use tauri::async_runtime::RuntimeHandle;
 use std::time::Duration;
@@ -57,35 +57,56 @@ impl ClipboardHandler for ClipboardHandlerImpl {
 //     });
 // }
 
-
 pub fn start_listener(app: AppHandle) {
     let handler_logic = Arc::new(GlobalClipboard::new(app.clone()));
-    
-    // 使用 Tauri 的 async runtime，直接 spawn polling loop（无需独立线程）
+
+    // 关键：把 app 克隆一份给闭包用
+    let app_for_state = app.clone();
+
     tauri::async_runtime::spawn(async move {
-        let mut last_content = String::new();  // 缓存上次内容，避免重复处理
-        
-        info!("🎧 [Clipboard] Polling 监听服务已启动 (间隔 500ms)");
-        
+        // 在闭包内部获取 state（现在 app_for_state 是 move 进来的，生命周期够长）
+        let state = app_for_state.state::<crate::common::state::AppState>();
+
+        let mut last_was_non_text = false;
+
+        info!("🎧 [Clipboard] Polling 监听服务已启动 (间隔 600ms)");
+
         loop {
-            // 安全读取剪贴板
-            let current = match handler_logic.get_text() {
-                Ok(text) => text,
-                Err(e) => {
-                    error!("⚠️ [Clipboard] 读取失败: {}", e);
-                    String::new()
+            match handler_logic.get_text() {
+                Ok(text) => {
+                    last_was_non_text = false;
+
+                    let should_process = {
+                        let last_global = state.last_content.lock();
+                        !text.is_empty() && text != *last_global
+                    };
+
+                    if should_process {
+                        {
+                            let mut guard = state.last_content.lock();
+                            *guard = text.clone();
+                        }
+                        info!("🔔 [Clipboard] 检测到变化: {} 字节", text.len());
+                        handler_logic.process_change().await;
+                    }
                 }
-            };
-            
-            // 如果变化，处理
-            if !current.is_empty() && current != last_content {
-                info!("🔔 [Clipboard] 检测到变化: {} 字节", current.len());
-                last_content = current.clone();
-                handler_logic.process_change().await;
+
+                Err(arboard::Error::ContentNotAvailable) => {
+                    if !last_was_non_text {
+                        info!("📋 [Clipboard] 当前剪贴板内容为非文本格式 (已忽略)");
+                        last_was_non_text = true;
+                        let mut guard = state.last_content.lock();
+                        guard.clear();
+                    }
+                }
+
+                Err(e) => {
+                    error!("⚠️ [Clipboard] 访问剪贴板失败: {}", e);
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
             }
-            
-            // 等待下次 poll（可调 300-1000ms）
-            tokio::time::sleep(Duration::from_millis(500)).await;
+
+            tokio::time::sleep(Duration::from_millis(600)).await;
         }
     });
 }

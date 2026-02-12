@@ -37,6 +37,7 @@ impl GlobalClipboard {
 
         // 1. 检查开关和内部标记
         if !*state.is_monitor_on.lock() || state.is_internal_changing.load(Ordering::Acquire) {
+            info!("哨兵模式关闭, 不再进行实时脱敏处理!");
             return;
         }
 
@@ -79,6 +80,12 @@ impl GlobalClipboard {
             error!("[Clipboard] 写回失败: {}", e);
             state.is_internal_changing.store(false, Ordering::Release);
             return;
+        }
+
+        // 🚀 核心修复：将脱敏后的内容同步到全局缓存，防止监听器误判
+        {
+            let mut last = state.last_content.lock();
+            *last = masked_text.clone();
         }
 
         let history_item = MaskHistoryItem {
