@@ -5,6 +5,6 @@ rules:
     # 1. 限制顶级域名为常见的 2-6 位合法后缀，避开大部分动词
     # 2. 只有匹配到常用顶级域（com/cn/net/org/io/local/internal等）时才视为域名
     # 3. 修复了 \b 在点号周围误触发的问题
-    pattern: '\b[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.(?:com|net|org|cn|io|gov|me|edu|biz|info|xyz|icu|vip|us|cc|top|vip|local|internal|corp)\b'
+    pattern: '\b[a-zA-Z0-9-]+\.(?:com|net|org|cn|io|gov|me|edu|biz|info|xyz|icu|vip|us|cc|top|vip|local|internal|corp)(?=[^a-zA-Z0-9_(]|$)'
     mask: "<DOMAIN>"
     priority: 5
