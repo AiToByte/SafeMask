@@ -78,7 +78,7 @@ jobs:
 
       # 构建主体（包含安装包和便携版）
       - name: Build Tauri app & create GitHub Release
-        uses: tauri-apps/tauri-action@v0.6
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -95,10 +95,10 @@ jobs:
 
             #### 🪟 Windows
             - **标准安装版 (`SafeMask_x64-setup.exe`)**: 建议大多数用户使用，支持快捷方式和自动更新。
-            - **单文件便携版 (`SafeMask_Portable_x64.exe`)**: 无需安装，双击即用，适合 U 盘或快速使用。
+            - **单文件便携版 (`SafeMask_Portable_x64.zip`)**: 无需安装，双击即用，适合 U 盘或快速使用。
 
             #### 🍎 macOS
-            - **磁盘映像 (`.dmg`)**: 通用二进制版本，支持 Apple Silicon (M1/M2/M3) 和 Intel 芯片。
+            - **磁盘映像 (`.dmg`)**: 通用二进制版本，支持 Apple Silicon (M1/M2/M3/M4) 和 Intel 芯片。
 
             #### 🐧 Linux
             - **通用版 (`.AppImage`)**: 赋予权限即可运行。
