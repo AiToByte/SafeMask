@@ -92,47 +92,57 @@ jobs:
           releaseDraft: true
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') }}
           args: --config tauri-build-config.json ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
-
-        # 制作 Windows 便携版 (路径完全修复版)
+          
+      # 制作 Windows 便携版 (路径修复增强版)
       - name: Create Windows Portable ZIP
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}".TrimStart('v')
-
-          # 1. 修复路径：根据日志，Tauri 默认将产物放在根目录的 target，而非 src-tauri/target
-          # 我们使用 Get-ChildItem 动态寻找，防止版本号或路径微调导致失败
-          $bundleDir = "target\release\bundle\nsis"
-          if (-not (Test-Path $bundleDir)) {
-              $bundleDir = "src-tauri\target\release\bundle\nsis" # 备选路径
-          }
-
-          Write-Output "正在搜索安装包，目录：$bundleDir"
-          $nsisSetupExe = Get-ChildItem -Path $bundleDir -Filter "SafeMask_*_x64-setup.exe" | Select-Object -First 1 -ExpandProperty FullName
-
-          if (-not $nsisSetupExe) {
-              Get-ChildItem -Path "target" -Recurse -Filter "*.exe" # 调试用
-              throw "无法在 $bundleDir 找到 NSIS 安装包！"
-          }
-
-          Write-Output "找到安装包: $nsisSetupExe"
-
-          # 2. 创建便携版文件夹
-          $portableDir = "SafeMask_${version}_Portable_x64"
-          $zipPath = "${portableDir}.zip"
-          New-Item -ItemType Directory -Path $portableDir -Force
+          $target = "${{ matrix.target }}"
           
-          # 拷贝安装包并重命名为执行文件（或者直接拷贝编译好的原始 exe）
-          # 注意：这里的 SafeMask.exe 如果需要直接运行，通常应该拷贝 target\release\SafeMask.exe
-          $rawExe = "target\release\SafeMask.exe"
-          if (Test-Path $rawExe) {
-              Copy-Item -Path $rawExe -Destination "$portableDir\SafeMask.exe"
-          } else {
-              Copy-Item -Path $nsisSetupExe -Destination "$portableDir\SafeMask_Setup_Backup.exe"
+          # 动态构建基础路径
+          # 如果指定了 target，产物在 target/<target>/release，否则在 target/release
+          $basePath = if ($target) { "target\$target\release" } else { "target\release" }
+          $bundleDir = Join-Path $basePath "bundle\nsis"
+          
+          Write-Host "[DEBUG] Target Triple: $target"
+          Write-Host "[DEBUG] Searching in: $bundleDir"
+
+          # 1. 寻找 NSIS 安装包 (仅用于验证编译是否成功)
+          if (-not (Test-Path $bundleDir)) {
+              Write-Error "目录不存在: $bundleDir"
+              Get-ChildItem -Path "target" -Recurse -Depth 3 # 打印目录结构方便排查
+              exit 1
           }
 
-          # 3. 压缩并上传
-          Compress-Archive -Path "$portableDir\*" -DestinationPath $zipPath -Force
-          gh release upload ${{ github.ref_name }} "$zipPath#Portable Windows x64" --clobber
+          $setupExe = Get-ChildItem -Path $bundleDir -Filter "SafeMask_*_x64-setup.exe" | Select-Object -First 1
+          if (-not $setupExe) {
+              Write-Error "找不到安装包文件！"
+              exit 1
+          }
+          Write-Host "Found Setup Exe: $($setupExe.FullName)"
+
+          # 2. 寻找原始执行文件用于制作便携版
+          $rawExe = Join-Path $basePath "SafeMask.exe"
+          if (-not (Test-Path $rawExe)) {
+              Write-Error "找不到原始执行文件: $rawExe"
+              exit 1
+          }
+
+          # 3. 创建便携版压缩包
+          $portableName = "SafeMask_${version}_Portable_x64"
+          $zipPath = "${portableName}.zip"
+          New-Item -ItemType Directory -Path $portableName -Force
+          Copy-Item -Path $rawExe -Destination "$portableName\SafeMask.exe"
+          
+          # 也可以拷贝一些必要的 DLL 或 License (如果有的话)
+          # Copy-Item -Path "LICENSE" -Destination $portableName -ErrorAction SilentlyContinue
+
+          Compress-Archive -Path "$portableName\*" -DestinationPath $zipPath -Force
+          Write-Host "Successfully created portable zip: $zipPath"
+
+          # 4. 上传到当前 Release
+          gh release upload ${{ github.ref_name }} "$zipPath#Windows-Portable-x64" --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
