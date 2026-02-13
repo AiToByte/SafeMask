@@ -26,7 +26,8 @@ jobs:
 
           - platform: windows-latest
             target: ""
-            config: '{"bundle":{"targets":["nsis"],"windows":{"nsis":{"installMode":"perMachine","languages":["zh-CN"],"displayLanguageSelector":false}}}}'
+            # ✅ 关键修复：把 "zh-CN" 改为 "SimpChinese"
+            config: '{"bundle":{"targets":["nsis"],"windows":{"nsis":{"installMode":"perMachine","languages":["SimpChinese"],"displayLanguageSelector":false}}}}'
             name: Windows
 
     runs-on: ${{ matrix.platform }}
@@ -37,7 +38,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 防止国内/公司代理导致 CI 失败
       - name: Clean Cargo proxy config
         shell: bash
         run: rm -rf ~/.cargo/config* .cargo/config* || true
@@ -60,7 +60,6 @@ jobs:
           workspaces: './src-tauri -> target'
           cache-on-failure: true
 
-      # Linux 依赖（Tauri v2 官方推荐完整列表）
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-22.04'
         run: |
@@ -72,11 +71,11 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      # ==================== 动态配置核心 ====================
+      # 生成动态配置（Windows 已使用 SimpChinese）
       - name: Generate platform-specific Tauri config
         run: echo '${{ matrix.config }}' > tauri-build-config.json
 
-      # ==================== 构建 + 发布 Release ====================
+      # 构建 + 发布 Release
       - name: Build Tauri app & create GitHub Release
         uses: tauri-apps/tauri-action@v0.6
         env:
@@ -92,7 +91,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') }}
           args: --config tauri-build-config.json ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
 
-      # ==================== Windows 专用便携 ZIP ====================
+      # Windows 便携版 ZIP（绿色免安装）
       - name: Create Windows Portable ZIP
         if: matrix.platform == 'windows-latest'
         shell: pwsh
@@ -101,14 +100,12 @@ jobs:
           $portableDir = "SafeMask_${version}_Portable_x64"
           $zipPath = "${portableDir}.zip"
 
-          # 查找主程序（更健壮）
           $exe = Get-ChildItem -Path "src-tauri/target/release" -Filter "SafeMask.exe" -File | Select-Object -First 1
           if (-not $exe) { throw "未找到 SafeMask.exe" }
 
           New-Item -ItemType Directory -Path $portableDir -Force
           Copy-Item $exe.FullName -Destination $portableDir/
 
-          # 拷贝 resources（如果有外部资源）
           $resDir = "src-tauri/target/release/resources"
           if (Test-Path $resDir) {
             Copy-Item -Recurse -Force $resDir "$portableDir/resources"
