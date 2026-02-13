@@ -149,7 +149,7 @@ jobs:
 
 
 
-       - name: Create Windows Portable ZIP
+      - name: Create Windows Portable ZIP
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
