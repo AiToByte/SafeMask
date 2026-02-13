@@ -50,7 +50,6 @@ zip = "2.2"         # 处理 Office 文档内部结构
 calamine = "0.26"     # 读取 Excel
 rust_xlsxwriter = "0.93" # 写入 Excel
 pdf-extract = "0.7"   # PDF 文本提取
-dotext = "0.1.0" # 🚀 必须添加，用于处理二进制 .doc
 quick-xml = "0.36"    # 高性能 XML 处理（用于 Docx）
 # Tauri 增强
 tokio = { version = "1", features = ["full"] }
