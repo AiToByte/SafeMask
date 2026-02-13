@@ -91,7 +91,6 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') }}
           args: --config tauri-build-config.json ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
 
-      # Windows 便携版 ZIP（绿色免安装）
       - name: Create Windows Portable ZIP
         if: matrix.platform == 'windows-latest'
         shell: pwsh
@@ -100,82 +99,40 @@ jobs:
           $portableDir = "SafeMask_${version}_Portable_x64"
           $zipPath = "${portableDir}.zip"
 
-          Write-Output "当前版本: $version"
-          Write-Output "正在搜索可能的 exe 文件..."
+          # 从构建日志确认的真实路径（相对路径）
+          $nsisSetupExe = "src-tauri/target/release/bundle/nsis/SafeMask_${version}_x64-setup.exe"
 
-          # 扩展 candidates，支持更多文件名变体（忽略大小写、空格、下划线等）
-          $candidates = @(
-            # 最常见 NSIS 输出
-            "src-tauri/target/release/bundle/nsis/SafeMask_${version}_x64-setup.exe",
-            "src-tauri/target/release/bundle/nsis/SafeMask_${version}_x64.exe",
-            "src-tauri/target/release/bundle/nsis/SafeMask_x64-setup.exe",
-            # 可能有空格或不同分隔符
-            "src-tauri/target/release/bundle/nsis/*${version}*-setup.exe",
-            "src-tauri/target/release/bundle/nsis/*${version}*.exe",
-            # 原始二进制 fallback
-            "src-tauri/target/release/SafeMask.exe",
-            "src-tauri/target/release/bundle/SafeMask.exe"
-          )
+          Write-Output "预期 NSIS exe 路径: $nsisSetupExe"
 
-          $exePath = $null
-
-          # 先尝试精确匹配
-          foreach ($pattern in $candidates) {
-            $found = Get-ChildItem -Path $pattern -File -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($found) {
-              $exePath = $found.FullName
-              Write-Output "精确匹配找到 exe: $exePath"
-              break
-            }
-          }
-
-          # 如果精确没找到，用通配符模糊搜索 bundle/nsis 下所有 .exe / -setup.exe
-          if (-not $exePath) {
-            Write-Output "精确匹配失败，尝试模糊搜索 bundle/nsis 目录..."
-            $nsisDir = "src-tauri/target/release/bundle/nsis"
-            if (Test-Path $nsisDir) {
-              $possibleExes = Get-ChildItem -Path $nsisDir -Filter "*.exe" -File
-              if ($possibleExes.Count -gt 0) {
-                # 优先选带 -setup.exe 的
-                $setupOne = $possibleExes | Where-Object { $_.Name -like "*-setup.exe" } | Select-Object -First 1
-                if ($setupOne) {
-                  $exePath = $setupOne.FullName
-                  Write-Output "模糊匹配找到 setup exe: $exePath"
-                } else {
-                  $exePath = $possibleExes[0].FullName
-                  Write-Output "找到第一个 exe: $exePath"
-                }
-              } else {
-                Write-Output "nsis 目录存在，但里面没有 .exe 文件"
-              }
+          if (-not (Test-Path $nsisSetupExe)) {
+            Write-Output "路径不存在！列出 bundle/nsis 目录内容（如果存在）："
+            if (Test-Path "src-tauri/target/release/bundle/nsis") {
+              Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Force | ForEach-Object { Write-Output $_.FullName }
             } else {
-              Write-Output "bundle/nsis 目录不存在！"
+              Write-Output "bundle/nsis 目录完全不存在！"
             }
+
+            Write-Output "递归列出 target/release 下所有 .exe（调试用）："
+            Get-ChildItem -Path "src-tauri/target/release" -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue | ForEach-Object { Write-Output $_.FullName }
+
+            throw "NSIS exe 文件未找到：$nsisSetupExe。请检查构建日志确认文件名/路径。"
           }
 
-          # 最终 fallback：递归搜索整个 target/release 下的所有 .exe
-          if (-not $exePath) {
-            Write-Output "仍未找到，递归列出 target/release 下所有 .exe 文件："
-            Get-ChildItem -Path "src-tauri/target/release" -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue | ForEach-Object {
-              Write-Output "发现 exe: $($_.FullName) (大小: $($_.Length) bytes)"
-            }
-            throw "没有找到任何 .exe 文件。请检查上面的日志，确认 NSIS 构建是否真的生成了安装程序。"
-          }
+          Write-Output "找到 NSIS exe: $nsisSetupExe （将用作 portable 版）"
 
-          # 拷贝并重命名（统一叫 SafeMask.exe，便于用户使用）
+          # 创建便携目录并拷贝，重命名为 SafeMask.exe（去掉 -setup 后缀，用户更友好）
           New-Item -ItemType Directory -Path $portableDir -Force | Out-Null
-          Copy-Item -Path $exePath -Destination "$portableDir/SafeMask.exe" -Force
-          Write-Output "已拷贝 exe 到便携目录: $portableDir/SafeMask.exe"
+          Copy-Item -Path $nsisSetupExe -Destination "$portableDir/SafeMask.exe" -Force
 
-          # resources 拷贝（如果有）
+          # 拷贝 resources（如果存在）
           $resDir = "src-tauri/target/release/resources"
           if (Test-Path $resDir) {
             Copy-Item -Recurse -Force $resDir "$portableDir/resources"
-            Write-Output "已拷贝 resources 目录"
+            Write-Output "已拷贝 resources"
           }
 
           Compress-Archive -Path "$portableDir\*" -DestinationPath $zipPath -Force
-          Write-Output "ZIP 打包完成: $zipPath"
+          Write-Output "便携 ZIP 生成完成: $zipPath"
 
           gh release upload ${{ github.ref_name }} $zipPath --clobber
         env:
