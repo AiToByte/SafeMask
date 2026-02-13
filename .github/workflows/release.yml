@@ -100,48 +100,83 @@ jobs:
           $portableDir = "SafeMask_${version}_Portable_x64"
           $zipPath = "${portableDir}.zip"
 
-          # 优先查找 NSIS 打包后的最终 exe（最常见位置）
+          Write-Output "当前版本: $version"
+          Write-Output "正在搜索可能的 exe 文件..."
+
+          # 扩展 candidates，支持更多文件名变体（忽略大小写、空格、下划线等）
           $candidates = @(
+            # 最常见 NSIS 输出
             "src-tauri/target/release/bundle/nsis/SafeMask_${version}_x64-setup.exe",
             "src-tauri/target/release/bundle/nsis/SafeMask_${version}_x64.exe",
             "src-tauri/target/release/bundle/nsis/SafeMask_x64-setup.exe",
-            "src-tauri/target/release/SafeMask.exe",                    # fallback：原始 exe
+            # 可能有空格或不同分隔符
+            "src-tauri/target/release/bundle/nsis/*${version}*-setup.exe",
+            "src-tauri/target/release/bundle/nsis/*${version}*.exe",
+            # 原始二进制 fallback
+            "src-tauri/target/release/SafeMask.exe",
             "src-tauri/target/release/bundle/SafeMask.exe"
           )
 
           $exePath = $null
-          foreach ($candidate in $candidates) {
-            if (Test-Path $candidate) {
-              $exePath = $candidate
-              Write-Output "找到可用的 exe 文件：$exePath"
+
+          # 先尝试精确匹配
+          foreach ($pattern in $candidates) {
+            $found = Get-ChildItem -Path $pattern -File -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) {
+              $exePath = $found.FullName
+              Write-Output "精确匹配找到 exe: $exePath"
               break
             }
           }
 
+          # 如果精确没找到，用通配符模糊搜索 bundle/nsis 下所有 .exe / -setup.exe
           if (-not $exePath) {
-            # 调试：列出所有 exe 文件，帮助排查
-            Write-Output "未找到 exe，列出 target/release 下所有 .exe："
-            Get-ChildItem -Path "src-tauri/target/release" -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue | ForEach-Object { Write-Output $_.FullName }
-            throw "没有找到任何 SafeMask 相关的 .exe 文件，请检查构建日志中的 bundle/nsis 路径"
+            Write-Output "精确匹配失败，尝试模糊搜索 bundle/nsis 目录..."
+            $nsisDir = "src-tauri/target/release/bundle/nsis"
+            if (Test-Path $nsisDir) {
+              $possibleExes = Get-ChildItem -Path $nsisDir -Filter "*.exe" -File
+              if ($possibleExes.Count -gt 0) {
+                # 优先选带 -setup.exe 的
+                $setupOne = $possibleExes | Where-Object { $_.Name -like "*-setup.exe" } | Select-Object -First 1
+                if ($setupOne) {
+                  $exePath = $setupOne.FullName
+                  Write-Output "模糊匹配找到 setup exe: $exePath"
+                } else {
+                  $exePath = $possibleExes[0].FullName
+                  Write-Output "找到第一个 exe: $exePath"
+                }
+              } else {
+                Write-Output "nsis 目录存在，但里面没有 .exe 文件"
+              }
+            } else {
+              Write-Output "bundle/nsis 目录不存在！"
+            }
           }
 
-          # 创建便携目录并拷贝 exe（重命名为干净的 SafeMask.exe）
+          # 最终 fallback：递归搜索整个 target/release 下的所有 .exe
+          if (-not $exePath) {
+            Write-Output "仍未找到，递归列出 target/release 下所有 .exe 文件："
+            Get-ChildItem -Path "src-tauri/target/release" -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue | ForEach-Object {
+              Write-Output "发现 exe: $($_.FullName) (大小: $($_.Length) bytes)"
+            }
+            throw "没有找到任何 .exe 文件。请检查上面的日志，确认 NSIS 构建是否真的生成了安装程序。"
+          }
+
+          # 拷贝并重命名（统一叫 SafeMask.exe，便于用户使用）
           New-Item -ItemType Directory -Path $portableDir -Force | Out-Null
           Copy-Item -Path $exePath -Destination "$portableDir/SafeMask.exe" -Force
+          Write-Output "已拷贝 exe 到便携目录: $portableDir/SafeMask.exe"
 
-          # 拷贝 resources（如果你的项目有外部资源）
+          # resources 拷贝（如果有）
           $resDir = "src-tauri/target/release/resources"
           if (Test-Path $resDir) {
             Copy-Item -Recurse -Force $resDir "$portableDir/resources"
+            Write-Output "已拷贝 resources 目录"
           }
 
-          # 如果有其他必要文件（如 README、配置文件），可以在这里额外拷贝
-          # 示例：Copy-Item "README.md" "$portableDir/" -Force -ErrorAction SilentlyContinue
-
-          # 打包 ZIP
           Compress-Archive -Path "$portableDir\*" -DestinationPath $zipPath -Force
+          Write-Output "ZIP 打包完成: $zipPath"
 
-          # 上传到 Release（即使是 draft 也能上传）
           gh release upload ${{ github.ref_name }} $zipPath --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
