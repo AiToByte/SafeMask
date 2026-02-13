@@ -1,126 +1,121 @@
-name: "Publish Release"
+name: Publish Release
 
 on:
   push:
     tags:
-      - 'v*' # 当推送到以 v 开头的标签时触发，如 v1.1.2
+      - 'v*'
 
 jobs:
-  publish-tauri:
+  build-and-release:
     permissions:
       contents: write
+
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-latest" # macOS (Intel & Apple Silicon)
-            args: "--target universal-apple-darwin"
-          - platform: "ubuntu-22.04" # Linux
-            args: ""
-          - platform: "windows-latest" # Windows
-            args: ""
+          - platform: macos-latest
+            target: universal-apple-darwin
+            config: '{"bundle":{"targets":["app","dmg"]}}'
+            name: macOS
+
+          - platform: ubuntu-22.04
+            target: ""
+            config: '{"bundle":{"targets":["deb","appimage"]}}'
+            name: Linux
+
+          - platform: windows-latest
+            target: ""
+            config: '{"bundle":{"targets":["nsis"],"windows":{"nsis":{"installMode":"perMachine","languages":["zh-CN"],"displayLanguageSelector":false}}}}'
+            name: Windows
 
     runs-on: ${{ matrix.platform }}
-    steps:
-      - uses: actions/checkout@v4
-      
-       # 🚀 新增步骤：移除本地代理配置，防止 CI 环境连接失败
-      - name: Remove local cargo proxy
-        run: |
-          if [ -d ".cargo" ]; then
-            rm -rf .cargo
-            echo "Removed .cargo directory to prevent proxy errors in CI"
-          fi
-        shell: bash
 
-      # 1. 环境准备：Node.js
-      - name: setup node
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 防止国内/公司代理导致 CI 失败
+      - name: Clean Cargo proxy config
+        shell: bash
+        run: rm -rf ~/.cargo/config* .cargo/config* || true
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      # 2. 环境准备：Rust
-      - name: install Rust stable
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          # 针对 macOS 需要添加 aarch64 目标以支持 Universal 二进制
+          toolchain: stable
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      # 3. Rust 编译缓存（大幅提升二次打包速度）
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
+          cache-on-failure: true
 
-      # 4. 安装 Linux 必要的系统依赖 (Tauri v2 专用)
-      - if: matrix.platform == 'ubuntu-22.04'
-        name: install dependencies (ubuntu only)
+      # Linux 依赖（Tauri v2 官方推荐完整列表）
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev \
+            librsvg2-dev patchelf build-essential curl wget file libssl-dev libxdo-dev
 
-      # 5. 安装前端依赖
-      - name: install frontend dependencies
-        run: npm install
+      - name: Install frontend dependencies
+        run: npm ci
 
-        # 🚀 修正：移除不合法的 portable 标志，仅保留语言和必要的 NSIS 配置
-      - name: Configure Windows NSIS
-        if: matrix.platform == 'windows-latest'
-        shell: bash
-        run: |
-          node -e "
-            const fs = require('fs');
-            const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
-            conf.bundle.windows = conf.bundle.windows || {};
-            // Tauri v2 合法的 NSIS 配置
-            conf.bundle.windows.nsis = { 
-              installMode: 'perMachine', 
-              languages: ['zh-CN'],
-              displayLanguageSelector: false 
-            };
-            // 确保构建目标包含 nsis
-            conf.bundle.targets = ['nsis']; 
-            fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(conf, null, 2));
-          "
+      # ==================== 动态配置核心 ====================
+      - name: Generate platform-specific Tauri config
+        run: echo '${{ matrix.config }}' > tauri-build-config.json
 
-      # 6. 构建并发布
-      - name: build and release
-        uses: tauri-apps/tauri-action@v2
+      # ==================== 构建 + 发布 Release ====================
+      - name: Build Tauri app & create GitHub Release
+        uses: tauri-apps/tauri-action@v0.6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }} # 使用当前推送到标签名
-          releaseName: "SafeMask v__VERSION__" # 版本号会自动从 tauri.conf.json 提取
-          releaseBody: "🚀 SafeMask 极致性能脱敏工具新版本发布。详情请见下方附件。"
-          releaseDraft: true # 先作为草稿发布，确认无误后再手动点击公开
-          prerelease: false
-          args: ${{ matrix.args }}
+          tagName: ${{ github.ref_name }}
+          releaseName: "SafeMask ${{ github.ref_name }}"
+          releaseBody: |
+            🚀 **SafeMask ${{ github.ref_name }}** 已发布！
 
-       # 🚀 附加步骤：针对 Windows 额外打包一个真正的 ZIP 绿色版
-      - name: Package Windows ZIP Portable
+            **下载地址** 请见下方 Assets。
+          releaseDraft: true
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') }}
+          args: --config tauri-build-config.json ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
+
+      # ==================== Windows 专用便携 ZIP ====================
+      - name: Create Windows Portable ZIP
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          $VERSION = "${{ github.ref_name }}".Replace("v", "")
-          $ReleaseDir = "src-tauri/target/release"
-          $PortableDir = "SafeMask_$VERSION`_Portable_Win64"
-          
-          # 创建打包目录
-          New-Item -ItemType Directory -Path $PortableDir
-          
-          # 拷贝二进制文件
-          Copy-Item "$ReleaseDir/SafeMask.exe" -Destination "$PortableDir/"
-          
-          # 拷贝资源文件夹 (Tauri v2 编译后的资源通常在 resources 目录下)
-          if (Test-Path "$ReleaseDir/resources") {
-              Copy-Item -Recurse "$ReleaseDir/resources" -Destination "$PortableDir/"
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $portableDir = "SafeMask_${version}_Portable_x64"
+          $zipPath = "${portableDir}.zip"
+
+          # 查找主程序（更健壮）
+          $exe = Get-ChildItem -Path "src-tauri/target/release" -Filter "SafeMask.exe" -File | Select-Object -First 1
+          if (-not $exe) { throw "未找到 SafeMask.exe" }
+
+          New-Item -ItemType Directory -Path $portableDir -Force
+          Copy-Item $exe.FullName -Destination $portableDir/
+
+          # 拷贝 resources（如果有外部资源）
+          $resDir = "src-tauri/target/release/resources"
+          if (Test-Path $resDir) {
+            Copy-Item -Recurse -Force $resDir "$portableDir/resources"
           }
-          
-          # 压缩
-          Compress-Archive -Path "$PortableDir/*" -DestinationPath "$PortableDir.zip"
-          
-          # 将 ZIP 作为资产上传到同一个 Release
-          gh release upload ${{ github.ref_name }} "$PortableDir.zip" --clobber
+
+          Compress-Archive -Path "$portableDir\*" -DestinationPath $zipPath -Force
+
+          gh release upload ${{ github.ref_name }} $zipPath --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
