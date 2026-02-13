@@ -96,44 +96,52 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}".TrimStart('v')
+
+          # 使用 GitHub Actions 内置的环境变量，确保是仓库根目录
+          $repoRoot = $env:GITHUB_WORKSPACE
+          $nsisSetupExe = Join-Path $repoRoot "src-tauri/target/release/bundle/nsis/SafeMask_${version}_x64-setup.exe"
+
+          Write-Output "仓库根目录: $repoRoot"
+          Write-Output "预期 NSIS 文件路径: $nsisSetupExe"
+          Write-Output "当前工作目录（调试用）: $PWD"
+
+          if (-not (Test-Path $nsisSetupExe)) {
+            Write-Output "文件不存在！下面输出调试信息："
+
+            # 检查 bundle 目录是否存在
+            $bundleDir = Join-Path $repoRoot "src-tauri/target/release/bundle"
+            if (Test-Path $bundleDir) {
+              Write-Output "bundle 目录存在，列出内容："
+              Get-ChildItem -Path $bundleDir -Recurse | ForEach-Object { $_.FullName }
+            } else {
+              Write-Output "src-tauri/target/release/bundle 目录都不存在！"
+            }
+
+            # 最终手段：列出 target/release 下所有 .exe
+            Write-Output "列出 src-tauri/target/release 下所有 .exe 文件："
+            Get-ChildItem -Path (Join-Path $repoRoot "src-tauri/target/release") -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
+
+            throw "NSIS exe 未找到：$nsisSetupExe"
+          }
+
+          # 以下是原有逻辑：创建 portable ZIP
           $portableDir = "SafeMask_${version}_Portable_x64"
           $zipPath = "${portableDir}.zip"
 
-          # 从构建日志确认的真实路径（相对路径）
-          $nsisSetupExe = "src-tauri/target/release/bundle/nsis/SafeMask_${version}_x64-setup.exe"
-
-          Write-Output "预期 NSIS exe 路径: $nsisSetupExe"
-
-          if (-not (Test-Path $nsisSetupExe)) {
-            Write-Output "路径不存在！列出 bundle/nsis 目录内容（如果存在）："
-            if (Test-Path "src-tauri/target/release/bundle/nsis") {
-              Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Force | ForEach-Object { Write-Output $_.FullName }
-            } else {
-              Write-Output "bundle/nsis 目录完全不存在！"
-            }
-
-            Write-Output "递归列出 target/release 下所有 .exe（调试用）："
-            Get-ChildItem -Path "src-tauri/target/release" -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue | ForEach-Object { Write-Output $_.FullName }
-
-            throw "NSIS exe 文件未找到：$nsisSetupExe。请检查构建日志确认文件名/路径。"
-          }
-
-          Write-Output "找到 NSIS exe: $nsisSetupExe （将用作 portable 版）"
-
-          # 创建便携目录并拷贝，重命名为 SafeMask.exe（去掉 -setup 后缀，用户更友好）
           New-Item -ItemType Directory -Path $portableDir -Force | Out-Null
           Copy-Item -Path $nsisSetupExe -Destination "$portableDir/SafeMask.exe" -Force
 
-          # 拷贝 resources（如果存在）
-          $resDir = "src-tauri/target/release/resources"
+          # 如果有 resources 也拷贝（可选）
+          $resDir = Join-Path $repoRoot "src-tauri/target/release/resources"
           if (Test-Path $resDir) {
             Copy-Item -Recurse -Force $resDir "$portableDir/resources"
-            Write-Output "已拷贝 resources"
+            Write-Output "已拷贝 resources 文件夹"
           }
 
-          Compress-Archive -Path "$portableDir\*" -DestinationPath $zipPath -Force
-          Write-Output "便携 ZIP 生成完成: $zipPath"
+          Compress-Archive -Path "$portableDir\*" -DestinationPath $zipPath -Force -CompressionLevel Optimal
+          Write-Output "Portable ZIP 创建完成：$zipPath"
 
+          # 上传到 release
           gh release upload ${{ github.ref_name }} $zipPath --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
