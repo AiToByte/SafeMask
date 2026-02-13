@@ -47,7 +47,7 @@ pub fn process_file<P: AsRef<Path>>(
          "xlsx" | "xls" | "xlsm" | "xlsb" => process_xlsx(input, output_path.as_ref(), engine, progress_callback),
 
         // 3. PDF 文档 (通常输出为脱敏后的文本，因为 PDF 逆向修改容易乱码)
-        "pdf | doc" => process_pdf(input, output_path.as_ref(), engine, progress_callback),
+        "pdf" | "doc" => process_pdf(input, output_path.as_ref(), engine, progress_callback),
 
         // 4. 默认：高性能纯文本流水线 (Log, Txt, Csv, Json, etc.)
         _ => process_text_file_mmap(input, output_path.as_ref(), engine, progress_callback),

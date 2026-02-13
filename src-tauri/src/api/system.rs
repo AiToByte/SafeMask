@@ -28,7 +28,7 @@ pub async fn get_all_detailed_rules(app: AppHandle) -> AppResult<Vec<Rule>> {
 #[tauri::command]
 pub async fn save_rule_api(app: AppHandle, state: State<'_, AppState>, rule: Rule) -> AppResult<String> {
     // 1. 持久化到 YAML
-    ConfigLoader::save_custom_rule(rule)?;
+    ConfigLoader::save_custom_rule(&app, rule)?;
     
     // 2. 触发引擎热重载，使规则立即生效
     reload_engine_internal(app, state).await?;
@@ -39,7 +39,7 @@ pub async fn save_rule_api(app: AppHandle, state: State<'_, AppState>, rule: Rul
 /// 删除规则
 #[tauri::command]
 pub async fn delete_rule_api(app: AppHandle, state: State<'_, AppState>, name: String) -> AppResult<String> {
-    ConfigLoader::delete_custom_rule(&name)?;
+    ConfigLoader::delete_custom_rule(&app, &name)?;
     reload_engine_internal(app, state).await?;
     Ok("规则已删除".into())
 }

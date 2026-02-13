@@ -6,30 +6,57 @@ use tauri::{AppHandle, Manager};
 use walkdir::WalkDir; 
 // 🚀 核心修复：引入 anyhow 的 Context Trait 以使用 with_context
 use anyhow::Context; 
-use log::{info};  // 添加导入
+use log::{info};
 
 pub struct ConfigLoader;
 
 impl ConfigLoader {
     /// 核心功能：自动加载内置规则目录和用户自定义目录
+    // pub fn load_all_rules(app_handle: &AppHandle) -> Vec<Rule> {
+    //     let mut all_rules = Vec::new();
+    //     info!("📁 获取资源目录...");
+    //      // 🚀 动态获取打包后的资源目录
+    //     let resource_dir = app_handle.path().resource_dir().expect("无法获取资源目录");
+    //     info!("📁 资源目录: {:?}", resource_dir);
+    //     // 规定两个加载路径
+    //     let paths = vec![
+    //         resource_dir.join("rules"),  // 内置目录
+    //         resource_dir.join("custom"), // 用户自定义目录
+    //     ];
+
+    //     for path in paths {
+    //         if path.exists() && path.is_dir() {
+    //             let is_custom = path.ends_with("custom");
+    //             all_rules.extend(Self::load_from_directory(path, is_custom));
+    //         }
+    //     }
+    //     all_rules
+    // }
+
+    /// 核心功能：自动加载内置规则目录和用户自定义目录
     pub fn load_all_rules(app_handle: &AppHandle) -> Vec<Rule> {
         let mut all_rules = Vec::new();
-        info!("📁 获取资源目录...");
-         // 🚀 动态获取打包后的资源目录
-        let resource_dir = app_handle.path().resource_dir().expect("无法获取资源目录");
-        info!("📁 资源目录: {:?}", resource_dir);
-        // 规定两个加载路径
-        let paths = vec![
-            resource_dir.join("rules"),  // 内置目录
-            resource_dir.join("custom"), // 用户自定义目录
-        ];
 
-        for path in paths {
-            if path.exists() && path.is_dir() {
-                let is_custom = path.ends_with("custom");
-                all_rules.extend(Self::load_from_directory(path, is_custom));
+        // 1. 加载内置规则 (只读资源)
+        // 在 NSIS 便携版中，此目录位于临时文件夹；在安装版中位于 Program Files
+        if let Ok(resource_dir) = app_handle.path().resource_dir() {
+            let built_in_path = resource_dir.join("rules");
+            if built_in_path.exists() {
+                info!("📁 加载系统内置规则: {:?}", built_in_path);
+                all_rules.extend(Self::load_from_directory(&built_in_path, false));
             }
         }
+
+        // 2. 加载用户自定义规则 (持久化配置)
+        let custom_dir = Self::get_custom_storage_path(app_handle);
+        if custom_dir.exists() {
+            info!("📁 加载用户自定义规则: {:?}", custom_dir);
+            all_rules.extend(Self::load_from_directory(&custom_dir, true));
+        } else {
+            // 首次运行，尝试创建目录
+            let _ = fs::create_dir_all(&custom_dir);
+        }
+
         all_rules
     }
 
@@ -63,8 +90,8 @@ impl ConfigLoader {
     }
 
     /// 保存单个自定义规则到 custom/user_rules.yaml
-    pub fn save_custom_rule(rule: Rule) -> AppResult<()> {
-        let custom_dir = PathBuf::from("custom");
+    pub fn save_custom_rule(app_handle: &AppHandle, rule: Rule) -> AppResult<()> {
+        let custom_dir = Self::get_custom_storage_path(app_handle);
         if !custom_dir.exists() {
             fs::create_dir_all(&custom_dir)?;
         }
@@ -98,8 +125,8 @@ impl ConfigLoader {
     }
 
     /// 从 custom/user_rules.yaml 中删除规则
-    pub fn delete_custom_rule(name: &str) -> AppResult<()> {
-        let file_path = PathBuf::from("custom").join("user_rules.yaml");
+    pub fn delete_custom_rule(app_handle: &AppHandle, name: &str) -> AppResult<()> {
+        let file_path = Self::get_custom_storage_path(app_handle).join("user_rules.yaml");
         if !file_path.exists() { return Ok(()); }
 
         let content = fs::read_to_string(&file_path)?;
@@ -113,6 +140,27 @@ impl ConfigLoader {
         
         fs::write(file_path, yaml)?;
         Ok(())
+    }
+    /// 🚀 智能路径判定：适配安装版、ZIP便携版、NSIS单文件版
+    fn get_custom_storage_path(app_handle: &AppHandle) -> PathBuf {
+        // 获取当前 EXE 所在目录
+        let exe_path = std::env::current_exe().unwrap_or_default();
+        let exe_dir = exe_path.parent().unwrap_or(Path::new(""));
+
+        // 判定 1：是否在临时文件夹运行 (NSIS Portable 特征)
+        // Windows 临时文件夹通常包含 "Temp" 字符串
+        let is_in_temp = exe_dir.to_string_lossy().to_lowercase().contains("temp");
+
+        if is_in_temp {
+            // 【针对 NSIS 单文件版】：临时目录不可靠，使用系统的 AppData 目录实现真正持久化
+            app_handle.path().app_local_data_dir()
+                .unwrap_or_else(|_| PathBuf::from("./data")) // 兜底
+                .join("custom")
+        } else {
+            // 【针对 ZIP 绿色版 / 开发模式】：直接在 EXE 同级目录创建 custom 文件夹
+            // 这样用户把整个文件夹考走，规则也会跟着走，实现真正的绿色便携
+            exe_dir.join("custom")
+        }
     }
 
      // 修改此内部方法，增加 is_custom 参数
