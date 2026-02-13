@@ -26,8 +26,8 @@ jobs:
 
           - platform: windows-latest
             target: "x86_64-pc-windows-msvc"
-            # ✅ 关键修复：把 "zh-CN" 改为 "SimpChinese"
-            config: '{"bundle":{"targets":["nsis"],"windows":{"nsis":{"installMode":"perMachine","languages":["SimpChinese"],"displayLanguageSelector":false}}}}'
+             # ✅ 深度优化：启用官方 portable 模式，生成单文件免安装版，彻底解决资源路径闪退问题
+            config: '{"bundle":{"targets":["nsis"],"windows":{"nsis":{"type":"portable","installMode":"perMachine","languages":["SimpChinese"],"displayLanguageSelector":false}}}}'
             name: Windows
 
     runs-on: ${{ matrix.platform }}
@@ -52,7 +52,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          # 仅在需要时安装特定 target
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || (matrix.target != '' && matrix.target || '') }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -75,7 +76,7 @@ jobs:
       - name: Generate platform-specific Tauri config
         run: echo '${{ matrix.config }}' > tauri-build-config.json
 
-      # 构建 + 发布 Release
+      # 构建主体（包含安装包和便携版）
       - name: Build Tauri app & create GitHub Release
         uses: tauri-apps/tauri-action@v0.6
         env:
@@ -86,64 +87,67 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "SafeMask ${{ github.ref_name }}"
           releaseBody: |
-            🚀 **SafeMask ${{ github.ref_name }}** 已发布！
+            🚀 **SafeMask ${{ github.ref_name }}** 现已正式发布！
+            
+            SafeMask 是一款基于 Rust 构建的高性能本地隐私脱敏工具，确保您的敏感数据在拥抱 AI 的同时，隐私不出域。
 
-            **下载地址** 请见下方 Assets。
+            ### 📦 各平台下载指南 / Download Guide
+
+            #### 🪟 Windows
+            - **标准安装版 (`SafeMask_x64-setup.exe`)**: 建议大多数用户使用，支持快捷方式和自动更新。
+            - **单文件便携版 (`SafeMask_Portable_x64.exe`)**: 无需安装，双击即用，适合 U 盘或快速使用。
+
+            #### 🍎 macOS
+            - **磁盘映像 (`.dmg`)**: 通用二进制版本，支持 Apple Silicon (M1/M2/M3) 和 Intel 芯片。
+
+            #### 🐧 Linux
+            - **通用版 (`.AppImage`)**: 赋予权限即可运行。
+            - **安装包 (`.deb`)**: 适用于 Ubuntu/Debian。
+
+            ---
+            ### 🔐 安全承诺 / Security
+            - **100% Local**: 所有脱敏计算均在本地完成。引擎无任何网络权限，数据绝对安全。
+
+            ---
+            *感谢使用 SafeMask！*
           releaseDraft: true
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') }}
           args: --config tauri-build-config.json ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
           
-      - name: Create Windows Portable ZIP
+      # 专门处理 Windows 的单文件便携版上传
+      - name: Handle Windows Portable Artifact
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}".TrimStart('v')
           $target = "${{ matrix.target }}"
+          $version = "${{ github.ref_name }}".TrimStart('v')
           
-          # 1. 准确定位编译产物目录
-          $basePath = if ($target) { "target\$target\release" } else { "target\release" }
-          $rawExe = Join-Path $basePath "SafeMask.exe"
+          # 1. 定位 NSIS 产物目录
+          $basePath = if ($target) { "target\$target\release\bundle\nsis" } else { "target\release\bundle\nsis" }
           
-          Write-Host "检查路径: $rawExe"
-
-          if (-not (Test-Path $rawExe)) {
-              Write-Error "找不到核心执行文件 SafeMask.exe，打包中止！"
-              Get-ChildItem -Path "target" -Recurse -Depth 4
+          Write-Host "正在搜索便携版产物，路径: $basePath"
+          
+          if (-not (Test-Path $basePath)) {
+              Write-Error "找不到产物目录！打印目录树以供排查："
+              Get-ChildItem -Path "target" -Recurse -Depth 3
               exit 1
           }
 
-          # 2. 创建便携版文件夹
-          $portableDir = "SafeMask_${version}_Portable_x64"
-          New-Item -ItemType Directory -Path $portableDir -Force
-
-          # 3. 拷贝核心文件
-          Copy-Item -Path $rawExe -Destination "$portableDir\SafeMask.exe"
-
-          # 4. 拷贝必要目录 (如果存在)
-          # resources 文件夹通常包含你打包进去的外部资源
-          if (Test-Path (Join-Path $basePath "resources")) {
-              Write-Host "发现 resources 目录，正在拷贝..."
-              Copy-Item -Path (Join-Path $basePath "resources") -Destination $portableDir -Recurse
-          }
+          # 2. 寻找生成的 portable 文件 (由 "type": "portable" 生成)
+          $portableExe = Get-ChildItem -Path $basePath -Filter "SafeMask_*_x64-portable.exe" | Select-Object -First 1
           
-          # _upd 文件夹（如果开启了更新功能，某些版本可能需要）
-          if (Test-Path (Join-Path $basePath "_upd")) {
-              Copy-Item -Path (Join-Path $basePath "_upd") -Destination $portableDir -Recurse
+          if ($portableExe) {
+              Write-Host "找到官方便携版: $($portableExe.FullName)"
+              # 重命名为更友好的名称
+              $newName = "SafeMask_${version}_Portable_x64.exe"
+              Move-Item -Path $portableExe.FullName -Destination $newName -Force
+              
+              # 上传到 Release
+              gh release upload ${{ github.ref_name }} "${newName}#Windows-Portable-x64" --clobber
+              Write-Host "上传成功！"
+          } else {
+              Write-Error "在 $basePath 中找不到 portable.exe。请确认 matrix 中的 config 已包含 type:portable"
+              exit 1
           }
-
-          # 5. 检查并处理 Sidecars (如果有)
-          # Tauri 的 sidecar 通常直接放在 exe 同级，名称带有 target 后缀
-          # 这里通过匹配排除掉主要的 exe，拷贝其他可能的执行文件
-          Get-ChildItem -Path $basePath -Filter "*.exe" | Where-Object { $_.Name -ne "SafeMask.exe" -and $_.Name -notlike "*setup*" } | ForEach-Object {
-              Write-Host "发现疑似 Sidecar 或依赖文件: $($_.Name)"
-              Copy-Item -Path $_.FullName -Destination $portableDir
-          }
-
-          # 6. 压缩并上传
-          $zipPath = "${portableDir}.zip"
-          Compress-Archive -Path "$portableDir\*" -DestinationPath $zipPath -Force
-          
-          Write-Host "便携版打包完成: $zipPath"
-          gh release upload ${{ github.ref_name }} "$zipPath#Windows_Portable_x64" --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

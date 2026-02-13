@@ -6,7 +6,7 @@ use tauri::{AppHandle, Manager};
 use walkdir::WalkDir; 
 // 🚀 核心修复：引入 anyhow 的 Context Trait 以使用 with_context
 use anyhow::Context; 
-use log::{info};
+use log::{info, error};
 
 pub struct ConfigLoader;
 
@@ -44,7 +44,12 @@ impl ConfigLoader {
             if built_in_path.exists() {
                 info!("📁 加载系统内置规则: {:?}", built_in_path);
                 all_rules.extend(Self::load_from_directory(&built_in_path, false));
+            } else {
+                 // 记录日志而不是直接崩溃
+                error!("⚠️ 资源目录存在但找不到 rules 文件夹: {:?}", built_in_path);
             }
+        } else {
+            error!("⚠️ 无法获取资源目录资源，可能运行环境不规范");
         }
 
         // 2. 加载用户自定义规则 (持久化配置)
