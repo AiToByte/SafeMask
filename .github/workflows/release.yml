@@ -125,7 +125,9 @@ jobs:
           # 1. 定位产物路径 (考虑到指定的 target triple)
           $basePath = "target\$target\release"
           $exePath = Join-Path $basePath "SafeMask.exe"
-          $resPath = Join-Path $basePath "resources"
+          $rulesPath = Join-Path $basePath "rules"
+          $customPath = Join-Path $basePath "custom"
+          $iconsPath = Join-Path $basePath "icons"
 
           Write-Host "检查核心文件: $exePath"
           if (-not (Test-Path $exePath)) {
@@ -141,13 +143,25 @@ jobs:
           # 3. 拷贝核心执行文件
           Copy-Item -Path $exePath -Destination "$portableName\SafeMask.exe"
 
-          # 4. 🚀 关键修复：必须拷贝整个 resources 文件夹
+          # 4. 🚀 关键修复：必须拷贝所有资源文件夹
           # 你的 Rust 代码加载规则时 expect 了资源路径，没有这个文件夹必定闪退
-          if (Test-Path $resPath) {
-              Write-Host "正在拷贝资源文件夹: $resPath"
-              Copy-Item -Path $resPath -Destination $portableName -Recurse -Force
+          if (Test-Path $rulesPath) {
+              Write-Host "正在拷贝资源文件夹: $rulesPath"
+              Copy-Item -Path $rulesPath -Destination $portableName -Recurse -Force
           } else {
-              Write-Warning "未找到 resources 文件夹，程序运行可能会闪退！"
+              Write-Warning "未找到 rules 文件夹，程序运行可能会闪退！"
+          }
+          if (Test-Path $customPath) {
+              Write-Host "正在拷贝资源文件夹: $customPath"
+              Copy-Item -Path $customPath -Destination $portableName -Recurse -Force
+          } else {
+              Write-Warning "未找到 custom 文件夹，程序运行可能会闪退！"
+          }
+          if (Test-Path $iconsPath) {
+              Write-Host "正在拷贝资源文件夹: $iconsPath"
+              Copy-Item -Path $iconsPath -Destination $portableName -Recurse -Force
+          } else {
+              Write-Warning "未找到 icons 文件夹，程序运行可能会闪退！"
           }
 
           # 5. 压缩并上传
