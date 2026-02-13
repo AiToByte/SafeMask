@@ -6,6 +6,7 @@ pub struct AppEvents;
 impl AppEvents {
     /// 文件处理进度事件
     /// Payload: { "percentage": f64 }
+    #[allow(dead_code)]
     pub const FILE_PROGRESS: &'static str = "file-progress";
 
     /// 实时脱敏通知事件 (主要用于剪贴板自动脱敏后的提示)

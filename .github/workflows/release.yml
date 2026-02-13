@@ -100,19 +100,48 @@ jobs:
           $portableDir = "SafeMask_${version}_Portable_x64"
           $zipPath = "${portableDir}.zip"
 
-          $exe = Get-ChildItem -Path "src-tauri/target/release" -Filter "SafeMask.exe" -File | Select-Object -First 1
-          if (-not $exe) { throw "未找到 SafeMask.exe" }
+          # 优先查找 NSIS 打包后的最终 exe（最常见位置）
+          $candidates = @(
+            "src-tauri/target/release/bundle/nsis/SafeMask_${version}_x64-setup.exe",
+            "src-tauri/target/release/bundle/nsis/SafeMask_${version}_x64.exe",
+            "src-tauri/target/release/bundle/nsis/SafeMask_x64-setup.exe",
+            "src-tauri/target/release/SafeMask.exe",                    # fallback：原始 exe
+            "src-tauri/target/release/bundle/SafeMask.exe"
+          )
 
-          New-Item -ItemType Directory -Path $portableDir -Force
-          Copy-Item $exe.FullName -Destination $portableDir/
+          $exePath = $null
+          foreach ($candidate in $candidates) {
+            if (Test-Path $candidate) {
+              $exePath = $candidate
+              Write-Output "找到可用的 exe 文件：$exePath"
+              break
+            }
+          }
 
+          if (-not $exePath) {
+            # 调试：列出所有 exe 文件，帮助排查
+            Write-Output "未找到 exe，列出 target/release 下所有 .exe："
+            Get-ChildItem -Path "src-tauri/target/release" -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue | ForEach-Object { Write-Output $_.FullName }
+            throw "没有找到任何 SafeMask 相关的 .exe 文件，请检查构建日志中的 bundle/nsis 路径"
+          }
+
+          # 创建便携目录并拷贝 exe（重命名为干净的 SafeMask.exe）
+          New-Item -ItemType Directory -Path $portableDir -Force | Out-Null
+          Copy-Item -Path $exePath -Destination "$portableDir/SafeMask.exe" -Force
+
+          # 拷贝 resources（如果你的项目有外部资源）
           $resDir = "src-tauri/target/release/resources"
           if (Test-Path $resDir) {
             Copy-Item -Recurse -Force $resDir "$portableDir/resources"
           }
 
+          # 如果有其他必要文件（如 README、配置文件），可以在这里额外拷贝
+          # 示例：Copy-Item "README.md" "$portableDir/" -Force -ErrorAction SilentlyContinue
+
+          # 打包 ZIP
           Compress-Archive -Path "$portableDir\*" -DestinationPath $zipPath -Force
 
+          # 上传到 Release（即使是 draft 也能上传）
           gh release upload ${{ github.ref_name }} $zipPath --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
