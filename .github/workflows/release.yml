@@ -64,27 +64,29 @@ jobs:
       - name: install frontend dependencies
         run: npm install
 
-       # 🚀 关键步骤：在 Windows 上动态修改配置以生成单文件便携版
-      - name: Configure Windows Portable Mode
+        # 🚀 修正：移除不合法的 portable 标志，仅保留语言和必要的 NSIS 配置
+      - name: Configure Windows NSIS
         if: matrix.platform == 'windows-latest'
         shell: bash
         run: |
-          # 使用 node 脚本快速修改 tauri.conf.json
           node -e "
             const fs = require('fs');
             const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
             conf.bundle.windows = conf.bundle.windows || {};
+            // Tauri v2 合法的 NSIS 配置
             conf.bundle.windows.nsis = { 
-              installMode: 'portable', 
+              installMode: 'perMachine', 
               languages: ['zh-CN'],
               displayLanguageSelector: false 
             };
+            // 确保构建目标包含 nsis
+            conf.bundle.targets = ['nsis']; 
             fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(conf, null, 2));
           "
 
       # 6. 构建并发布
       - name: build and release
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
