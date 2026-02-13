@@ -26,8 +26,8 @@ jobs:
 
           - platform: windows-latest
             target: "x86_64-pc-windows-msvc"
-             # ✅ 深度优化：启用官方 portable 模式，生成单文件免安装版，彻底解决资源路径闪退问题
-            config: '{"bundle":{"targets":["nsis"],"windows":{"nsis":{"type":"portable","installMode":"perMachine","languages":["SimpChinese"],"displayLanguageSelector":false}}}}'
+             # ✅ 修复：移除了不支持的 "type":"portable"，回归标准 NSIS 配置
+            config: '{"bundle":{"targets":["nsis"],"windows":{"nsis":{"installMode":"perMachine","languages":["SimpChinese"],"displayLanguageSelector":false}}}}'
             name: Windows
 
     runs-on: ${{ matrix.platform }}
@@ -114,40 +114,45 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') }}
           args: --config tauri-build-config.json ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
           
-      # 专门处理 Windows 的单文件便携版上传
-      - name: Handle Windows Portable Artifact
+       # 制作 Windows 免安装 ZIP (修复路径并包含 resources 文件夹)
+      - name: Create Windows Portable ZIP
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          $target = "${{ matrix.target }}"
           $version = "${{ github.ref_name }}".TrimStart('v')
+          $target = "${{ matrix.target }}"
           
-          # 1. 定位 NSIS 产物目录
-          $basePath = if ($target) { "target\$target\release\bundle\nsis" } else { "target\release\bundle\nsis" }
-          
-          Write-Host "正在搜索便携版产物，路径: $basePath"
-          
-          if (-not (Test-Path $basePath)) {
-              Write-Error "找不到产物目录！打印目录树以供排查："
-              Get-ChildItem -Path "target" -Recurse -Depth 3
+          # 1. 定位产物路径 (考虑到指定的 target triple)
+          $basePath = "target\$target\release"
+          $exePath = Join-Path $basePath "SafeMask.exe"
+          $resPath = Join-Path $basePath "resources"
+
+          Write-Host "检查核心文件: $exePath"
+          if (-not (Test-Path $exePath)) {
+              Write-Error "找不到 SafeMask.exe"
               exit 1
           }
 
-          # 2. 寻找生成的 portable 文件 (由 "type": "portable" 生成)
-          $portableExe = Get-ChildItem -Path $basePath -Filter "SafeMask_*_x64-portable.exe" | Select-Object -First 1
-          
-          if ($portableExe) {
-              Write-Host "找到官方便携版: $($portableExe.FullName)"
-              # 重命名为更友好的名称
-              $newName = "SafeMask_${version}_Portable_x64.exe"
-              Move-Item -Path $portableExe.FullName -Destination $newName -Force
-              
-              # 上传到 Release
-              gh release upload ${{ github.ref_name }} "${newName}#Windows-Portable-x64" --clobber
-              Write-Host "上传成功！"
+          # 2. 创建打包目录
+          $portableName = "SafeMask_${version}_Portable_x64"
+          $zipPath = "${portableName}.zip"
+          New-Item -ItemType Directory -Path $portableName -Force
+
+          # 3. 拷贝核心执行文件
+          Copy-Item -Path $exePath -Destination "$portableName\SafeMask.exe"
+
+          # 4. 🚀 关键修复：必须拷贝整个 resources 文件夹
+          # 你的 Rust 代码加载规则时 expect 了资源路径，没有这个文件夹必定闪退
+          if (Test-Path $resPath) {
+              Write-Host "正在拷贝资源文件夹: $resPath"
+              Copy-Item -Path $resPath -Destination $portableName -Recurse -Force
           } else {
-              Write-Error "在 $basePath 中找不到 portable.exe。请确认 matrix 中的 config 已包含 type:portable"
-              exit 1
+              Write-Warning "未找到 resources 文件夹，程序运行可能会闪退！"
           }
+
+          # 5. 压缩并上传
+          Compress-Archive -Path "$portableName\*" -DestinationPath $zipPath -Force
+          Write-Host "正在上传免安装版 ZIP..."
+          gh release upload ${{ github.ref_name }} "$zipPath#Windows-Portable-x64" --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
