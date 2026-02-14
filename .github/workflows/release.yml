@@ -109,7 +109,9 @@ jobs:
             - **100% Local**: 所有脱敏计算均在本地完成。引擎无任何网络权限，数据绝对安全。
 
             ---
-            *感谢使用 SafeMask！*
+            <div align="center">
+              <p><b>SafeMask</b> - 让每一行数据，都能安全地拥抱 AI。</p>
+            </div>
           releaseDraft: true
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') }}
           args: --config tauri-build-config.json ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
