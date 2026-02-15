@@ -86,7 +86,7 @@ export const MaskAPI = {
   async selectFile() {
     return await open({
       multiple: false,
-      filters: [{ name: 'Log/Text', extensions: ['log', 'txt', 'csv', 'json'] }]
+      filters: [{ name: 'Log/Text/Office', extensions: ['log', 'txt', 'csv', 'json', 'docx', 'doc', 'pdf', 'xls', 'xlsx'] }]
     });
   },
 
