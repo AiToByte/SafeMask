@@ -1,5 +1,6 @@
 use crate::common::errors::{AppError, AppResult};
 use crate::core::rules::{Rule, RuleGroup};
+use crate::core::config::AppSettings;
 use std::fs;
 use std::path::{Path, PathBuf}; // 🚀 修复：导入 Path
 use tauri::{AppHandle, Manager};
@@ -11,27 +12,6 @@ use log::{info, error};
 pub struct ConfigLoader;
 
 impl ConfigLoader {
-    /// 核心功能：自动加载内置规则目录和用户自定义目录
-    // pub fn load_all_rules(app_handle: &AppHandle) -> Vec<Rule> {
-    //     let mut all_rules = Vec::new();
-    //     info!("📁 获取资源目录...");
-    //      // 🚀 动态获取打包后的资源目录
-    //     let resource_dir = app_handle.path().resource_dir().expect("无法获取资源目录");
-    //     info!("📁 资源目录: {:?}", resource_dir);
-    //     // 规定两个加载路径
-    //     let paths = vec![
-    //         resource_dir.join("rules"),  // 内置目录
-    //         resource_dir.join("custom"), // 用户自定义目录
-    //     ];
-
-    //     for path in paths {
-    //         if path.exists() && path.is_dir() {
-    //             let is_custom = path.ends_with("custom");
-    //             all_rules.extend(Self::load_from_directory(path, is_custom));
-    //         }
-    //     }
-    //     all_rules
-    // }
 
     /// 核心功能：自动加载内置规则目录和用户自定义目录
     pub fn load_all_rules(app_handle: &AppHandle) -> Vec<Rule> {
@@ -200,5 +180,48 @@ impl ConfigLoader {
             .with_context(|| format!("YAML 格式解析失败: {:?}", path))?;
             
         Ok(rules)
+    }
+
+    /// 加载应用设置：优先从磁盘读取，失败则返回默认值
+    pub fn load_settings(app_handle: &AppHandle) -> AppSettings {
+        let settings_path = Self::get_custom_storage_path(app_handle).join("settings.yaml");
+        
+        if settings_path.exists() {
+            match fs::read_to_string(&settings_path) {
+                Ok(content) => {
+                    serde_yaml::from_str(&content).unwrap_or_else(|e| {
+                        error!("解析 settings.yaml 失败，使用默认配置: {}", e);
+                        AppSettings::default()
+                    })
+                }
+                Err(e) => {
+                    error!("读取 settings.yaml 失败: {}", e);
+                    AppSettings::default()
+                }
+            }
+        } else {
+            // 首次运行，保存一份默认配置到磁盘
+            let default_settings = AppSettings::default();
+            let _ = Self::save_settings(app_handle, &default_settings);
+            default_settings
+        }
+    }
+
+    /// 将设置持久化到磁盘
+    pub fn save_settings(app_handle: &AppHandle, settings: &AppSettings) -> AppResult<()> {
+        let custom_dir = Self::get_custom_storage_path(app_handle);
+        if !custom_dir.exists() {
+            fs::create_dir_all(&custom_dir)?;
+        }
+
+        let file_path = custom_dir.join("settings.yaml");
+        let yaml = serde_yaml::to_string(settings)
+            .map_err(|e| AppError::Config(format!("配置序列化失败: {}", e)))?;
+
+        fs::write(file_path, yaml)
+            .map_err(|e| AppError::Io(e))?;
+            
+        info!("✅ 应用设置已成功持久化到磁盘");
+        Ok(())
     }
 }

@@ -1,164 +1,86 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { ref } from 'vue';
 import { useAppStore } from '../stores/useAppStore';
-import { 
-  Settings, Shield, Trash2, Github, Info, 
-  Monitor, ExternalLink, CheckCircle2 
-} from 'lucide-vue-next';
+import { MaskAPI } from '../services/api';
+import { Settings as SettingsIcon, Shield, Keyboard, Bell, Timer, RotateCcw, Save, Trash2, Github, Info, ExternalLink } from 'lucide-vue-next';
 import { confirm } from '@tauri-apps/plugin-dialog';
 
-// 🚀 修复点 1: 正确导入方式 (适配 Tauri v2)
-// 如果之前报错 'open' 不存在，请尝试 revealItemInDir 或检查插件注册
-import { openUrl } from '@tauri-apps/plugin-opener';
-
 const store = useAppStore();
-const showSuccess = ref(false);
+const isRecording = ref(false);
 
-// 🚀 添加初始化标识，防止重复请求
-const isInitializing = ref(false);
-
-onMounted(async () => {
-  console.log("⚙️ Settings Component Mounted"); // 调试日志
-  isInitializing.value = true;
-  try {
-    // 确保 store 里有这个方法
-    if (typeof store.fetchAppInfo === 'function') {
-      await store.fetchAppInfo();
-      console.log("✅ App Info Fetched:", store.appInfo);
-    } else {
-      console.error("❌ store.fetchAppInfo is not a function");
-    }
-  } catch (err) {
-    console.error("❌ Failed to load settings:", err);
-  } finally {
-    isInitializing.value = false;
-  }
-});
-
-const handleClearHistory = async () => {
-  const confirmed = await confirm(
-    '确定要清除所有脱敏拦截记录吗？此操作无法恢复。',
-    { title: '安全提醒', kind: 'warning' }
-  );
-  
-  if (confirmed) {
-    await store.clearHistory();
-    showSuccess.value = true;
-    setTimeout(() => showSuccess.value = false, 2000);
+const handleRecord = (e: KeyboardEvent) => {
+  if (!isRecording.value) return;
+  e.preventDefault();
+  const mods: string[] = [];
+  if (e.ctrlKey) mods.push("Ctrl");
+  if (e.altKey) mods.push("Alt");
+  if (e.shiftKey) mods.push("Shift");
+  if (e.metaKey) mods.push("Super");
+  const key = e.key.toUpperCase();
+  if (!["CONTROL", "ALT", "SHIFT", "META"].includes(key)) {
+    store.settings.magic_paste_shortcut = [...mods, key].join("+");
+    isRecording.value = false;
   }
 };
 
-const openGithub = async () => {
-  if (store.appInfo?.github) {
-    try {
-      await openUrl(store.appInfo.github);
-    } catch (e) {
-      console.error("无法打开链接:", e);
-      // 降级方案
-      window.open(store.appInfo.github, '_blank');
-    }
-  }
+const handleSave = async () => {
+  await MaskAPI.updateSettings(store.settings);
+  alert("✅ 设置已保存并重载");
 };
 </script>
 
 <template>
-  <!-- 外层容器添加加载状态遮罩(可选) -->
-  <div v-if="isInitializing" class="h-full flex items-center justify-center">
-    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-  </div>
-
-  <div v-else class="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-    <!-- 头部 -->
-    <div class="flex items-center gap-4 mb-10">
-      <div class="p-3 bg-blue-600/20 rounded-2xl">
-        <Settings class="text-blue-500 w-6 h-6" />
-      </div>
-      <div>
-        <h2 class="text-2xl font-bold text-white">系统设置</h2>
-        <p class="text-zinc-500 text-sm font-medium">管理引擎行为与应用偏好</p>
-      </div>
+  <div class="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div class="flex items-center gap-4 mb-10"><div class="p-3 bg-blue-600/20 rounded-2xl"><SettingsIcon class="text-blue-500 w-6 h-6" /></div>
+      <div><h2 class="text-2xl font-bold text-white">系统设置</h2><p class="text-zinc-500 text-sm font-medium">管理宇宙行为与交互偏好</p></div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- 引擎控制卡片 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
       <section class="glass p-8 rounded-[2.5rem] space-y-6 border border-white/5">
-        <div class="flex items-center gap-3 mb-2">
-          <Monitor :size="18" class="text-blue-400" />
-          <h3 class="font-bold text-zinc-200">引擎核心</h3>
-        </div>
-        
-        <div class="flex justify-between items-center group">
-          <div>
-            <p class="text-sm font-bold">剪贴板自动保护</p>
-            <p class="text-xs text-zinc-500">开启后将静默脱敏剪贴板敏感信息</p>
+        <div class="flex items-center gap-3"><Shield :size="18" class="text-blue-400" /><h3 class="font-bold text-zinc-200">引擎核心</h3></div>
+        <div class="space-y-6">
+          <div class="row"><div class="info"><span class="lbl">启用影子模式</span><span class="dsc">复制不拦截，Alt+V 安全粘贴</span></div>
+            <button @click="store.settings.shadow_mode_enabled = !store.settings.shadow_mode_enabled" :class="store.settings.shadow_mode_enabled ? 'bg-blue-600' : 'bg-zinc-800'" class="sw"><div class="dot" :class="{'act': store.settings.shadow_mode_enabled}"></div></button>
           </div>
-          <button 
-            @click="store.toggleMonitor"
-            class="w-12 h-6 rounded-full relative transition-all duration-300 shadow-inner"
-            :class="store.isMonitorOn ? 'bg-blue-600' : 'bg-zinc-800'"
-          >
-            <div class="absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform shadow-sm"
-                 :class="{ 'translate-x-6': store.isMonitorOn }"></div>
-          </button>
-        </div>
-
-        <div class="pt-4 border-t border-white/5">
-          <button 
-            @click="handleClearHistory"
-            class="flex items-center gap-2 text-xs font-bold text-red-400 hover:text-red-300 transition-colors"
-          >
-            <Trash2 :size="14" />
-            清除脱敏拦截历史
-          </button>
-          <p v-if="showSuccess" class="text-[10px] text-emerald-400 mt-2 flex items-center gap-1">
-            <CheckCircle2 :size="10" /> 记录已安全抹除
-          </p>
+          <div class="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-3">
+            <div class="flex justify-between items-center"><span class="lbl">安全粘贴快捷键</span><Keyboard :size="14" class="text-zinc-600" /></div>
+            <input readonly :value="isRecording ? '录制中...' : store.settings.magic_paste_shortcut" @keydown="handleRecord" @focus="isRecording=true" @blur="isRecording=false" :class="{'rec': isRecording}" class="shortcut-box" />
+          </div>
         </div>
       </section>
 
-      <!-- 关于卡片 -->
       <section class="glass p-8 rounded-[2.5rem] space-y-6 border border-white/5">
-        <div class="flex items-center gap-3 mb-2">
-          <Info :size="18" class="text-blue-400" />
-          <h3 class="font-bold text-zinc-200">关于 SafeMask</h3>
-        </div>
-
+        <div class="flex items-center gap-3"><Bell :size="18" class="text-blue-400" /><h3 class="font-bold text-zinc-200">交互反馈</h3></div>
         <div class="space-y-4">
-          <div class="flex justify-between items-baseline">
-            <span class="text-xs text-zinc-500 font-bold uppercase tracking-widest">版本号</span>
-            <span class="text-sm font-mono text-blue-400">{{ store.appInfo?.version || '1.0.2' }}</span>
-          </div>
-          <div class="flex justify-between items-baseline">
-            <span class="text-xs text-zinc-500 font-bold uppercase tracking-widest">架构</span>
-            <span class="text-sm font-mono text-zinc-300">Rust / Tauri 2.0</span>
-          </div>
-          
-          <div class="pt-4 border-t border-white/5">
-            <button 
-              @click="openGithub"
-              class="w-full flex items-center justify-between p-4 bg-white/[0.03] hover:bg-white/[0.06] rounded-2xl transition-all group"
-            >
-              <div class="flex items-center gap-3">
-                <Github :size="18" class="text-zinc-400 group-hover:text-white" />
-                <span class="text-sm font-bold text-zinc-300 group-hover:text-white">开源仓库</span>
-              </div>
-              <ExternalLink :size="14" class="text-zinc-600 group-hover:text-zinc-400" />
-            </button>
+          <div class="row"><span class="lbl-sm">显示蓝盾气泡提示</span><button @click="store.settings.enable_visual_feedback = !store.settings.enable_visual_feedback" :class="store.settings.enable_visual_feedback ? 'bg-blue-600' : 'bg-zinc-800'" class="sw-sm"><div class="dot-sm" :class="{'act': store.settings.enable_visual_feedback}"></div></button></div>
+          <div class="row"><span class="lbl-sm">启用机械音效反馈</span><button @click="store.settings.enable_audio_feedback = !store.settings.enable_audio_feedback" :class="store.settings.enable_audio_feedback ? 'bg-blue-600' : 'bg-zinc-800'" class="sw-sm"><div class="dot-sm" :class="{'act': store.settings.enable_audio_feedback}"></div></button></div>
+          <div class="pt-4 border-t border-white/5 space-y-3">
+            <div class="flex justify-between"><div class="flex items-center gap-2 text-zinc-500"><Timer :size="14" /><span class="lbl-sm">注入延迟</span></div><span class="font-mono text-blue-400 text-xs">{{ store.settings.paste_delay_ms }}ms</span></div>
+            <input type="range" v-model.number="store.settings.paste_delay_ms" min="50" max="800" step="50" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none accent-blue-500" />
           </div>
         </div>
       </section>
+    </div>
 
-      <!-- 安全说明 -->
-      <div class="md:col-span-2 glass p-6 rounded-[2rem] bg-emerald-500/5 border border-emerald-500/10 flex gap-4">
-        <Shield class="text-emerald-500 shrink-0" :size="24" />
-        <div class="space-y-1">
-          <p class="text-sm font-bold text-emerald-200">100% 隐私保证</p>
-          <p class="text-xs text-emerald-200/50 leading-relaxed italic">
-            SafeMask 脱敏工作不会连接互联网，所有的正则表达式匹配和脱敏计算均在您的计算机本地完成。
-            我们不收集、不上传任何原始记录。
-          </p>
-        </div>
-      </div>
+    <div class="flex justify-between pt-8 border-t border-white/5">
+      <button @click="store.clearHistory" class="flex items-center gap-2 text-zinc-500 hover:text-red-400 transition-all font-bold text-sm"><Trash2 :size="16" /> 清除审计历史</button>
+      <button @click="handleSave" class="px-10 py-3 bg-blue-600 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20"><Save :size="18" /> 保存配置并重载</button>
     </div>
   </div>
 </template>
+
+<style scoped>
+.glass { background: rgba(18, 18, 22, 0.6); backdrop-filter: blur(20px); }
+.row { @apply flex justify-between items-center; }
+.lbl { @apply text-sm font-bold text-zinc-200; }
+.lbl-sm { @apply text-xs font-semibold text-zinc-400; }
+.dsc { @apply text-[10px] text-zinc-500 block mt-0.5 uppercase tracking-wider; }
+.sw { @apply w-11 h-6 rounded-full relative transition-colors duration-300; }
+.dot { @apply absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300; }
+.dot.act { @apply translate-x-5; }
+.sw-sm { @apply w-8 h-[1.125rem] rounded-full relative transition-colors duration-300; }
+.dot-sm { @apply absolute top-0.5 left-0.5 bg-white w-3.5 h-3.5 rounded-full transition-transform duration-300; }
+.dot-sm.act { @apply translate-x-3.5; }
+.shortcut-box { @apply w-full bg-black/40 border border-white/5 rounded-xl py-3 text-sm font-mono text-blue-400 text-center outline-none cursor-pointer hover:border-blue-500/30; }
+.shortcut-box.rec { @apply border-blue-600 bg-blue-600/10 animate-pulse; }
+</style>

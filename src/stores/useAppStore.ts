@@ -1,73 +1,98 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-// 🚀 导入 Rule 和 HistoryItem 类型
-import { MaskAPI, type Rule, type HistoryItem, type RuleStats, type AppInfo } from '../services/api';
-import { listen } from "@tauri-apps/api/event"; // 🚀 引入事件监听
+import { listen } from "@tauri-apps/api/event";
+import { MaskAPI, type Rule, type HistoryItem, type AppSettings } from '../services/api';
 
 export const useAppStore = defineStore('app', () => {
+  const settings = ref<AppSettings>({
+    magic_paste_shortcut: "Alt+V",
+    shadow_mode_enabled: true,
+    paste_delay_ms: 150,
+    enable_visual_feedback: true,
+    enable_audio_feedback: true
+  });
+
   const isMonitorOn = ref(true);
   const ruleCount = ref(0);
-  const isProcessing = ref(false);
-  const progress = ref(0);
-  const currentFileName = ref("");
+  const activeTab = ref('dashboard');
   const historyList = ref<HistoryItem[]>([]);
-  const activeTab = ref('dashboard'); // 切换页面
   const allRulesList = ref<Rule[]>([]);
-  const appInfo = ref<AppInfo | null>(null);
-  const isAlwaysOnTop = ref(false);
+  const activeFeedback = ref<any>(null);
+  const progress = ref(0);
+  const isProcessing = ref(false);
+  const currentFileName = ref("");
+  const appInfo = ref<any>(null);
 
-   // 🚀 初始化全局监听：确保只要程序开着，历史记录就在更新
-  const initEventListeners = async () => {
-    await listen<HistoryItem>("new-history", (event) => {
-      // 将新记录插入数组头部（最新在前）
-      historyList.value.unshift(event.payload);
-      // 保持数组长度，防止长时间运行占用过多内存
+  const bootstrap = async () => {
+    try {
+      settings.value = await MaskAPI.getSettings();
+      const stats = await MaskAPI.getStats();
+      ruleCount.value = stats.rule_count;
+      historyList.value = await MaskAPI.getHistory();
+      appInfo.value = await MaskAPI.getAppInfo();
+      await initAllEventListeners();
+    } catch (e) { console.error("Bootstrap Error:", e); }
+  };
+
+  const initAllEventListeners = async () => {
+    await listen<HistoryItem>("new-history", (e) => {
+      historyList.value.unshift(e.payload);
       if (historyList.value.length > 50) historyList.value.pop();
     });
-  };
-  
-  const fetchHistory = async () => {
-    historyList.value = await MaskAPI.getHistory();
+
+    await listen<any>("magic-feedback", (e) => {
+      const p = e.payload;
+      if (settings.value.enable_audio_feedback && p.type === 'SUCCESS') playSound('CLICK');
+      if (settings.value.enable_visual_feedback) {
+        activeFeedback.value = { ...p, id: Date.now() };
+        setTimeout(() => activeFeedback.value = null, 3000);
+      }
+    });
+
+    await listen<string>("mode-switch-event", (e) => {
+      const mode = e.payload;
+      settings.value.shadow_mode_enabled = (mode === 'SHADOW');
+      if (settings.value.enable_audio_feedback) playSound(mode === 'SHADOW' ? 'ASCEND' : 'DESCEND');
+      activeFeedback.value = { type: 'MODE_CHANGE', mode, id: Date.now() };
+      setTimeout(() => activeFeedback.value = null, 3000);
+    });
+
+    await listen<{ percentage: number }>("file-progress", (e) => progress.value = e.payload.percentage);
   };
 
-  const fetchAllRules = async () => {
-    allRulesList.value = await MaskAPI.getAllRules();
+  const playSound = (type: 'CLICK' | 'ASCEND' | 'DESCEND') => {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    const now = ctx.currentTime;
+    if (type === 'CLICK') {
+      osc.frequency.setValueAtTime(1200, now);
+      osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+      gain.gain.setValueAtTime(0.1, now);
+    } else if (type === 'ASCEND') {
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+      gain.gain.setValueAtTime(0.05, now);
+    } else {
+      osc.frequency.setValueAtTime(660, now);
+      osc.frequency.exponentialRampToValueAtTime(330, now + 0.15);
+      gain.gain.setValueAtTime(0.05, now);
+    }
+    osc.start(); osc.stop(now + 0.2);
   };
 
-  // 初始化统计
-  const fetchStats = async () => {
-    const stats = await MaskAPI.getStats();
-    ruleCount.value = stats.rule_count;
+  const toggleVaultMode = async () => {
+    const newState = await MaskAPI.toggleVaultMode();
+    settings.value.shadow_mode_enabled = newState;
   };
 
-  // 切换监控
-  const toggleMonitor = async () => {
-    isMonitorOn.value = !isMonitorOn.value;
-    await MaskAPI.toggleMonitor(isMonitorOn.value);
-  };
-
-  // 获取应用详情
-  const fetchAppInfo = async () => {
-    appInfo.value = await MaskAPI.getAppInfo();
-  };
-
-  // 清除历史记录
-  const clearHistory = async () => {
-    await MaskAPI.clearHistory();
-    historyList.value = [];
-  };
-
-  const toggleAlwaysOnTop = async () => {
-    isAlwaysOnTop.value = !isAlwaysOnTop.value;
-    await MaskAPI.setAlwaysOnTop(isAlwaysOnTop.value);
-  };
-
-return { 
-     isMonitorOn, ruleCount, isProcessing, progress, 
-    currentFileName, historyList, activeTab, allRulesList,
-    appInfo, isAlwaysOnTop, // 🚀 必须返回
-    fetchStats, fetchHistory, toggleMonitor, fetchAllRules, 
-    initEventListeners, fetchAppInfo, clearHistory, // 🚀 必须返回
-    toggleAlwaysOnTop
+  return { 
+    settings, isMonitorOn, activeTab, ruleCount, historyList, allRulesList, 
+    activeFeedback, progress, isProcessing, currentFileName, appInfo,
+    bootstrap, toggleVaultMode, fetchStats: async () => ruleCount.value = (await MaskAPI.getStats()).rule_count,
+    fetchHistory: async () => historyList.value = await MaskAPI.getHistory(),
+    fetchAllRules: async () => allRulesList.value = await MaskAPI.getAllRules(),
+    clearHistory: async () => { await MaskAPI.clearHistory(); historyList.value = []; }
   };
 });
