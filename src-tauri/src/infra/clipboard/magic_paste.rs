@@ -11,6 +11,13 @@ pub struct MagicPaster;
 impl MagicPaster {
     pub async fn execute(app: &AppHandle) {
         let state = app.state::<AppState>();
+
+        // 🚀 核心修复：如果前端正在录制快捷键，后端闭嘴，不准模拟按键
+        if state.is_recording_mode.load(Ordering::SeqCst) { 
+            info!("[MagicPaste] 检测到录制模式，取消模拟执行");
+            return;
+        }
+
         let settings = state.settings.read().clone();
         let shadow = state.shadow_store.read().clone();
 

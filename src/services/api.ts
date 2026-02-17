@@ -137,5 +137,12 @@ export const MaskAPI = {
       filters: [{ name: 'Log/Text/Office', extensions: ['log', 'txt', 'csv', 'json', 'docx', 'xlsx', 'pdf'] }]
     });
   },
-  async getAppInfo() { return await invoke("get_app_info"); }
+  async getAppInfo() { return await invoke("get_app_info"); },
+  /** 切换窗口置顶状态 */
+  async setAlwaysOnTop(enabled: boolean): Promise<void> {
+    await invoke("toggle_always_on_top", { enabled });
+  },
+  async setRecordingMode(enabled: boolean): Promise<void> {
+  await invoke("set_recording_mode", { enabled });
+}
 };

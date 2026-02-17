@@ -8,56 +8,90 @@
 
 @layer base {
   :root {
-    /* 默认使用 Inter */
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11"; /* 开启 Inter 的高级字形优化 */
-    background-color: #09090b;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #09090b; /* 更纯净的暗色 */
     -webkit-font-smoothing: antialiased;
   }
 
-  /* 强制所有输入框和文本域继承字体，解决浏览器默认字体不一的问题 */
-  input, textarea, button, select {
-    font-family: inherit;
+  /* 呼吸感：平滑滚动 */
+  html {
+    scroll-behavior: smooth;
   }
 
-  /* 定义等宽字体类 */
-  .font-mono {
-    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace !important;
+  /* 雅致的滚动条 */
+  ::-webkit-scrollbar {
+    width: 3px;
   }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    transition: background 0.3s;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* 玻璃拟态全局类：增加多层阴影 */
+.glass-morphism {
+  background: rgba(18, 18, 23, 0.7);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 
+    0 4px 24px -1px rgba(0, 0, 0, 0.2),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.02);
 }
 
 @layer components {
-  /* 🚀 修复 custom-scroll 报错：定义全局自定义滚动条类 */
+  /* 🚀 修复 animate-in 报错：手动定义常用的微动效类 */
+  .animate-in {
+    animation-duration: 300ms;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    animation-fill-mode: forwards;
+  }
+
+  .fade-in {
+    @keyframes fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    animation-name: fade-in;
+  }
+
+  .zoom-in {
+    @keyframes zoom-in {
+      from { transform: scale(0.95); }
+      to { transform: scale(1); }
+    }
+    animation-name: zoom-in;
+  }
+
+  .slide-in-from-top-1 {
+    @keyframes slide-in-from-top {
+      from { transform: translateY(-4px); }
+      to { transform: translateY(0); }
+    }
+    animation-name: slide-in-from-top;
+  }
+
+  /* 之前的 custom-scroll 也在这一层级定义 */
   .custom-scroll {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
-  }
-
-  .custom-scroll::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
-
-  .custom-scroll::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .custom-scroll::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-  }
-
-  .custom-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    scrollbar-color: rgba(245, 158, 11, 0.2) transparent;
   }
 }
 
-/* --- 全局滚动条样式优化 --- */
+/* 修改全局滚动条 */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 2px; /* 极细 */
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5); /* 悬浮时变蓝 */
 }

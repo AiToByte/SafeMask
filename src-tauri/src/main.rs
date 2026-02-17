@@ -61,6 +61,7 @@ fn main() {
             api::system::get_app_settings,
             api::system::toggle_vault_mode,
             api::system::test_rule_logic,
+            api::system::set_recording_mode,  // 🚀 新增命令
         ])
         .run(tauri::generate_context!())
     {
@@ -188,7 +189,7 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
 
     // 加载持久化设置
     let settings = ConfigLoader::load_settings(handle);
-    
+
     // 加载并编译规则引擎
     let rules = ConfigLoader::load_all_rules(handle);
     let engine = Arc::new(MaskEngine::new(rules));
@@ -202,6 +203,7 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
         is_monitor_on: Arc::new(Mutex::new(true)),
         history: Arc::new(Mutex::new(Vec::new())),
         last_content: Arc::new(Mutex::new(String::new())),
+        is_recording_mode: Arc::new(AtomicBool::new(false)),  // 🚀 新增录制模式状态
     };
 
     // 托管状态

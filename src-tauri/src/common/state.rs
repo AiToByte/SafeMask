@@ -28,6 +28,9 @@ pub struct AppState {
     
     /// 剪贴板轮询的去重缓存
     pub last_content: Arc<Mutex<String>>,
+
+    /// 🚀 新增：标记前端是否正在录制快捷键
+    pub is_recording_mode: Arc<AtomicBool>, 
 }
 
 /// 影子剪贴板：存储当前的“影子宇宙”状态

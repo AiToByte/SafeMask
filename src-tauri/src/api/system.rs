@@ -9,6 +9,7 @@ use std::sync::Arc;
 use crate::core::config::AppSettings;
 use log::{info, error};
 use regex::bytes::Regex;
+use std::sync::atomic::Ordering; 
 
 /// 获取规则统计信息 (仪表盘使用)
 #[tauri::command]
@@ -180,4 +181,12 @@ pub async fn test_rule_logic(pattern: String, mask: String, test_text: String) -
     let result = re.replace_all(input_bytes, mask.as_bytes());
     
     Ok(String::from_utf8_lossy(&result).to_string())
+}
+
+
+#[tauri::command]
+pub async fn set_recording_mode(state: State<'_, AppState>, enabled: bool) -> AppResult<()> {
+    state.is_recording_mode.store(enabled, Ordering::SeqCst);
+    info!("🚀 录制模式状态更新: {}", enabled);
+    Ok(())
 }
