@@ -4,6 +4,7 @@ use enigo::{Enigo, Key, KeyboardControllable};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 use tauri::{AppHandle, Manager, Emitter};
+use log::{info, warn, error};
 
 pub struct MagicPaster;
 
@@ -13,59 +14,75 @@ impl MagicPaster {
         let settings = state.settings.read().clone();
         let shadow = state.shadow_store.read().clone();
 
-        // 模式判定
-        let target_text = if settings.shadow_mode_enabled {
-            if !shadow.has_privacy { return; }
-            shadow.masked.clone()
+        let (target_text, feedback_type) = if settings.shadow_mode_enabled {
+            if shadow.has_privacy { (shadow.masked.clone(), "PASTE_MASKED") }
+            else { (shadow.original.clone(), "NORMAL") }
         } else {
-            if !shadow.has_privacy { return; }
-            shadow.original.clone() 
+            if shadow.has_privacy { (shadow.original.clone(), "PASTE_ORIGINAL") } 
+            else { (shadow.original.clone(), "NORMAL") }
         };
+
+        if target_text.is_empty() { return; }
 
         state.is_magic_pasting.store(true, Ordering::SeqCst);
 
-        // 🚀 执行交换序列
+        // 🚀 核心改动：增加执行序列的健壮性
         if let Ok(_) = Self::perform_swap_sequence(target_text, settings.paste_delay_ms).await {
-             let feedback_type = if settings.shadow_mode_enabled { "PASTE_MASKED" } else { "PASTE_ORIGINAL" };
              let _ = app.emit("magic-feedback", serde_json::json!({ "type": feedback_type }));
         }
 
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(50)).await;
         state.is_magic_pasting.store(false, Ordering::SeqCst);
     }
 
-    // 🚀 核心修复：添加缺失的交换序列方法
     async fn perform_swap_sequence(target_text: String, delay: u64) -> Result<(), Box<dyn std::error::Error>> {
         let mut cb = Clipboard::new()?;
-        
-        // 1. 备份当前内容
         let backup = cb.get_text().unwrap_or_default();
-        
-        // 2. 写入目标内容
+
+        // 1. 覆盖剪贴板
         cb.set_text(target_text)?;
-        
-        // 3. 模拟按键
+
+        // 2. 模拟按键（优化版）
         Self::simulate_paste_keys();
-        
-        // 4. 等待应用读取
+
+        // 3. 🚀 关键：给目标应用留出足够的读取时间
+        // 如果 150ms 还是不行，建议在 UI 设置中调大到 300ms
         tokio::time::sleep(Duration::from_millis(delay)).await;
-        
-        // 5. 还原内容
+
+        // 4. 还原剪贴板
         cb.set_text(backup)?;
         
         Ok(())
     }
 
-    // 🚀 核心修复：添加按键模拟方法
     fn simulate_paste_keys() {
         let mut enigo = Enigo::new();
+
+        // 🚀 核心修复逻辑：
+        // 因为用户触发快捷键时按住了物理 ALT 键，
+        // 我们必须先在软件层面发送一个 ALT 松开的信号，
+        // 否则系统会认为用户在按 Ctrl + Alt + V。
+
+        #[cfg(target_os = "windows")]
+        {
+            enigo.key_up(Key::Alt); // 强制松开物理 Alt
+            tokio::time::sleep(Duration::from_millis(20)); // 微小停顿
+        }
+
         #[cfg(target_os = "macos")]
         let modifier = Key::Meta;
         #[cfg(not(target_os = "macos"))]
         let modifier = Key::Control;
 
+        // 执行粘贴组合键
         enigo.key_down(modifier);
+        tokio::time::sleep(Duration::from_millis(20)); // 模拟真人按下的间隔
         enigo.key_click(Key::Layout('v'));
+        tokio::time::sleep(Duration::from_millis(20));
         enigo.key_up(modifier);
+        
+        // 如果是 Windows，粘贴完后再把 Alt 补回来（可选，避免影响用户继续操作）
+        // #[cfg(target_os = "windows")]xiaosheng
+        // enigo.key_down(Key::Alt); 
     }
 }

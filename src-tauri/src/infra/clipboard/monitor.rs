@@ -30,82 +30,41 @@ impl ClipboardHandler for ClipboardHandlerImpl {
     }
 }
 
-// pub fn start_listener(app: AppHandle) {
-//     // 确保 GlobalClipboard 初始化
-//     let handler_logic = Arc::new(GlobalClipboard::new(app.clone()));
-    
-//     // 🚀 获取 Tauri 维护的全局运行时句柄
-//     let rt = tauri::async_runtime::handle().clone();
-
-//     // 在独立线程中运行阻塞的剪贴板监听器
-//     std::thread::spawn(move || {
-//         let handler = ClipboardHandlerImpl { 
-//             handler: handler_logic, 
-//             rt 
-//         };
-        
-//         match Master::new(handler) {
-//             Ok(mut master) => {
-//                 if let Err(e) = master.run() {
-//                     eprintln!("❌ [Clipboard] 监听循环异常中断: {}", e);
-//                 }
-//             }
-//             Err(e) => {
-//                 eprintln!("❌ [Clipboard] 无法初始化 Master: {}", e);
-//             }
-//         }
-//     });
-// }
-
 pub fn start_listener(app: AppHandle) {
     let handler_logic = Arc::new(GlobalClipboard::new(app.clone()));
-
-    // 关键：把 app 克隆一份给闭包用
-    let app_for_state = app.clone();
+    let app_clone = app.clone();
 
     tauri::async_runtime::spawn(async move {
-        // 在闭包内部获取 state（现在 app_for_state 是 move 进来的，生命周期够长）
-        let state = app_for_state.state::<crate::common::state::AppState>();
-
-        let mut last_was_non_text = false;
-
-        info!("🎧 [Clipboard] Polling 监听服务已启动 (间隔 600ms)");
+        let state = app_clone.state::<crate::common::state::AppState>();
+        info!("🎧 [Clipboard] 哨兵轮询服务已启动 (600ms)");
 
         loop {
+            // 1. 获取当前剪贴板文本
             match handler_logic.get_text() {
                 Ok(text) => {
-                    last_was_non_text = false;
-
-                    let should_process = {
+                    let should_trigger = {
                         let last_global = state.last_content.lock();
+                        // 🚀 仅做初步判定，不在这里更新 last_content
                         !text.is_empty() && text != *last_global
                     };
 
-                    if should_process {
-                        {
-                            let mut guard = state.last_content.lock();
-                            *guard = text.clone();
-                        }
-                        info!("🔔 [Clipboard] 检测到变化: {} 字节", text.len());
+                    if should_trigger {
+                        // 🚀 发现变化，交给 handler 处理（handler 会负责更新缓存和影子宇宙）
                         handler_logic.process_change().await;
                     }
                 }
-
                 Err(arboard::Error::ContentNotAvailable) => {
-                    if !last_was_non_text {
-                        info!("📋 [Clipboard] 当前剪贴板内容为非文本格式 (已忽略)");
-                        last_was_non_text = true;
-                        let mut guard = state.last_content.lock();
+                    // 非文本内容，清空缓存以便下次能捕获文本
+                    let mut guard = state.last_content.lock();
+                    if !guard.is_empty() {
                         guard.clear();
                     }
                 }
-
                 Err(e) => {
-                    error!("⚠️ [Clipboard] 访问剪贴板失败: {}", e);
+                    error!("⚠️ [Clipboard] 访问失败: {}", e);
                     tokio::time::sleep(Duration::from_secs(1)).await;
                 }
             }
-
             tokio::time::sleep(Duration::from_millis(600)).await;
         }
     });
