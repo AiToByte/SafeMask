@@ -231,19 +231,17 @@ fn init_shortcut_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
                     }
                 }
 
-                // 校验静态快捷键 (Alt+M)
-                let mode_toggle_shortcut = Shortcut::new(Some(Modifiers::ALT), Code::KeyM);
-                if shortcut == &mode_toggle_shortcut {
-                    let h2 = app_handle.clone();
-                    tauri::async_runtime::spawn(async move {
-                        if let Ok(new_mode_is_shadow) = crate::api::system::toggle_vault_mode(h2.clone(), h2.state()).await {
-                            let payload = if new_mode_is_shadow { "SHADOW" } else { "SENTRY" };
-                            let _ = h2.emit("magic-feedback", serde_json::json!({
-                                "type": "MODE_CHANGE",
-                                "mode": payload
-                            }));
-                        }
-                    });
+                 // --- 🚀 逻辑 B: 模式一键切换 (统一使用管理器解析) ---
+                if let Ok(mode_toggle) = ShortcutManager::parse_shortcut_string("Alt+M") {
+                    if shortcut == &mode_toggle {
+                        let h2 = app_handle.clone();
+                        tauri::async_runtime::spawn(async move {
+                            if let Ok(new_mode_is_shadow) = crate::api::system::toggle_vault_mode(h2.clone(), h2.state()).await {
+                                let payload = if new_mode_is_shadow { "SHADOW" } else { "SENTRY" };
+                                let _ = h2.emit("mode-switch-event", payload);
+                            }
+                        });
+                    }
                 }
             }
         })
@@ -252,17 +250,18 @@ fn init_shortcut_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
 
 /// [工具方法] 执行初始快捷键在系统中的注册
 fn init_shortcut_service(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    let settings = handle.state::<AppState>().settings.read().clone();
+    let settings = handle.state::<crate::common::state::AppState>().settings.read().clone();
     
-    // 注册动态键
+    // 1. 注册动态的安全粘贴快捷键 (如 Alt+V)
     ShortcutManager::reload_magic_shortcut(handle, &settings.magic_paste_shortcut)
         .map_err(|e| e.to_string())?;
 
-    // 注册静态键 Alt+M
-    // 🚀 这里的 Shortcut, Modifiers, Code 现在可以被正确解析了
-    let alt_m = Shortcut::new(Some(Modifiers::ALT), Code::KeyM);
-    handle.global_shortcut().register(alt_m)
-        .map_err(|e| format!("无法注册 Alt+M: {}", e))?;
+    // 2. 🚀 注册静态模式切换键 Alt+M (同样使用管理器解析)
+    if let Ok(alt_m_shortcut) = ShortcutManager::parse_shortcut_string("Alt+M") {
+        let _ = handle.global_shortcut().register(alt_m_shortcut);
+    } else {
+        error!("无法解析默认切换快捷键 Alt+M");
+    }
 
     Ok(())
 }

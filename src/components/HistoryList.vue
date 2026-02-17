@@ -73,7 +73,7 @@ const filteredHistory = computed(() => {
           <!-- 装饰：右侧精致的指示标识 -->
           <div class="search-tag">
              <div class="w-1 h-1 rounded-full bg-amber-500/40 mr-2"></div>
-             <span>Filter</span>
+             <span>搜索</span>
           </div>
         </div>
       </div>
@@ -82,7 +82,7 @@ const filteredHistory = computed(() => {
     <!-- 列表内容保持精致度 -->
     <div v-if="filteredHistory.length === 0" class="flex flex-col items-center justify-center py-32 opacity-20">
        <Search :size="48" class="mb-4" />
-       <p class="text-sm font-bold tracking-widest uppercase">No Audit Matches Found</p>
+       <p class="text-sm font-bold tracking-widest uppercase">暂无脱敏记录</p>
     </div>
 
     <div v-for="item in filteredHistory" :key="item.id" 

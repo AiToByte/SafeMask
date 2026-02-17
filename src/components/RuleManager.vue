@@ -135,7 +135,7 @@ const sortedRules = computed(() => {
       <div class="px-8 py-5 border-b border-white/[0.04] flex items-center justify-between">
         <div class="flex items-center gap-3">
           <Layers :size="18" class="text-amber-500/50" />
-          <h3 class="font-bold text-amber-50/80 text-sm tracking-widest uppercase">Patterns Library</h3>
+          <h3 class="font-bold text-amber-50/80 text-sm tracking-widest uppercase">规则模式库</h3>
         </div>
         <div class="relative group">
           <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-amber-500/40 transition-colors" :size="14" />

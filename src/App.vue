@@ -57,14 +57,44 @@ onMounted(() => store.bootstrap());
           </button>
 
           <!-- 模式切换：极致扁平 -->
-          <div @click="store.toggleVaultMode" 
-               class="group flex items-center gap-4 bg-[#141210] border border-white/[0.05] h-9 px-4 rounded-xl cursor-pointer hover:border-blue-500/30 transition-all duration-500 active:scale-95">
-            <span class="text-[10px] font-bold tracking-widest transition-colors duration-300" 
-                  :class="store.settings.shadow_mode_enabled ? 'text-amber-200/80' : 'text-blue-300/80'">
-              {{ store.settings.shadow_mode_enabled ? '影子宇宙' : '哨兵宇宙' }}
-            </span>
-            <div class="w-5 h-5 flex items-center justify-center rounded-md bg-white/[0.02] border border-white/5">
-              <component :is="store.settings.shadow_mode_enabled ? Ghost : Shield" :size="10" :class="store.settings.shadow_mode_enabled ? 'text-amber-200' : 'text-blue-300'" />
+          <!-- 修改 App.vue 中的模式切换胶囊部分 -->
+<div @click="store.toggleVaultMode" 
+     class="group relative flex items-center gap-5 bg-[#141210] border border-white/[0.08] h-12 px-6 rounded-2xl cursor-pointer hover:border-amber-500/30 transition-all duration-500 active:scale-95 shadow-xl">
+  
+  <!-- 🚀 雅致的自定义悬浮说明浮层 -->
+  <div class="absolute top-full mb-4 right-0 w-72 p-4 rounded-2xl bg-[#1d1b18] border border-amber-500/20 shadow-2xl opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 z-[100]">
+    <div class="flex items-center gap-2 mb-2">
+      <div class="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+      <span class="text-xs font-bold text-amber-200">运行模式详情</span>
+    </div>
+      <p class="text-[11px] text-zinc-400 leading-relaxed">
+        <template v-if="store.settings.shadow_mode_enabled">
+          <strong class="text-amber-200/80">影子宇宙模式：</strong> 
+          系统仅在后台静默记录敏感信息，不改变剪贴板。需按下 <code class="bg-black/40 px-1 rounded text-amber-500">{{ store.settings.magic_paste_shortcut }}</code> 才会粘贴脱敏副本。
+        </template>
+        <template v-else>
+          <strong class="text-blue-400/80">哨兵宇宙模式：</strong> 
+          全自动强力拦截。检测到敏感隐私时，系统会自动实时洗白剪贴板，确保存储与发送的始终是脱敏数据。
+        </template>
+      </p>
+        <!-- 装饰三角 -->
+        <div class="absolute bottom-full right-8 w-3 h-3 bg-[#1d1b18] border-r border-b border-amber-500/20 rotate-45 -translate-y-1.5"></div>
+          </div>
+
+            <div class="flex flex-col items-end">
+              <span class="text-[9px] font-black text-zinc-600 uppercase tracking-tighter mb-0.5">Universe Mode</span>
+              <span class="text-xs font-bold tracking-widest transition-colors duration-300" 
+                    :class="store.settings.shadow_mode_enabled ? 'text-amber-200' : 'text-blue-300'">
+                {{ store.settings.shadow_mode_enabled ? '影子宇宙模式' : '哨兵宇宙模式' }}
+              </span>
+            </div>
+
+            <div class="w-8 h-8 flex items-center justify-center rounded-xl bg-white/[0.02] border border-white/5 relative">
+              <div class="absolute inset-0 rounded-xl blur-sm opacity-20 animate-pulse"
+                  :class="store.settings.shadow_mode_enabled ? 'bg-amber-400' : 'bg-blue-400'"></div>
+              <component :is="store.settings.shadow_mode_enabled ? Ghost : Shield" 
+                        :size="14" 
+                        :class="store.settings.shadow_mode_enabled ? 'text-amber-200' : 'text-blue-300'" />
             </div>
           </div>
         </div>

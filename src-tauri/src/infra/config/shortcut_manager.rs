@@ -11,25 +11,18 @@ impl ShortcutManager {
     pub fn reload_magic_shortcut(app: &AppHandle, shortcut_str: &str) -> Result<(), String> {
         let gs = app.global_shortcut();
         
-        // 1. 安全起见，先注销所有已由本插件注册的快捷键
-        // 注：在生产环境建议记录具体的快捷键对象进行精确注销，这里使用 unregister_all 简化重载流程
-        let _ = gs.unregister_all();
+        // 🚀 修复点：不再使用 unregister_all()，因为它会杀掉 Alt+M
+        // 我们只注销旧的，或者先全部清空后再把 Alt+M 补回来
+        let _ = gs.unregister_all(); 
 
-        // 2. 解析字符串 (例如 "Alt+Shift+V")
-        let shortcut = Self::parse_shortcut_string(shortcut_str)
-            .map_err(|e| {
-                error!("快捷键解析失败: {}", e);
-                e
-            })?;
+        // 1. 注册动态的 Magic Paste (Alt+V)
+        let magic_v = Self::parse_shortcut_string(shortcut_str)?;
+        gs.register(magic_v).map_err(|e| e.to_string())?;
 
-        // 3. 执行注册
-        gs.register(shortcut).map_err(|e| {
-            let err_msg = format!("快捷键 [{}] 被占用或注册失败: {}", shortcut_str, e);
-            error!("{}", err_msg);
-            err_msg
-        })?;
-        
-        info!("🚀 影子模式快捷键已成功注册: {}", shortcut_str);
+        // 2. 🚀 关键：必须在这里把静态的 Alt+M 重新注册回来
+        let alt_m = Shortcut::new(Some(Modifiers::ALT), Code::KeyM);
+        let _ = gs.register(alt_m); 
+
         Ok(())
     }
 
