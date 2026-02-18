@@ -3,7 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useAppStore } from '../stores/useAppStore';
 import { MaskAPI } from '../services/api';
 import { 
-  Plus, Layers, Trash2, ShieldCheck, Search, Edit3, X, 
+  Plus,Fingerprint, Layers, Trash2, ShieldCheck, Search, Edit3, X, 
   Beaker, Check, AlertTriangle, Save, CopyPlus, Lock, Info
 } from 'lucide-vue-next';
 import { confirm, message } from '@tauri-apps/plugin-dialog';
@@ -247,30 +247,80 @@ const sortedRules = computed(() => {
         </div>
       </div>
 
-      <!-- 调试沙盒 -->
-      <div class="glass-panel p-8 flex-1 border-emerald-500/10">
-        <div class="flex items-center gap-3 mb-6">
-          <div class="p-1.5 bg-emerald-500/10 rounded-lg"><Beaker :size="16" class="text-emerald-400" /></div>
-          <h3 class="font-bold text-amber-50/80">调试沙盒</h3>
-        </div>
+      <!-- 3. 调试沙盒实验室：增加逻辑引导提示 -->
+<div class="glass-panel p-8 flex-1 border-emerald-500/10 shadow-[0_0_50px_rgba(16,185,129,0.02)] relative group/sandbox">
+  <div class="flex items-center gap-3 mb-6">
+    <div class="p-1.5 bg-emerald-500/10 rounded-lg">
+      <Beaker :size="16" class="text-emerald-400" />
+    </div>
+    <h3 class="font-bold text-amber-50/80">调试沙盒实验室</h3>
+    <!-- 状态指示灯 -->
+    <div class="ml-auto flex items-center gap-2">
+      <span class="text-[8px] font-black uppercase tracking-widest text-zinc-600">Sandbox Status:</span>
+      <div class="w-1.5 h-1.5 rounded-full" :class="form.pattern ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]' : 'bg-zinc-800'"></div>
+    </div>
+  </div>
 
-        <div class="space-y-4">
-          <div class="relative">
-            <span class="sandbox-label">Test Input</span>
-            <textarea v-model="testInput" placeholder="在这里输入原始文本进行测试..." class="sandbox-area input custom-scroll" />
-          </div>
-          <div class="relative">
-            <span class="sandbox-label" :class="testError ? 'text-red-500' : 'text-emerald-500'">
-              {{ testError ? '正则语法错误' : '实时预览' }}
-            </span>
-            <div class="sandbox-area output custom-scroll" :class="{'err': testError}">
-              <span v-if="testError" class="text-red-400 font-mono text-[10px] leading-tight">{{ testError }}</span>
-              <span v-else class="text-emerald-100/70">{{ testOutput }}</span>
-              <Check v-if="!testError && testOutput !== testInput && testInput" class="absolute right-3 bottom-3 text-emerald-500/40" :size="16" />
+  <div class="space-y-5">
+    <!-- 测试输入区 -->
+    <div class="relative">
+      <span class="sandbox-label">测试输入 (Test Input)</span>
+      <textarea 
+        v-model="testInput" 
+        @click.stop
+        placeholder="在这里输入含有敏感信息的原始文本..." 
+        class="sandbox-area input custom-scroll" 
+      />
+    </div>
+
+    <!-- 实时预览区：增加引导逻辑 -->
+    <div class="relative">
+      <span class="sandbox-label" :class="testError ? 'text-red-500' : 'text-emerald-500'">
+        {{ testError ? '正则编译错误 (Syntax Error)' : '实时脱敏仿真 (Simulation)' }}
+      </span>
+      
+      <div class="sandbox-area output custom-scroll" :class="{'err': testError, 'empty-hint': !form.pattern}">
+        <!-- 🚀 优化后的引导提示：增强对比度与清晰度 -->
+        <!-- 🚀 优化后的引导提示：使用更具“识别/待机”语义的图标 -->
+        <template v-if="!form.pattern">
+          <div class="flex flex-col items-center justify-center h-full py-6 text-center space-y-4 animate-in fade-in duration-700">
+            
+            <!-- 图标：改用指纹符号，代表“特征感应中” -->
+            <div class="relative w-12 h-12 flex items-center justify-center">
+              <!-- 外圈扩散光晕 -->
+              <div class="absolute inset-0 rounded-full bg-amber-500/5 animate-ping opacity-20"></div>
+              <div class="relative w-12 h-12 rounded-full border border-amber-500/20 flex items-center justify-center bg-[#0d0d0f] shadow-inner">
+                <Fingerprint :size="22" class="text-amber-500/40" />
+              </div>
+            </div>
+            
+            <div class="space-y-2">
+              <!-- 标题：雅致的琥珀色 -->
+              <p class="text-[12px] text-amber-200/70 font-bold tracking-[0.2em] uppercase">
+                Engine Standby
+              </p>
+              <p class="text-[11px] text-zinc-500 font-medium leading-relaxed px-10">
+                当前沙盒处于待机状态。请从左侧
+                <span class="text-amber-500/60 border-b border-amber-500/20 mx-0.5">选定模式</span> 
+                或 
+                <span class="text-amber-500/60 border-b border-amber-500/20 mx-0.5">编写正则</span>
+                以激活仿真逻辑。
+              </p>
             </div>
           </div>
-        </div>
+        </template>
+
+        <!-- 正常输出或错误显示 -->
+        <template v-else>
+          <span v-if="testError" class="text-red-400 font-mono text-[10px] leading-tight">{{ testError }}</span>
+          <span v-else class="text-emerald-100/70">{{ testOutput }}</span>
+          <Check v-if="!testError && testOutput !== testInput && testInput" 
+                 class="absolute right-3 bottom-3 text-emerald-500/40 animate-in zoom-in" :size="16" />
+        </template>
       </div>
+    </div>
+  </div>
+</div>
 
     </div>
   </div>
@@ -319,9 +369,25 @@ const sortedRules = computed(() => {
 
 .glass-panel { @apply bg-[#0d0d0f]/80 border border-white/[0.04] rounded-[2.5rem]; }
 .sandbox-label { @apply text-[9px] font-bold uppercase tracking-widest absolute -top-2.5 left-5 px-2 bg-[#0c0b0a] z-10 text-amber-100/60; }
-.sandbox-area { @apply w-full bg-black/40 border border-white/[0.1] rounded-2xl p-4 text-[12px] font-mono leading-relaxed outline-none transition-all resize-none; }
+/* 统一提升沙盒文字清晰度 */
+.sandbox-area {
+  @apply w-full bg-black/40 border border-white/[0.08] rounded-2xl p-5 text-[13px] font-mono leading-relaxed outline-none transition-all resize-none;
+  /* 解决深色背景下文字发虚 */
+  -webkit-font-smoothing: subpixel-antialiased;
+}
+
 .sandbox-area.input:focus { @apply border-amber-500/30; }
 .sandbox-area.output { @apply min-h-[100px] bg-emerald-500/[0.01] border-emerald-500/10; }
+/* 🚀 强化输出区域的容器感 */
+.sandbox-area.output.empty-hint {
+  /* 使用稍明显的虚线边框 */
+  @apply border-dashed border-white/[0.06] bg-black/20;
+  background-image: radial-gradient(circle at center, rgba(245,158,11,0.02) 0%, transparent 70%);
+}
+/* 强调文字阴影，使文字更锐利 */
+.drop-shadow-sm {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
 
 .custom-scroll::-webkit-scrollbar { width: 2px; }
 .custom-scroll::-webkit-scrollbar-thumb { @apply bg-amber-500/10 rounded-full; }
