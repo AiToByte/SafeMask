@@ -33,10 +33,14 @@ const filteredHistory = computed(() => {
     const matchOriginal = item.original.toLowerCase().includes(q);
     // 2. 匹配脱敏后的文本
     const matchMasked = item.masked.toLowerCase().includes(q);
-    // 3. 🚀 关键修复：匹配审计 ID (支持全量 ID 或 UI 显示的简短 ID)
-    const matchId = item.id.toLowerCase().includes(q);
+    // 3. 🚀 修正：仅匹配显示的短 ID (取第一段)
+    const displayId = item.id.split('-')[0].toLowerCase();
+    const matchId = displayId.includes(q);
+    // 4. 🚀 新增：匹配时间戳 (例如用户搜 "17:57" 也能搜到)
+    const matchTime = item.timestamp.includes(q);
     
-    return matchOriginal || matchMasked || matchId;
+    // 只有这四个可见部分命中，才算匹配成功
+    return matchOriginal || matchMasked || matchId || matchTime;
   });
 });
 </script>
@@ -92,6 +96,17 @@ const filteredHistory = computed(() => {
     <div v-if="filteredHistory.length === 0" class="flex flex-col items-center justify-center py-32 opacity-20">
        <Search :size="48" class="mb-4" />
        <p class="text-sm font-bold tracking-widest uppercase">暂无脱敏记录</p>
+    </div>
+
+    <!-- 🚀 搜索无结果时的占位提示 -->
+    <div v-if="filteredHistory.length === 0 && searchQuery" 
+        class="flex flex-col items-center justify-center py-32 animate-in fade-in zoom-in duration-700">
+      <div class="relative mb-6">
+        <div class="absolute inset-0 bg-amber-500/10 blur-3xl rounded-full"></div>
+        <Search :size="48" class="text-zinc-800 relative z-10" />
+      </div>
+      <h3 class="text-amber-50/60 font-bold tracking-widest uppercase text-xs">No Audit Matches</h3>
+      <p class="text-[10px] text-zinc-600 mt-2">未发现包含 "{{ searchQuery }}" 的审计项，请尝试其他关键词</p>
     </div>
 
     <div v-for="item in filteredHistory" :key="item.id" 
