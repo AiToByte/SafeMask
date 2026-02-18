@@ -22,13 +22,22 @@ const handleCopy = async (id: string, text: string, type: 'org' | 'msk') => {
 
 const clearSearch = () => searchQuery.value = "";
 
+// 🚀 修复后的搜索逻辑：支持 原始流、脱敏流、以及 Audit-ID 的全字匹配
 const filteredHistory = computed(() => {
   if (!searchQuery.value) return store.historyList;
-  const q = searchQuery.value.toLowerCase();
-  return store.historyList.filter(i => 
-    i.original.toLowerCase().includes(q) || 
-    i.masked.toLowerCase().includes(q)
-  );
+  
+  const q = searchQuery.value.toLowerCase().trim();
+  
+  return store.historyList.filter(item => {
+    // 1. 匹配原始文本
+    const matchOriginal = item.original.toLowerCase().includes(q);
+    // 2. 匹配脱敏后的文本
+    const matchMasked = item.masked.toLowerCase().includes(q);
+    // 3. 🚀 关键修复：匹配审计 ID (支持全量 ID 或 UI 显示的简短 ID)
+    const matchId = item.id.toLowerCase().includes(q);
+    
+    return matchOriginal || matchMasked || matchId;
+  });
 });
 </script>
 
@@ -142,36 +151,49 @@ const filteredHistory = computed(() => {
 </template>
 
 <style scoped>
-/* 🚀 搜索框容器：默认状态下的明显边框与背景 */
+/* 🚀 搜索框容器：增强默认可见度 */
 .search-wrapper {
   @apply relative flex items-center h-14 px-5 rounded-2xl transition-all duration-500 border;
-  /* 默认状态：琥珀灰背景 + 明显琥珀边框 */
-  background: rgba(26, 24, 22, 0.8);
-  border-color: rgba(245, 158, 11, 0.15);
-  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.4);
+  /* 默认状态：稍微提高琥珀色边框的透明度，确保在黑灰背景下清晰可见 */
+  background: rgba(20, 18, 16, 0.9);
+  border-color: rgba(245, 158, 11, 0.25); 
+  box-shadow: 
+    0 4px 20px -2px rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px rgba(255, 255, 255, 0.02);
 }
 
 .search-wrapper:hover {
-  /* 悬浮状态：边框提亮 */
-  border-color: rgba(245, 158, 11, 0.3);
-  background: rgba(32, 28, 26, 0.9);
+  @apply border-amber-500/40 bg-[#0d0d0f];
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.7);
 }
 
 .search-wrapper:focus-within {
-  /* 🚀 点击聚焦状态：变换边框颜色并增加外发光 */
-  @apply border-amber-500/50 scale-[1.01];
-  background: #0d0d0f;
+  /* 聚焦状态：强化发光感 */
+  @apply border-amber-500/60 scale-[1.01];
+  background: #000000;
   box-shadow: 
-    0 0 0 4px rgba(245, 158, 11, 0.05),
-    0 20px 40px -12px rgba(0, 0, 0, 0.8);
+    0 0 25px rgba(245, 158, 11, 0.08),
+    0 20px 40px -15px rgba(0, 0, 0, 0.9);
 }
 
+/* 搜索图标：默认颜色加亮 */
 .search-icon {
-  @apply text-amber-500/40 group-focus-within/search:text-amber-500 transition-colors duration-500;
+  @apply text-amber-500/60 group-focus-within/search:text-amber-400 transition-colors duration-500;
 }
 
+/* 搜索输入文本：象牙白 */
 .search-input {
-  @apply flex-1 bg-transparent border-none outline-none px-4 text-amber-50/90 text-sm placeholder:text-zinc-700 tracking-wide;
+  @apply flex-1 bg-transparent border-none outline-none px-4 text-amber-50 font-medium text-sm placeholder:text-zinc-600 tracking-wide;
+}
+
+/* 右侧检索标识 */
+.search-tag {
+  @apply hidden sm:flex items-center pl-4 border-l border-white/10 text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em];
+}
+
+/* 当搜索框有内容时，让标识闪烁，提示正在过滤 */
+.search-wrapper:has(.search-input:not(:placeholder-shown)) .search-tag {
+  @apply text-amber-500/80;
 }
 
 .search-tag {
