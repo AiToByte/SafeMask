@@ -132,16 +132,37 @@ const sortedRules = computed(() => {
     
     <!-- 1. 左侧：规则列表面板 -->
     <div class="flex-1 min-w-0 flex flex-col bg-[#0d0d0f]/60 border border-white/[0.04] rounded-[2rem] overflow-hidden" @click.stop>
-      <div class="px-8 py-5 border-b border-white/[0.04] flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <Layers :size="18" class="text-amber-500/50" />
-          <h3 class="font-bold text-amber-50/80 text-sm tracking-widest uppercase">规则模式库</h3>
-        </div>
-        <div class="relative group">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-amber-500/40 transition-colors" :size="14" />
-          <input v-model="searchQuery" placeholder="快速检索模式..." class="search-bar" />
-        </div>
+      <!-- 🚀 优化后的搜索头部：解决挤压问题 -->
+  <div class="px-8 py-6 border-b border-white/[0.04] flex items-center justify-between gap-6">
+    
+    <!-- 标题组：增加 flex-shrink-0 确保不被挤压 -->
+    <div class="flex items-center gap-3 flex-shrink-0">
+      <div class="w-8 h-8 rounded-lg bg-amber-500/5 border border-amber-500/10 flex items-center justify-center shadow-inner">
+        <Layers :size="16" class="text-amber-500/60" />
       </div>
+      <div class="flex flex-col">
+        <h3 class="font-black text-amber-50/90 text-[13px] tracking-[0.1em] leading-tight">规则模式库</h3>
+        <span class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mt-0.5">Pattern Repository</span>
+      </div>
+    </div>
+
+    <!-- 搜索框容器：使用 flex-1 占据剩余空间，并设置最大宽度 -->
+    <div class="relative flex-1 max-w-[240px] group" @click.stop>
+      <!-- 搜索图标 -->
+      <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-amber-500/60 transition-colors z-10">
+        <Search :size="14" />
+      </div>
+      
+      <input 
+        v-model="searchQuery" 
+        placeholder="快速检索..." 
+        class="search-bar-fluid" 
+      />
+      
+      <!-- 装饰用的小圆点，增加精密感 -->
+      <div class="absolute right-3 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-zinc-800 group-focus-within:bg-amber-500/40 transition-colors"></div>
+    </div>
+  </div>
       
       <div class="flex-1 overflow-y-auto p-5 space-y-2 custom-scroll" @click.self="clearForm">
         <div v-for="rule in sortedRules" :key="rule.name" 
@@ -328,7 +349,38 @@ const sortedRules = computed(() => {
 
 <style scoped>
 /* --- 列表与通用项 --- */
-.search-bar { @apply bg-black/40 border border-amber-500/10 rounded-xl py-2 pl-9 pr-4 text-xs text-amber-50/80 outline-none focus:border-amber-500/40 transition-all w-48 focus:w-64; }
+
+/* 🚀 弹性化搜索框：具备明显的琥珀色边框和内凹感 */
+.search-bar-fluid {
+  @apply w-full bg-[#08080a] border border-white/[0.08] rounded-xl py-2.5 pl-10 pr-8 text-[11px] text-amber-50/80 outline-none transition-all duration-500 shadow-inner;
+}
+
+/* 默认状态就有较清晰的轮廓 */
+.search-bar-fluid {
+  border-color: rgba(245, 158, 11, 0.1);
+}
+
+.search-bar-fluid:hover {
+  @apply border-white/20 bg-[#0a0a0c];
+}
+
+.search-bar-fluid:focus {
+  @apply border-amber-500/40 bg-[#0c0c0e];
+  /* 增加微弱的外发光和更深的内阴影 */
+  box-shadow: 
+    0 0 15px rgba(245, 158, 11, 0.03), 
+    inset 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* 调整标题文字的大小和间距，使其看起来更“稳” */
+h3 {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* 占位符颜色调整 */
+.search-bar-fluid::placeholder {
+  @apply text-zinc-700 font-medium tracking-wide;
+}
 .rule-item { @apply flex items-center p-4 rounded-2xl bg-white/[0.01] border border-white/[0.03] transition-all cursor-pointer relative overflow-hidden; }
 .rule-item:hover { @apply bg-white/[0.03] border-white/[0.08] translate-x-1; }
 .rule-item.active { @apply border-amber-500/30 bg-amber-500/[0.04] shadow-[0_10px_30px_rgba(0,0,0,0.4)]; }
@@ -344,7 +396,7 @@ const sortedRules = computed(() => {
 .label-header { @apply flex items-center justify-between px-1.5; }
 .label-header label {
   /* 🚀 提升 Label 辨识度：微黄象牙白 */
-  @apply text-[11px] font-bold text-amber-100/80 uppercase tracking-[0.12em];
+@apply text-[11px] font-bold text-amber-100/80 uppercase tracking-[0.12em];
 }
 .required-dot { @apply w-1.5 h-1.5 rounded-full bg-amber-500/60 shadow-[0_0_8px_rgba(245,158,11,0.3)]; }
 
