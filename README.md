@@ -122,6 +122,9 @@ npm run tauri dev
 npm run tauri build
 ```
 
+🌟 星史
+如果您觉得 SafeMask 有用，请考虑给代码库点个星标！这有助于我们发展壮大，也体现了您对注重隐私的加密工具的支持。
+https://www.star-history.com/#AiToByte/SafeMask&type=date&legend=top-left
 ---
 
 <div align="center">
