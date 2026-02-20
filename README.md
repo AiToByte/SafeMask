@@ -21,10 +21,12 @@ SafeMask revolutionizes the traditional "all-or-nothing" interceptor logic by in
 *   **The Phenomenon**: You press `Ctrl+C` to copy. The clipboard still holds your **original plain text**. Local debugging and development continue as usual; SafeMask remains invisible.
 *   **The Collapse**: When you are ready to send content to ChatGPT/Claude, press `Alt+V`. SafeMask instantly executes a lightning-fast sequence (150ms): **Backup → Inject Masked Text → Simulate Paste → Instant Restore**.
 *   **The Value**: The AI receives a safe `<API_KEY>`, while your physical clipboard "heals" back to the original text the moment the paste is complete.
+![演示Alt + V粘贴](https://github.com/user-attachments/assets/8a9e129a-8542-4e93-8dc0-8128a4e99b0a)
 
 ### 2. Sentry Universe (Sentry Mode) — *Absolute Defense*
 *   **Logic**: System-level forceful interception. Any sensitive data hitting the clipboard is "bleached" into masked text within milliseconds.
 *   **Use Case**: Remote meetings/screen sharing, high-security office environments, or working in public spaces.
+![剪切板 哨兵宇宙](https://github.com/user-attachments/assets/a665ad4e-62ba-482c-a008-12a2cad0aee4)
 
 ---
 
@@ -56,7 +58,7 @@ SafeMask is not just a masker; it's a professional Regex debugging terminal:
 *   **Real-time Simulation**: As you write a regular expression, the sandbox below shows the masking result instantly.
 *   **Error Backtracking**: If the Regex syntax is invalid (e.g., unclosed parentheses), the sandbox captures the low-level engine error and highlights it.
 *   **System Lock Mechanism**: Built-in rules are physically protected. Users are encouraged to use the "Save As" logic to build custom private libraries based on industrial-standard templates.
-
+![规则页面 规则实验室](https://github.com/user-attachments/assets/0e858ed3-eff7-4433-a4e4-9bb829f581d8)
 ---
 
 ## 🎨 Industrial Design Aesthetics
@@ -65,6 +67,8 @@ We believe productivity tools should be as elegant as precision instruments:
 *   **Amber Ivory Theme**: A deep, warm color palette combined with asymmetric white space significantly reduces eye strain during long sessions.
 *   **Mechanical Audio System**: Real-time synthesis via Web Audio API. Opening, closing, recording, and errors each have unique physical feedback sounds.
 *   **Precision Indicators**: A dynamic breathing light in the top-right corner displays the "Universe Mode" status in real-time.
+![首页GIF图](https://github.com/user-attachments/assets/97497bfa-673b-498c-a956-71965e5cb2d8)
+
 
 ---
 
