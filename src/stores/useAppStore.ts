@@ -61,37 +61,38 @@ export const useAppStore = defineStore('app', () => {
   };
 
   const playFeedbackSound = (type: 'CLICK' | 'ASCEND' | 'DESCEND' | 'RECORD' | 'ERROR') => {
-  const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-  const now = audioCtx.currentTime;
+    if (!settings.value.enable_audio_feedback) return;
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const now = audioCtx.currentTime;
 
-  const playOsc = (freq: number, dur: number, gainVal: number, type: OscillatorType = 'triangle') => {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, now);
-    gain.gain.setValueAtTime(gainVal, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + dur);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(now + dur);
-  };
+    const playOsc = (freq: number, dur: number, gainVal: number, type: OscillatorType = 'triangle') => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(gainVal, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(now + dur);
+    };
 
-  switch (type) {
-    case 'CLICK': playOsc(1200, 0.08, 0.1, 'square'); break;
-    case 'ASCEND': 
-      playOsc(440, 0.2, 0.05); 
-      setTimeout(() => playOsc(880, 0.2, 0.04), 80); 
-      break;
-    case 'DESCEND': 
-      playOsc(660, 0.2, 0.05); 
-      setTimeout(() => playOsc(330, 0.2, 0.04), 80); 
-      break;
-    case 'RECORD': playOsc(1000, 0.1, 0.08, 'sine'); break;
-    case 'ERROR': // 🚀 新增错误反馈音：低沉的双顿音
-      playOsc(200, 0.15, 0.1, 'sawtooth');
-      setTimeout(() => playOsc(150, 0.2, 0.1, 'sawtooth'), 120);
-      break;
+    switch (type) {
+      case 'CLICK': playOsc(1200, 0.08, 0.1, 'square'); break;
+      case 'ASCEND': 
+        playOsc(440, 0.2, 0.05); 
+        setTimeout(() => playOsc(880, 0.2, 0.04), 80); 
+        break;
+      case 'DESCEND': 
+        playOsc(660, 0.2, 0.05); 
+        setTimeout(() => playOsc(330, 0.2, 0.04), 80); 
+        break;
+      case 'RECORD': playOsc(1000, 0.1, 0.08, 'sine'); break;
+      case 'ERROR': // 🚀 新增错误反馈音：低沉的双顿音
+        playOsc(200, 0.15, 0.1, 'sawtooth');
+        setTimeout(() => playOsc(150, 0.2, 0.1, 'sawtooth'), 120);
+        break;
   }
 };
 
