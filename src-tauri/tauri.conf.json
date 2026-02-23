@@ -1,0 +1,63 @@
+{
+  "$schema": ".././tauri.schema.json",
+  "productName": "SafeMask",
+  "version": "1.2.0",
+  "identifier": "com.aitobyte.safemask",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://127.0.0.1:18924",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "SafeMask - 极致性能隐私脱敏控制台",
+        "width": 1024,
+        "height": 720,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "theme": "Dark"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": true,
+    "resources": [
+      "icons/**/*",
+      "rules/**/*",
+      "custom/**/*"
+    ],
+    "windows": {
+      "wix": {
+        "language": "zh-CN" 
+      }
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "publisher": "XiaoSheng",
+    "copyright": "Copyright © 2026 XiaoSheng"
+
+  },
+  "plugins": { 
+    "updater": {
+      "active": true,
+      "endpoints": ["https://github.com/AiToByte/SafeMask/releases/latest/download/latest.json"],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhGOTg3QjE3QkQ5OUNGMzkKUldRNXo1bTlGM3VZajl0OE9TZ1NtcXJxODYxbjAzcTFwakNnMUtVSFBXSW8wN3NTVGY5YlgxODYK"
+    }
+  }
+}
