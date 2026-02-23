@@ -1,4 +1,4 @@
-# 🛡️ SafeMask (v1.2.0)
+# 🛡️ SafeMask (v1.2.2)
 
 **"Keep the Truth in the Physical Universe, Exchange Safety in the Digital Universe."**
 

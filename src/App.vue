@@ -41,7 +41,7 @@ onMounted(() => store.bootstrap());
               <span class="text-zinc-500 font-medium text-sm tracking-widest">控制台</span>
             </h1>
             <p class="text-[8px] text-zinc-600 font-bold tracking-[0.1em] uppercase">
-              Secure Core Engine · v1.2.0
+              Secure Core Engine · v1.2.2
             </p>
           </div>
         </div>
