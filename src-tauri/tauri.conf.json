@@ -57,7 +57,7 @@
     "updater": {
       "active": true,
       "endpoints": ["https://github.com/AiToByte/SafeMask/releases/latest/download/latest.json"],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhGOTg3QjE3QkQ5OUNGMzkKUldRNXo1bTlGM3VZajl0OE9TZ1NtcXJxODYxbjAzcTFwakNnMUtVSFBXSW8wN3NTVGY5YlgxODYK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYzRjY1ODBGMEJBQjZDNDEKUldSQmJLc0xEMWoyODRPa081cjkvSXYxd0FDNWpyN25DNUh5b09paDlxVDlLRWlOTUFFa3h1b08K"
     }
   }
 }
