@@ -117,10 +117,10 @@ const filteredHistory = computed(() => {
             <Clock :size="12" /> {{ item.timestamp }}
           </div>
           
-          <div v-if="item.mode === 'SHADOW'" class="mode-badge shadow">
+          <div v-if="item.mode === 'SHADOW'" class="mode-badge sentry">
             <Ghost :size="11" /> 影子宇宙侦测
           </div>
-          <div v-else class="mode-badge sentry">
+          <div v-else class="mode-badge shadow">
             <ShieldAlert :size="11" /> 哨兵宇宙拦截
           </div>
         </div>
