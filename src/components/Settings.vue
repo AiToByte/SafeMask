@@ -21,7 +21,7 @@ const developerInfo = {
   email: "xiaosheng.tech@outlook.com",
   github: "https://github.com/AiToByte/SafeMask",
   website: "https://safemask.hub", 
-  version: "v1.2.2"
+  version: "v1.2.4"
 };
 
 
