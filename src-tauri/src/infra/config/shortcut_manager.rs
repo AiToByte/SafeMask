@@ -1,7 +1,6 @@
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::{AppHandle};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, Modifiers, Code};
 use std::str::FromStr;
-use log::{info, error};
 
 pub struct ShortcutManager;
 

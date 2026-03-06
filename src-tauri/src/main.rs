@@ -24,7 +24,7 @@ use tauri::{
 };
 
 // 🚀 核心修复：导入快捷键插件相关的类型和扩展 Trait
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, Modifiers, Code, ShortcutState};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
