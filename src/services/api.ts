@@ -38,6 +38,27 @@ export interface RuleStats {
   rule_count: number;
 }
 
+/** AI 引擎状态 */
+export interface AiEngineStatus {
+  state: 'not_loaded' | 'loading' | 'ready' | 'error' | 'not_available';
+  error?: string;
+  model?: {
+    name: string;
+    version: string;
+    size_mb: number;
+    entity_types: string[];
+  };
+  available_count: number;
+  models_dir: string;
+}
+
+/** 完整引擎信息 */
+export interface EngineInfo {
+  rule_count: number;
+  recognizers: string[];
+  ai_status: AiEngineStatus;
+}
+
 /** 文件处理响应 */
 export interface ProcessResponse {
   message: string;
@@ -143,6 +164,28 @@ export const MaskAPI = {
     await invoke("toggle_always_on_top", { enabled });
   },
   async setRecordingMode(enabled: boolean): Promise<void> {
-  await invoke("set_recording_mode", { enabled });
-}
+    await invoke("set_recording_mode", { enabled });
+  },
+
+  // === AI 引擎管理 ===
+
+  /** 获取 AI 引擎状态 */
+  async getAiEngineStatus(): Promise<AiEngineStatus> {
+    return await invoke("get_ai_engine_status");
+  },
+
+  /** 获取完整引擎信息 */
+  async getEngineInfo(): Promise<EngineInfo> {
+    return await invoke("get_engine_info");
+  },
+
+  /** 启用/停用 AI 引擎 */
+  async toggleAiEngine(enabled: boolean): Promise<boolean> {
+    return await invoke("toggle_ai_engine", { enabled });
+  },
+
+  /** 获取已注册的识别器列表 */
+  async getRegisteredRecognizers(): Promise<string[]> {
+    return await invoke("get_registered_recognizers");
+  },
 };

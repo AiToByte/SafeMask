@@ -1,11 +1,13 @@
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use crate::core::engine::MaskEngine;
+use crate::core::hybrid_engine::HybridEngine;
+use crate::infra::ai::ModelManager;
 use serde::{Serialize, Deserialize};
 use parking_lot::{Mutex, RwLock};
 use crate::core::config::AppSettings;
 
-pub type SharedEngine = Arc<RwLock<Arc<MaskEngine>>>;
+/// 共享混合引擎类型
+pub type SharedEngine = Arc<RwLock<Arc<HybridEngine>>>;
 
 pub struct AppState {
     /// 脱敏引擎 (支持热重载)

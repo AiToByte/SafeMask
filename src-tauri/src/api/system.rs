@@ -1,7 +1,7 @@
 use crate::common::state::{AppState, MaskHistoryItem};
 use crate::common::errors::AppResult;
 use crate::core::rules::Rule;
-use crate::core::engine::MaskEngine;
+use crate::core::hybrid_engine::HybridEngine;
 use crate::infra::config::loader::ConfigLoader;
 // 🚀 核心修复：必须引入 Emitter 才能使用 .emit() 方法
 use tauri::{AppHandle, State, Emitter}; 
@@ -45,10 +45,10 @@ pub async fn delete_rule_api(app: AppHandle, state: State<'_, AppState>, name: S
 /// 内部函数：重新加载规则并替换引擎
 async fn reload_engine_internal(app: AppHandle, state: State<'_, AppState>) -> AppResult<()> {
     let rules = ConfigLoader::load_all_rules(&app);
-    let new_engine = Arc::new(MaskEngine::new(rules));
-    
+    let new_engine = Arc::new(HybridEngine::from_rules(rules));
+
     let mut guard = state.engine.write();
-    *guard = new_engine; 
+    *guard = new_engine;
     Ok(())
 }
 
@@ -189,4 +189,49 @@ pub async fn set_recording_mode(state: State<'_, AppState>, enabled: bool) -> Ap
     state.is_recording_mode.store(enabled, Ordering::SeqCst);
     info!("🚀 录制模式状态更新: {}", enabled);
     Ok(())
+}
+
+/// 获取 AI 引擎状态
+///
+/// 返回 AI 引擎的当前状态，包括：
+/// - 模型加载状态 (not_loaded/loading/ready/error)
+/// - 可用模型数量
+/// - 模型信息 (名称、大小、支持的实体类型)
+/// - 模型目录路径
+#[tauri::command]
+pub async fn get_ai_engine_status(state: State<'_, AppState>) -> AppResult<serde_json::Value> {
+    let engine = state.engine.read();
+    Ok(engine.ai_status())
+}
+
+/// 获取完整的引擎信息
+///
+/// 返回混合引擎的完整信息，包括：
+/// - 规则数量
+/// - 已注册的识别器列表
+/// - AI 引擎状态
+/// - 脱敏配置
+#[tauri::command]
+pub async fn get_engine_info(state: State<'_, AppState>) -> AppResult<serde_json::Value> {
+    let engine = state.engine.read();
+    Ok(serde_json::json!({
+        "rule_count": engine.rule_count(),
+        "recognizers": engine.registry().recognizer_names(),
+        "ai_status": engine.ai_status(),
+    }))
+}
+
+/// 启用/停用 AI 引擎
+#[tauri::command]
+pub async fn toggle_ai_engine(state: State<'_, AppState>, enabled: bool) -> AppResult<bool> {
+    let mut engine = state.engine.write();
+    let result = engine.set_ai_enabled(enabled);
+    Ok(result)
+}
+
+/// 获取已注册的识别器列表
+#[tauri::command]
+pub async fn get_registered_recognizers(state: State<'_, AppState>) -> AppResult<Vec<String>> {
+    let engine = state.engine.read();
+    Ok(engine.registry().recognizer_names().iter().map(|s| s.to_string()).collect())
 }

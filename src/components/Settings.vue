@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, reactive, onMounted, onUnmounted, watch } from 'vue';
 import { useAppStore } from '../stores/useAppStore';
 import { MaskAPI } from '../services/api';
-import { 
-  Shield, Keyboard, Bell, Timer, RotateCcw, 
+import {
+  Shield, Keyboard, Bell, Timer, RotateCcw,
   Save, Trash2, Monitor, Cpu, Volume2, Eye, AlertTriangle,
   User, Mail, Github, Globe, Info, ExternalLink, Copyright,
-  Copy, Check
+  Copy, Check, Brain, Zap, Power, PowerOff, Loader2
 } from 'lucide-vue-next';
 import { message } from '@tauri-apps/plugin-dialog';
 
@@ -14,6 +14,43 @@ const store = useAppStore();
 const isRecording = ref(false);
 const showKeyWarning = ref(false);
 const emailCopied = ref(false);
+
+// AI 模型选择状态
+const selectedModels = reactive(new Set<string>());
+const aiEnabled = computed(() => store.aiEngineStatus?.state === 'ready' || store.aiEngineStatus?.state === 'loading');
+
+// 加载计时
+const loadingStartTime = ref<number | null>(null);
+const loadingElapsed = ref(0);
+let loadingTimer: number | null = null;
+
+// 监听 loading 状态变化，启动/停止计时
+const startLoadingTimer = () => {
+  loadingStartTime.value = Date.now();
+  loadingElapsed.value = 0;
+  loadingTimer = window.setInterval(() => {
+    if (loadingStartTime.value) {
+      loadingElapsed.value = Math.floor((Date.now() - loadingStartTime.value) / 1000);
+    }
+  }, 1000);
+};
+
+const stopLoadingTimer = () => {
+  if (loadingTimer) {
+    clearInterval(loadingTimer);
+    loadingTimer = null;
+  }
+  loadingStartTime.value = null;
+};
+
+const loadingElapsedText = computed(() => {
+  const mins = Math.floor(loadingElapsed.value / 60);
+  const secs = loadingElapsed.value % 60;
+  if (mins > 0) {
+    return `已用时 ${mins} 分 ${secs} 秒`;
+  }
+  return `已用时 ${secs} 秒`;
+});
 
 // 🚀 开发者基本信息
 const developerInfo = {
@@ -30,6 +67,153 @@ const openLink = async (url: string) => {
   const { openUrl } = await import('@tauri-apps/plugin-opener');
   await openUrl(url);
 };
+
+const formatRecognizer = (name: string) => {
+  const map: Record<string, string> = {
+    'aho_corasick_engine': '字典匹配',
+    'regex_engine': '正则匹配',
+    'ner_engine': 'AI 识别',
+    'context_enhancer': '上下文增强',
+    'checksum_recognizer': '校验位验证',
+  };
+  return map[name] || name;
+};
+
+const getRecognizerColor = (name: string) => {
+  const map: Record<string, string> = {
+    'aho_corasick_engine': 'bg-emerald-500',
+    'regex_engine': 'bg-blue-500',
+    'ner_engine': 'bg-purple-500',
+    'context_enhancer': 'bg-amber-500',
+    'checksum_recognizer': 'bg-cyan-500',
+  };
+  return map[name] || 'bg-zinc-500';
+};
+
+const formatEntityType = (type: string) => {
+  const map: Record<string, string> = {
+    'person': '人名',
+    'email': '邮箱',
+    'phone': '电话',
+    'address': '地址',
+    'account_number': '账号',
+    'date': '日期',
+    'url': '链接',
+    'secret': '密钥',
+  };
+  return map[type] || type;
+};
+
+const aiStatusColor = computed(() => {
+  switch (store.aiEngineStatus?.state) {
+    case 'ready': return 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]';
+    case 'loading': return 'bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]';
+    case 'error': return 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]';
+    default: return 'bg-zinc-600';
+  }
+});
+
+const aiStatusText = computed(() => {
+  switch (store.aiEngineStatus?.state) {
+    case 'ready': return '模型已就绪，AI 识别可用';
+    case 'loading': return '模型加载中，首次加载约需 1-3 分钟';
+    case 'error': return `加载失败: ${store.aiEngineStatus.error || '未知错误'}`;
+    case 'not_loaded': return '模型未加载，复制文本时将自动触发';
+    case 'not_available': return 'AI 引擎不可用';
+    default: return '未知状态';
+  }
+});
+
+// 可用模型列表
+const availableModels = computed(() => {
+  const models = [];
+  if (store.aiEngineStatus?.available_count > 0) {
+    // 从 aiEngineStatus 获取模型信息
+    if (store.aiEngineStatus.model) {
+      models.push({
+        name: store.aiEngineStatus.model.name,
+        description: `OpenAI 隐私过滤模型 · ${store.aiEngineStatus.model.entity_types.length} 种实体`,
+        size_mb: store.aiEngineStatus.model.size_mb,
+        loaded: store.aiEngineStatus.state === 'ready',
+      });
+    }
+    // 如果 available_count > 1，添加占位模型（未来扩展）
+    if (store.aiEngineStatus.available_count > 1 && !store.aiEngineStatus.model) {
+      for (let i = 0; i < store.aiEngineStatus.available_count; i++) {
+        models.push({
+          name: `model-${i + 1}`,
+          description: '待加载模型',
+          size_mb: 0,
+          loaded: false,
+        });
+      }
+    }
+  }
+  // 默认添加 privacy-filter 如果没有其他模型
+  if (models.length === 0 && store.aiEngineStatus?.state !== 'not_available') {
+    models.push({
+      name: 'privacy-filter',
+      description: 'OpenAI 隐私过滤模型',
+      size_mb: 874,
+      loaded: store.aiEngineStatus?.state === 'ready',
+    });
+  }
+  return models;
+});
+
+// 切换模型选择
+const toggleModelSelection = (modelName: string) => {
+  if (selectedModels.has(modelName)) {
+    selectedModels.delete(modelName);
+  } else {
+    selectedModels.add(modelName);
+  }
+};
+
+// 切换 AI 引擎启用/停用
+const handleToggleAi = async (event: Event) => {
+  const enabled = (event.target as HTMLInputElement).checked;
+  await store.toggleAiEngine(enabled);
+};
+
+// 刷新 AI 状态
+const refreshAiStatus = async () => {
+  await store.fetchAiStatus();
+  await store.fetchEngineInfo();
+  // 管理计时器
+  if (store.aiEngineStatus?.state === 'loading') {
+    if (!loadingTimer) startLoadingTimer();
+  } else {
+    stopLoadingTimer();
+  }
+};
+
+// 重试加载
+const handleRetryLoad = async () => {
+  await store.toggleAiEngine(true);
+  startLoadingTimer();
+  // 定期刷新状态
+  const checkInterval = setInterval(async () => {
+    await store.fetchAiStatus();
+    if (store.aiEngineStatus?.state !== 'loading') {
+      clearInterval(checkInterval);
+      stopLoadingTimer();
+    }
+  }, 5000);
+};
+
+// 生命周期：启动时检查状态，启动计时器
+onMounted(async () => {
+  await store.fetchAiStatus();
+  if (store.aiEngineStatus?.state === 'loading') {
+    startLoadingTimer();
+  }
+});
+
+// 生命周期：卸载时清理计时器
+onUnmounted(() => {
+  stopLoadingTimer();
+});
 
 /**
  * 复制邮箱逻辑
@@ -134,7 +318,160 @@ const sliderProgress = computed(() => ((store.settings.paste_delay_ms - 50) / (8
         </div>
       </section>
 
-      <!-- 模块 2: 交互感知 -->
+      <!-- 模块 2: AI 引擎 -->
+      <section class="config-card lg:col-span-2">
+        <div class="card-header"><Brain :size="16" class="text-purple-500" /><span>AI 智能识别 (AI Engine)</span></div>
+        <div class="space-y-6 mt-8">
+
+          <!-- 引擎总开关 -->
+          <div class="flex items-center justify-between p-4 bg-black/30 rounded-xl border border-white/[0.03]">
+            <div class="flex items-center gap-3">
+              <div :class="['w-3 h-3 rounded-full transition-colors', aiStatusColor]" />
+              <div>
+                <span class="text-[11px] text-zinc-300 font-medium">AI 引擎状态</span>
+                <p class="text-[9px] text-zinc-600 mt-0.5">{{ aiStatusText }}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <button @click="refreshAiStatus" class="p-1.5 rounded-lg hover:bg-white/5 transition-colors" title="刷新状态">
+                <RotateCcw :size="12" class="text-zinc-600" />
+              </button>
+              <!-- 启用/停用开关 -->
+              <label class="sw-wrapper sm" :title="aiEnabled ? '点击停用 AI' : '点击启用 AI'">
+                <input type="checkbox" :checked="aiEnabled" @change="handleToggleAi" :disabled="store.aiEngineStatus?.state === 'loading'">
+                <div class="sw-slider sm"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 加载状态 (仅 loading 状态显示) -->
+          <div v-if="store.aiEngineStatus?.state === 'loading'" class="p-4 bg-amber-500/10 rounded-xl border border-amber-500/20 space-y-3">
+            <div class="flex items-center gap-3">
+              <div class="relative w-4 h-4">
+                <div class="absolute inset-0 rounded-full bg-amber-500 animate-ping opacity-75"></div>
+                <div class="relative w-4 h-4 rounded-full bg-amber-500"></div>
+              </div>
+              <div>
+                <span class="text-[11px] text-amber-400 font-medium">模型加载中</span>
+                <p class="text-[9px] text-amber-400/60 mt-0.5">{{ loadingElapsedText }}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <Loader2 :size="12" class="text-amber-400 animate-spin" />
+              <span class="text-[10px] text-amber-400/80">正在加载 874MB 模型文件...</span>
+            </div>
+            <p class="text-[9px] text-zinc-600">首次加载约需 3-10 分钟，后续启动将使用缓存</p>
+          </div>
+
+          <!-- 错误信息 -->
+          <div v-if="store.aiEngineStatus?.state === 'error'" class="p-4 bg-red-500/10 rounded-xl border border-red-500/20 space-y-3">
+            <div class="flex items-center gap-2">
+              <AlertTriangle :size="14" class="text-red-400" />
+              <span class="text-[11px] text-red-400 font-medium">加载失败</span>
+            </div>
+            <p class="text-[10px] text-red-400/70 break-all">{{ store.aiEngineStatus.error }}</p>
+            <button @click="handleRetryLoad" class="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-[10px] text-red-400 transition-colors">
+              <RotateCcw :size="10" />
+              <span>重新加载</span>
+            </button>
+          </div>
+
+          <!-- 已加载模型信息 -->
+          <div v-if="store.aiEngineStatus?.model" class="space-y-3">
+            <div class="flex items-center gap-2 mb-2">
+              <Zap :size="12" class="text-amber-500" />
+              <span class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">已加载模型</span>
+            </div>
+
+            <div class="p-4 bg-black/30 rounded-xl border border-white/[0.03] space-y-3">
+              <!-- 模型名称和大小 -->
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                    <Brain :size="12" class="text-purple-400" />
+                  </div>
+                  <div>
+                    <p class="text-[11px] text-zinc-300 font-medium">{{ store.aiEngineStatus.model.name }}</p>
+                    <p class="text-[9px] text-zinc-600">v{{ store.aiEngineStatus.model.version }}</p>
+                  </div>
+                </div>
+                <span class="text-[10px] text-zinc-500 font-mono">{{ store.aiEngineStatus.model.size_mb.toFixed(0) }} MB</span>
+              </div>
+
+              <!-- 支持的实体类型 -->
+              <div class="pt-2 border-t border-white/[0.03]">
+                <span class="text-[9px] text-zinc-600 uppercase tracking-widest">支持识别</span>
+                <div class="flex flex-wrap gap-1.5 mt-2">
+                  <span v-for="type in store.aiEngineStatus.model.entity_types" :key="type"
+                    class="px-2 py-0.5 bg-purple-500/10 rounded text-[9px] text-purple-400 border border-purple-500/20">
+                    {{ formatEntityType(type) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 可用模型列表 (多选) -->
+          <div v-if="store.aiEngineStatus?.available_count > 0" class="space-y-2">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <Cpu :size="12" class="text-blue-500" />
+                <span class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">可用模型</span>
+              </div>
+              <span class="text-[10px] text-zinc-600">{{ selectedModels.size }}/{{ store.aiEngineStatus.available_count }} 已选</span>
+            </div>
+
+            <div class="space-y-2">
+              <!-- 模型列表项 -->
+              <div v-for="model in availableModels" :key="model.name"
+                @click="toggleModelSelection(model.name)"
+                class="p-3 bg-black/20 rounded-xl border border-white/[0.03] hover:border-purple-500/30 transition-colors cursor-pointer"
+                :class="{ 'border-purple-500/50 bg-purple-500/5': selectedModels.has(model.name) }">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded border flex items-center justify-center transition-colors"
+                      :class="selectedModels.has(model.name) ? 'bg-purple-500 border-purple-500' : 'border-zinc-600'">
+                      <Check v-if="selectedModels.has(model.name)" :size="10" class="text-white" />
+                    </div>
+                    <div>
+                      <p class="text-[11px] text-zinc-300">{{ model.name }}</p>
+                      <p class="text-[9px] text-zinc-600">{{ model.description }}</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[10px] text-zinc-500 font-mono">{{ model.size_mb.toFixed(0) }} MB</span>
+                    <div :class="['w-2 h-2 rounded-full', model.loaded ? 'bg-emerald-500' : 'bg-zinc-600']" :title="model.loaded ? '已加载' : '未加载'" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 无模型提示 -->
+          <div v-else-if="store.aiEngineStatus?.state !== 'loading'" class="p-6 bg-black/20 rounded-xl border border-dashed border-white/[0.05] text-center space-y-2">
+            <Brain :size="24" class="text-zinc-700 mx-auto" />
+            <p class="text-[11px] text-zinc-500">未发现 AI 模型</p>
+            <p class="text-[10px] text-zinc-600">将 ONNX 模型放置在 <code class="px-1.5 py-0.5 bg-black/30 rounded text-zinc-500">models/</code> 目录</p>
+          </div>
+
+          <!-- 识别器列表 -->
+          <div v-if="store.engineInfo?.recognizers" class="pt-4 border-t border-white/[0.03]">
+            <div class="flex items-center gap-2 mb-3">
+              <Cpu :size="12" class="text-blue-500" />
+              <span class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">已注册识别器</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div v-for="name in store.engineInfo.recognizers" :key="name"
+                class="flex items-center gap-2 p-2.5 bg-black/20 rounded-lg border border-white/[0.03]">
+                <div :class="['w-1.5 h-1.5 rounded-full', getRecognizerColor(name)]" />
+                <span class="text-[10px] text-zinc-400">{{ formatRecognizer(name) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 模块 3: 交互感知 -->
       <section class="config-card">
         <div class="card-header"><Volume2 :size="16" class="text-amber-500" /><span>实时感官反馈 (Feedback)</span></div>
         <div class="space-y-7 mt-8">

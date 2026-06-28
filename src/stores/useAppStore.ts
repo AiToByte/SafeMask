@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { listen } from "@tauri-apps/api/event";
-import { MaskAPI, type Rule, type HistoryItem, type AppSettings } from '../services/api';
+import { MaskAPI, type Rule, type HistoryItem, type AppSettings, type AiEngineStatus, type EngineInfo } from '../services/api';
 
 export const useAppStore = defineStore('app', () => {
   const settings = ref<AppSettings>({
@@ -22,6 +22,8 @@ export const useAppStore = defineStore('app', () => {
   const isProcessing = ref(false);
   const currentFileName = ref("");
   const appInfo = ref<any>(null);
+  const aiEngineStatus = ref<AiEngineStatus | null>(null);
+  const engineInfo = ref<EngineInfo | null>(null);
 
   const bootstrap = async () => {
     try {
@@ -30,6 +32,8 @@ export const useAppStore = defineStore('app', () => {
       ruleCount.value = stats.rule_count;
       historyList.value = await MaskAPI.getHistory();
       appInfo.value = await MaskAPI.getAppInfo();
+      aiEngineStatus.value = await MaskAPI.getAiEngineStatus();
+      engineInfo.value = await MaskAPI.getEngineInfo();
       await initAllEventListeners();
     } catch (e) { console.error("Bootstrap Error:", e); }
   };
@@ -108,13 +112,23 @@ export const useAppStore = defineStore('app', () => {
     await MaskAPI.setAlwaysOnTop(isAlwaysOnTop.value);
   };
 
-  return { 
-    settings, isMonitorOn, activeTab, ruleCount, historyList, allRulesList, 
+  return {
+    settings, isMonitorOn, activeTab, ruleCount, historyList, allRulesList,
     activeFeedback, progress, isProcessing, currentFileName, appInfo,
+    aiEngineStatus, engineInfo,
     bootstrap, toggleVaultMode, fetchStats: async () => ruleCount.value = (await MaskAPI.getStats()).rule_count,
     fetchHistory: async () => historyList.value = await MaskAPI.getHistory(),
     fetchAllRules: async () => allRulesList.value = await MaskAPI.getAllRules(),
     clearHistory: async () => { await MaskAPI.clearHistory(); historyList.value = []; },
+    fetchAiStatus: async () => aiEngineStatus.value = await MaskAPI.getAiEngineStatus(),
+    fetchEngineInfo: async () => engineInfo.value = await MaskAPI.getEngineInfo(),
+    toggleAiEngine: async (enabled: boolean) => {
+      const result = await MaskAPI.toggleAiEngine(enabled);
+      // 刷新状态
+      aiEngineStatus.value = await MaskAPI.getAiEngineStatus();
+      engineInfo.value = await MaskAPI.getEngineInfo();
+      return result;
+    },
     isAlwaysOnTop, toggleAlwaysOnTop, playFeedbackSound
   };
 });

@@ -1,4 +1,4 @@
-use crate::core::engine::MaskEngine;
+use crate::core::hybrid_engine::HybridEngine;
 use anyhow::{Context, Result};
 use crossbeam_channel::{bounded};
 use memmap2::MmapOptions;
@@ -33,7 +33,7 @@ pub struct ProcessStats {
 pub fn process_file<P: AsRef<Path>>(
     input_path: P,
     output_path: P,
-    engine: &Arc<MaskEngine>,
+    engine: &Arc<HybridEngine>,
     progress_callback: impl Fn(f64) + Sync + Send + 'static,
 ) -> Result<ProcessStats> {
     let input = input_path.as_ref();
@@ -55,7 +55,7 @@ pub fn process_file<P: AsRef<Path>>(
 }
 
 /// Word 脱敏：基于 ZIP 结构直接替换 XML 中的文本节点
-fn process_docx(input: &Path, output: &Path, engine: &Arc<MaskEngine>, cb: impl Fn(f64)) -> Result<ProcessStats> {
+fn process_docx(input: &Path, output: &Path, engine: &Arc<HybridEngine>, cb: impl Fn(f64)) -> Result<ProcessStats> {
     let start = Instant::now();
     
     // 1. 以只读模式打开输入文件
@@ -106,7 +106,7 @@ fn process_docx(input: &Path, output: &Path, engine: &Arc<MaskEngine>, cb: impl 
     })
 }
 
-fn process_xlsx(input: &Path, output: &Path, engine: &Arc<MaskEngine>, cb: impl Fn(f64)) -> Result<ProcessStats> {
+fn process_xlsx(input: &Path, output: &Path, engine: &Arc<HybridEngine>, cb: impl Fn(f64)) -> Result<ProcessStats> {
     let start = std::time::Instant::now();
     let mut workflow: Xlsx<_> = open_workbook(input)?;
     let mut new_workbook = Workbook::new();
@@ -147,7 +147,7 @@ fn process_xlsx(input: &Path, output: &Path, engine: &Arc<MaskEngine>, cb: impl 
 }
 
 /// PDF 脱敏实现
-fn process_pdf(input: &Path, output: &Path, engine: &Arc<MaskEngine>, cb: impl Fn(f64)) -> Result<ProcessStats> {
+fn process_pdf(input: &Path, output: &Path, engine: &Arc<HybridEngine>, cb: impl Fn(f64)) -> Result<ProcessStats> {
     let start = std::time::Instant::now();
     // 使用 pdf_extract 或类似工具提取文本
     // 注意：对于 .doc，pdf_extract 可能不支持，这里主要针对 PDF
@@ -173,7 +173,7 @@ fn process_pdf(input: &Path, output: &Path, engine: &Arc<MaskEngine>, cb: impl F
 pub fn process_text_file_mmap<P: AsRef<Path>>(
     input_path: P,
     output_path: P,
-    engine: &Arc<MaskEngine>,
+    engine: &Arc<HybridEngine>,
     progress_callback: impl Fn(f64) + Sync + Send + 'static,
 ) -> Result<ProcessStats> {
     let start_time = Instant::now();
@@ -259,7 +259,7 @@ pub fn process_text_file_mmap<P: AsRef<Path>>(
 }
 
 /// 🚀 XML 深度脱敏：只针对文本节点进行脱敏，保护 XML 标签
-fn mask_xml_content(xml_data: &[u8], engine: &Arc<MaskEngine>) -> Result<Vec<u8>> {
+fn mask_xml_content(xml_data: &[u8], engine: &Arc<HybridEngine>) -> Result<Vec<u8>> {
     let mut reader = XmlReader::from_reader(xml_data);
     let mut writer = XmlWriter::new(Cursor::new(Vec::new()));
     let mut buf = Vec::new();

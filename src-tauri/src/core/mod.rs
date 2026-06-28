@@ -1,3 +1,8 @@
 pub mod engine;
 pub mod rules;
 pub mod config;
+pub mod recognizer;
+pub mod resolver;
+pub mod hybrid_engine;
+pub mod masking;
+pub mod orchestrator;

@@ -6,7 +6,7 @@ mod core;
 mod infra;
 
 use crate::common::state::AppState;
-use crate::core::engine::MaskEngine;
+use crate::core::hybrid_engine::HybridEngine;
 use crate::infra::config::loader::ConfigLoader;
 use crate::infra::config::shortcut_manager::ShortcutManager;
 use std::sync::{Arc, atomic::AtomicBool};
@@ -61,7 +61,11 @@ fn main() {
             api::system::get_app_settings,
             api::system::toggle_vault_mode,
             api::system::test_rule_logic,
-            api::system::set_recording_mode,  // 🚀 新增命令
+            api::system::set_recording_mode,
+            api::system::get_ai_engine_status,  // AI 引擎状态
+            api::system::get_engine_info,        // 完整引擎信息
+            api::system::toggle_ai_engine,       // AI 启用/停用
+            api::system::get_registered_recognizers, // 已注册识别器
         ])
         .run(tauri::generate_context!())
     {
@@ -192,7 +196,19 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
 
     // 加载并编译规则引擎
     let rules = ConfigLoader::load_all_rules(handle);
-    let engine = Arc::new(MaskEngine::new(rules));
+    let mut engine = HybridEngine::from_rules(rules);
+
+    // 🚀 启用 AI 引擎（如果模型可用）
+    // 尝试多个可能的模型目录路径
+    let models_dir = find_models_dir(handle);
+    info!("🔍 模型目录: {}", models_dir.display());
+    engine.enable_ai_engine(&models_dir);
+    info!("🤖 AI 引擎初始化完成，状态: {:?}", engine.ai_status());
+
+    // 注意：AI 模型加载是异步的，不会阻塞启动
+    // 如果模型加载失败，规则引擎仍然可以正常工作
+
+    let engine = Arc::new(engine);
 
     // 构建核心状态机
     let app_state = AppState {
@@ -203,13 +219,60 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
         is_monitor_on: Arc::new(Mutex::new(true)),
         history: Arc::new(Mutex::new(Vec::new())),
         last_content: Arc::new(Mutex::new(String::new())),
-        is_recording_mode: Arc::new(AtomicBool::new(false)),  // 🚀 新增录制模式状态
+        is_recording_mode: Arc::new(AtomicBool::new(false)),
     };
 
     // 托管状态
     handle.manage(app_state);
     info!("✅ [Init] 全局状态注入完成");
     Ok(())
+}
+
+/// 查找模型目录
+fn find_models_dir(handle: &AppHandle) -> std::path::PathBuf {
+    let current_dir = std::env::current_dir().unwrap_or_default();
+
+    // 调试：写入日志文件
+    let debug_log = current_dir.join("models_debug.log");
+    let _ = std::fs::write(&debug_log, format!(
+        "当前工作目录: {}\n资源目录: {:?}\n",
+        current_dir.display(),
+        handle.path().resource_dir().ok()
+    ));
+
+    // 1. 尝试多个可能的路径
+    let possible_paths = vec![
+        current_dir.join("src-tauri").join("models"),
+        current_dir.join("models"),
+        std::path::PathBuf::from("src-tauri/models"),
+        std::path::PathBuf::from("models"),
+        handle.path().resource_dir().map(|p| p.join("models")).unwrap_or_default(),
+    ];
+
+    for path in &possible_paths {
+        let privacy_filter_dir = path.join("privacy-filter");
+        // 检查 model_q4.onnx 或 model.onnx
+        let model_exists = privacy_filter_dir.join("model_q4.onnx").exists()
+            || privacy_filter_dir.join("model.onnx").exists();
+        let tokenizer_exists = privacy_filter_dir.join("tokenizer.json").exists();
+
+        // 写入调试信息
+        let _ = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log)
+            .and_then(|mut f| {
+                use std::io::Write;
+                writeln!(f, "检查: {} | 存在:{} | model:{} | tokenizer:{}",
+                    path.display(), path.exists(), model_exists, tokenizer_exists)
+            });
+
+        if path.exists() && model_exists && tokenizer_exists {
+            info!("✅ 找到模型目录: {}", path.display());
+            return path.clone();
+        }
+    }
+
+    let default_path = current_dir.join("src-tauri").join("models");
+    info!("⚠️ 未找到模型目录，使用默认路径: {}", default_path.display());
+    default_path
 }
 
 fn init_shortcut_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
