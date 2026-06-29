@@ -110,7 +110,7 @@ jobs:
 
             ---
             <div align="center">
-              <p><b>SafeMask</b> - 让每一行数据，都能安全地拥抱 AI。</p>
+              <p><b>SafeMask</b> - 让每一行数据，都能安全的拥抱 AI。</p>
             </div>
           releaseDraft: true
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') }}

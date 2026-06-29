@@ -11,10 +11,12 @@ impl AppEvents {
 
     /// 实时脱敏通知事件 (主要用于剪贴板自动脱敏后的提示)
     /// Payload: String (提示消息)
+    #[allow(dead_code)]
     pub const MASKED_EVENT: &'static str = "masked-event";
 
     /// 新的历史记录产生事件
     /// Payload: MaskHistoryItem (包含 id, timestamp, original, masked)
+    #[allow(dead_code)]
     pub const NEW_HISTORY: &'static str = "new-history";
 
     /// 窗口关闭请求事件

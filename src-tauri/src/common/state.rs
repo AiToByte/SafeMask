@@ -84,6 +84,7 @@ impl AppState {
     }
 
     /// 获取影子副本的安全克隆 (读锁)
+    #[allow(dead_code)]
     pub fn get_shadow_snapshot(&self) -> ShadowClipboard {
         self.shadow_store.read().clone()
     }

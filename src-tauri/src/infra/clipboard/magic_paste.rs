@@ -4,7 +4,7 @@ use enigo::{Enigo, Key, KeyboardControllable};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 use tauri::{AppHandle, Manager, Emitter};
-use log::{info, warn, error};
+use log::{info};
 
 pub struct MagicPaster;
 
@@ -73,7 +73,7 @@ impl MagicPaster {
         #[cfg(target_os = "windows")]
         {
             enigo.key_up(Key::Alt); // 强制松开物理 Alt
-            tokio::time::sleep(Duration::from_millis(20)); // 微小停顿
+            let _ = tokio::time::sleep(Duration::from_millis(20)); // 微小停顿
         }
 
         #[cfg(target_os = "macos")]
@@ -83,9 +83,9 @@ impl MagicPaster {
 
         // 执行粘贴组合键
         enigo.key_down(modifier);
-        tokio::time::sleep(Duration::from_millis(20)); // 模拟真人按下的间隔
+        let _ = tokio::time::sleep(Duration::from_millis(20)); // 模拟真人按下的间隔
         enigo.key_click(Key::Layout('v'));
-        tokio::time::sleep(Duration::from_millis(20));
+        let _ = tokio::time::sleep(Duration::from_millis(20));
         enigo.key_up(modifier);
         
         // 如果是 Windows，粘贴完后再把 Alt 补回来（可选，避免影响用户继续操作）

@@ -1,4 +1,4 @@
-# 🛡️ SafeMask (v1.2.2)
+# 🛡️ SafeMask (v1.2.4)
 
 **“在物理宇宙保留真实，在数字宇宙交换安全。”**
 
@@ -111,10 +111,11 @@ git clone https://github.com/AiToByte/SafeMask.git
 npm install
 
 # 3. 启动开发宇宙
-npm run tauri dev
+npm tauri dev --no-watch
 
 # 4. 构建发布版本
-npm run tauri build
+npm tauri build
+
 ```
 
 ---

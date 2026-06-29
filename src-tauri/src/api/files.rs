@@ -3,7 +3,6 @@ use crate::common::errors::AppResult;
 use crate::infra::fs::processor;
 use tauri::{AppHandle, Emitter, State};
 use serde::Serialize;
-use serde_json::json; // 🚀 显式导入 json 宏
 
 #[derive(Serialize)]
 pub struct ProcessResponse {
