@@ -357,7 +357,7 @@ impl NerEngine {
                 .and_then(|mut f| {
                     use std::io::Write;
                     writeln!(f, "\n=== 推理诊断 (seq_len={}) ===", seq).ok();
-                    for i in 0..seq.min(30) {
+                    for i in 0..seq.min(80) {
                         let offset = offsets.get(i).copied().unwrap_or((0, 0));
                         let token_text = if offset.0 < text.len() && offset.1 <= text.len() {
                             &text[offset.0..offset.1]
