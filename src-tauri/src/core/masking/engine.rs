@@ -155,7 +155,7 @@ mod tests {
         let text = "姓名：张三，邮箱：test@example.com";
         let spans = vec![
             make_span(EntityType::Person, 9, 15),    // "张三" 的字节位置
-            make_span(EntityType::Email, 21, 39),    // "test@example.com"
+            make_span(EntityType::Email, 27, 43),    // "test@example.com" 的字节位置 (18+9=27)
         ];
 
         let result = engine.apply(text, &spans);
