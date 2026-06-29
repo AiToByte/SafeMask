@@ -7,7 +7,7 @@ use crate::infra::config::loader::ConfigLoader;
 use tauri::{AppHandle, State, Emitter}; 
 use std::sync::Arc;
 use crate::core::config::AppSettings;
-use log::{info, error};
+use log::{info};
 use regex::bytes::Regex;
 use std::sync::atomic::Ordering; 
 
@@ -88,7 +88,7 @@ pub async fn copy_original_cmd(state: State<'_, AppState>, text: String) -> AppR
 #[tauri::command]
 pub fn get_app_info() -> serde_json::Value {
     serde_json::json!({
-        "version": "1.2.2",
+        "version": "1.2.4",
         "author": "XiaoSheng",
         "github": "https://github.com/AiToByte/SafeMask",
         "description": "极致性能的本地隐私脱敏引擎"
@@ -102,22 +102,7 @@ pub async fn toggle_always_on_top(window: tauri::Window, enabled: bool) -> AppRe
     Ok(())
 }
 
-#[tauri::command]
-pub async fn update_magic_shortcut_api(
-    app: tauri::AppHandle,
-    state: tauri::State<'_, AppState>,
-    new_shortcut: String
-) -> AppResult<String> {
-    crate::infra::config::shortcut_manager::ShortcutManager::reload_magic_shortcut(&app, &new_shortcut)
-        .map_err(|e| crate::common::errors::AppError::Config(e))?;
 
-    {
-        let mut settings = state.settings.write();
-        settings.magic_paste_shortcut = new_shortcut.clone();
-        crate::infra::config::loader::ConfigLoader::save_settings(&app, &settings)?;
-    }
-    Ok("快捷键已更新并生效".into())
-}
 
 /// 切换脱敏宇宙模式
 #[tauri::command]

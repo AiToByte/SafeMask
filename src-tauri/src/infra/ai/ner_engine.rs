@@ -458,7 +458,10 @@ fn softmax_argmax(logits: &ndarray::ArrayView1<f32>) -> (usize, f32) {
     (max_idx, prob)
 }
 
-/// 修复 byte offset
+/// 修复 byte offset — 确保 span 边界落在有效的 UTF-8 字符边界上
+///
+/// start 向**前**回退到最近的字符边界，end 向**后**推进到最近的字符边界。
+/// 这样可以防止 span 切分多字节 UTF-8 字符。
 fn fix_offsets(spans: &mut Vec<EntitySpan>, text: &str) {
     let text_len = text.len();
 
@@ -470,9 +473,11 @@ fn fix_offsets(spans: &mut Vec<EntitySpan>, text: &str) {
             std::mem::swap(&mut span.start, &mut span.end);
         }
 
-        while span.start < text_len && !text.is_char_boundary(span.start) {
-            span.start += 1;
+        // start 向后退到字符边界
+        while span.start > 0 && !text.is_char_boundary(span.start) {
+            span.start -= 1;
         }
+        // end 向前推到字符边界
         while span.end < text_len && !text.is_char_boundary(span.end) {
             span.end += 1;
         }

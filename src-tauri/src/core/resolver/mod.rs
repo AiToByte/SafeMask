@@ -76,6 +76,8 @@ impl ConflictResolver {
     /// - 完全包含：保留外层跨度（覆盖范围更大）
     /// - 部分重叠：保留置信度更高的跨度
     /// - 无重叠：都保留
+    ///
+    /// 修复：替换后回溯检查，防止新 span 与更早的已接受 span 重叠。
     fn merge_overlapping(&self, spans: Vec<EntitySpan>) -> Vec<EntitySpan> {
         if spans.len() <= 1 {
             return spans;
@@ -91,13 +93,14 @@ impl ConflictResolver {
 
             let last = result.last_mut().unwrap();
 
-            // 检查是否重叠
             if span.start < last.end {
                 // 重叠：保留置信度更高的
                 if span.confidence > last.confidence {
                     *last = span;
+                    // 回溯检查：替换后的新 span 可能与更早的 span 重叠
+                    Self::backtrack_check(&mut result);
                 }
-                // 如果置信度相同，保留覆盖范围更大的（即 last，因为它先到）
+                // 置信度相同或更低：保留 last（已有），跳过当前 span
             } else {
                 // 无重叠：直接添加
                 result.push(span);
@@ -105,6 +108,28 @@ impl ConflictResolver {
         }
 
         result
+    }
+
+    /// 回溯检查：确保最后一个 span 不与前面的 span 重叠
+    fn backtrack_check(result: &mut Vec<EntitySpan>) {
+        while result.len() >= 2 {
+            let last_idx = result.len() - 1;
+            let prev_idx = last_idx - 1;
+
+            if result[prev_idx].start < result[last_idx].end
+                && result[last_idx].start < result[prev_idx].end
+            {
+                // 两个 span 重叠：保留置信度更高的
+                if result[last_idx].confidence >= result[prev_idx].confidence {
+                    result.remove(prev_idx);
+                } else {
+                    result.remove(last_idx);
+                    break; // 保留的 span 已在更早位置，不可能再与之前的重叠
+                }
+            } else {
+                break; // 不重叠，无需继续回溯
+            }
+        }
     }
 
     /// 更新置信度阈值
@@ -169,5 +194,39 @@ mod tests {
         let resolver = ConflictResolver::new(0.0);
         let result = resolver.resolve(vec![]);
         assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_backtrack_after_replacement() {
+        // Scenario: high-confidence narrow span replaces first span,
+        // then we get a wide medium-confidence span that overlaps both.
+        // After replacing the last, we must backtrack to check against the earlier one.
+        let resolver = ConflictResolver::new(0.0);
+        let spans = vec![
+            make_span(0, 10, 0.6, "wide-low"),
+            make_span(5, 15, 0.8, "narrow-high"),
+            make_span(12, 20, 0.7, "tail"),
+        ];
+        let result = resolver.resolve(spans);
+        // narrow-high(5..15,0.8) replaces wide-low(0..10,0.6)
+        // tail(12..20,0.7) overlaps with narrow-high(5..15) — confidence 0.7 < 0.8, skip tail
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].source, "narrow-high");
+    }
+
+    #[test]
+    fn test_three_way_overlap_backtrack() {
+        // A(0..25) gets replaced by B(10..15, high), C(20..30) doesn't overlap B,
+        // so C is kept as separate span. Otherwise fine.
+        let resolver = ConflictResolver::new(0.0);
+        let spans = vec![
+            make_span(0, 25, 0.6, "A"),
+            make_span(10, 15, 0.9, "B"),
+            make_span(20, 30, 0.8, "C"),
+        ];
+        let result = resolver.resolve(spans);
+        // B replaces A: result=[B(10..15)]
+        // C doesn't overlap B: result=[B(10..15), C(20..30)]
+        assert_eq!(result.len(), 2);
     }
 }

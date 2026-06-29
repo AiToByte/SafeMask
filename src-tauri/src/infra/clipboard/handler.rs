@@ -1,12 +1,11 @@
 use crate::common::state::{AppState, MaskHistoryItem};
-use crate::common::events::AppEvents;
 use arboard::Clipboard;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use tauri::{AppHandle, Manager, Emitter};
 use chrono::Local;
 use uuid::Uuid;
-use log::{info, warn, error};
+use log::{info, warn};
 
 pub struct GlobalClipboard {
     app: AppHandle,
