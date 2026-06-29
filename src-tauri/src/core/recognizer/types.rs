@@ -72,19 +72,19 @@ impl EntityType {
         }
     }
 
-    /// 获取实体类型的显示标签（中文，用于脱敏标签显示）
+    /// 获取实体类型的显示标签（英文大写，用于脱敏标签显示）
     pub fn display_label(&self) -> &str {
         match self {
-            Self::Person => "人名",
-            Self::Email => "邮箱",
-            Self::Phone => "手机",
-            Self::Address => "地址",
-            Self::IdCard => "身份证",
-            Self::BankCard => "银行卡",
-            Self::DateOfBirth => "生日",
-            Self::Url => "网址",
-            Self::ApiKey => "密钥",
-            Self::Password => "密码",
+            Self::Person => "PERSON",
+            Self::Email => "EMAIL",
+            Self::Phone => "PHONE",
+            Self::Address => "ADDRESS",
+            Self::IdCard => "ID_CARD",
+            Self::BankCard => "BANK_CARD",
+            Self::DateOfBirth => "DATE",
+            Self::Url => "URL",
+            Self::ApiKey => "API_KEY",
+            Self::Password => "PASSWORD",
             Self::IpAddress => "IP",
             Self::Custom(s) => s.as_str(),
         }

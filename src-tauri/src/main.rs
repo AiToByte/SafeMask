@@ -37,6 +37,27 @@ fn main() {
 
     info!("🚀 Tauri 应用启动中...");
 
+    // 🚀 限制线程数，降低资源占用（适用于资源受限环境）
+    // 1. 限制 Rayon 线程池（文件并行处理）
+    if let Ok(threads_str) = std::env::var("SAFEMASK_THREADS") {
+        if let Ok(n) = threads_str.parse::<usize>() {
+            info!("🔧 限制 Rayon 线程数为: {}", n);
+            unsafe { std::env::set_var("RAYON_NUM_THREADS", threads_str); }
+        }
+    } else {
+        // 默认限制为 2 线程，避免占用全部 CPU
+        info!("🔧 默认限制 Rayon 线程数为: 2");
+        unsafe { std::env::set_var("RAYON_NUM_THREADS", "2"); }
+    }
+
+    // 2. 限制 ONNX Runtime 线程数
+    if let Ok(ort_threads) = std::env::var("ORT_NUM_THREADS") {
+        info!("🔧 限制 ONNX Runtime 线程数为: {}", ort_threads);
+    } else {
+        unsafe { std::env::set_var("ORT_NUM_THREADS", "2"); }
+        info!("🔧 默认限制 ONNX Runtime 线程数为: 2");
+    }
+
     if let Err(e) = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())

@@ -171,6 +171,26 @@ impl NerEngine {
             })?;
         write_log("  优化级别设置成功");
 
+        // 🚀 限制 ONNX Runtime 线程数，降低资源占用
+        let ort_threads = std::env::var("ORT_NUM_THREADS")
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(2);
+        write_log(&format!("  设置 ONNX 线程数: intra={}, inter={}", ort_threads, ort_threads));
+        builder = builder
+            .with_intra_threads(ort_threads)
+            .map_err(|e| {
+                write_log(&format!("⚠️ 设置 intra_threads 失败: {}", e));
+                anyhow::anyhow!("设置 intra_threads 失败: {}", e)
+            })?;
+        builder = builder
+            .with_inter_threads(ort_threads)
+            .map_err(|e| {
+                write_log(&format!("⚠️ 设置 inter_threads 失败: {}", e));
+                anyhow::anyhow!("设置 inter_threads 失败: {}", e)
+            })?;
+        write_log("  线程数设置成功");
+
         write_log(&format!("  从文件加载模型: {}", model_path.display()));
         write_log("  调用 commit_from_file()...");
         write_log("  （这可能需要几分钟，请耐心等待...）");
@@ -330,6 +350,40 @@ impl NerEngine {
             let seq = shape[1] as usize;
             let labels = shape[2] as usize;
             let data: Vec<f32> = logits_slice.to_vec();
+
+            // 诊断日志：记录模型对每个 token 的预测
+            let log_file = std::path::PathBuf::from("ai_model_load.log");
+            let _ = std::fs::OpenOptions::new().create(true).append(true).open(&log_file)
+                .and_then(|mut f| {
+                    use std::io::Write;
+                    writeln!(f, "\n=== 推理诊断 (seq_len={}) ===", seq).ok();
+                    for i in 0..seq.min(30) {
+                        let offset = offsets.get(i).copied().unwrap_or((0, 0));
+                        let token_text = if offset.0 < text.len() && offset.1 <= text.len() {
+                            &text[offset.0..offset.1]
+                        } else { "" };
+                        let start_idx = i * labels;
+                        let end_idx = start_idx + labels;
+                        let token_logits = &data[start_idx..end_idx.min(data.len())];
+                        let (best_label, best_score) = if !token_logits.is_empty() {
+                            let mut max_idx = 0usize;
+                            let mut max_val = f32::NEG_INFINITY;
+                            for (li, &v) in token_logits.iter().enumerate() {
+                                if v > max_val { max_val = v; max_idx = li; }
+                            }
+                            let label_str = self.labels.get(max_idx).map(|s| s.as_str()).unwrap_or("O");
+                            let score = ((1.0_f64) / token_logits.iter()
+                                .map(|&x| ((x - max_val) as f64).exp())
+                                .sum::<f64>()) as f32;
+                            (label_str, score)
+                        } else { ("O", 0.0) };
+                        if best_label != "O" {
+                            write!(f, "  token[{}] \"{}\" [{:?}..{:?}]: {} ({:.3})", i, token_text, offset.0, offset.1, best_label, best_score).ok();
+                        }
+                    }
+                    writeln!(f, "=== 诊断结束 ===").ok();
+                    Ok::<_, std::io::Error>(())
+                });
 
             (seq, labels, data)
             // outputs 在这里被 drop，释放 mutable borrow
