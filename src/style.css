@@ -1,7 +1,7 @@
-/* --- 引入 Inter (UI) 和 JetBrains Mono (数据) --- */
+/* ── Fonts ── */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
-/* --- 基础 Tailwind 指令 --- */
+/* ── Tailwind Directives ── */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,18 +9,16 @@
 @layer base {
   :root {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background-color: #09090b; /* 更纯净的暗色 */
+    background-color: #09090b;
     -webkit-font-smoothing: antialiased;
   }
 
-  /* 呼吸感：平滑滚动 */
   html {
     scroll-behavior: smooth;
   }
 
-  /* 雅致的滚动条 */
   ::-webkit-scrollbar {
-    width: 3px;
+    width: 2px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
@@ -35,63 +33,95 @@
   }
 }
 
-/* 玻璃拟态全局类：增加多层阴影 */
+/* ── Glass Morphism ── */
 .glass-morphism {
   background: rgba(18, 18, 23, 0.7);
   backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.04);
-  box-shadow: 
+  box-shadow:
     0 4px 24px -1px rgba(0, 0, 0, 0.2),
     inset 0 1px 1px 0 rgba(255, 255, 255, 0.02);
 }
 
 @layer components {
-  /* 🚀 修复 animate-in 报错：手动定义常用的微动效类 */
+  /* ── Sidebar ── */
+  .sidebar-item {
+    @apply w-12 h-12 flex items-center justify-center rounded-xl transition-all duration-300;
+  }
+
+  /* Flow animation for active sidebar bg */
+  @keyframes flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .animate-flow {
+    background-size: 200% 100%;
+    animation: flow 3s ease-in-out infinite;
+  }
+
+  /* Shimmer for progress bar */
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+  }
+  .animate-shimmer {
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* Custom scrollbar with amber tint */
+  .custom-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(245, 158, 11, 0.2) transparent;
+  }
+  .custom-scroll::-webkit-scrollbar {
+    width: 2px;
+  }
+  .custom-scroll::-webkit-scrollbar-thumb {
+    background: rgba(245, 158, 11, 0.1);
+    border-radius: 9999px;
+  }
+  .custom-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(245, 158, 11, 0.2);
+  }
+
+  /* ── Legacy animation fallbacks ── */
   .animate-in {
     animation-duration: 300ms;
     animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     animation-fill-mode: forwards;
   }
 
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
   .fade-in {
-    @keyframes fade-in {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
     animation-name: fade-in;
   }
 
+  @keyframes zoom-in {
+    from { transform: scale(0.95); }
+    to { transform: scale(1); }
+  }
   .zoom-in {
-    @keyframes zoom-in {
-      from { transform: scale(0.95); }
-      to { transform: scale(1); }
-    }
     animation-name: zoom-in;
   }
 
+  @keyframes slide-in-from-top {
+    from { transform: translateY(-4px); }
+    to { transform: translateY(0); }
+  }
   .slide-in-from-top-1 {
-    @keyframes slide-in-from-top {
-      from { transform: translateY(-4px); }
-      to { transform: translateY(0); }
-    }
     animation-name: slide-in-from-top;
   }
 
-  /* 之前的 custom-scroll 也在这一层级定义 */
-  .custom-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(245, 158, 11, 0.2) transparent;
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
   }
-}
-
-/* 修改全局滚动条 */
-::-webkit-scrollbar {
-  width: 2px; /* 极细 */
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(59, 130, 246, 0.5); /* 悬浮时变蓝 */
+  .animate-shake {
+    animation: shake 0.4s ease-in-out;
+  }
 }

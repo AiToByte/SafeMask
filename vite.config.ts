@@ -1,18 +1,25 @@
 import { defineConfig } from "vite";
-import vue from "@vitejs/plugin-vue";
+import react from "@vitejs/plugin-react";
+import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
-  plugins: [vue()],
+  plugins: [react()],
 
-  // Vite 选项定制，优化 Tauri 开发体验
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+
+  // Vite options tuned for Tauri development
   clearScreen: false,
   server: {
-    host: "127.0.0.1", // 强制使用 IPv4 地址
+    host: "127.0.0.1",
     port: 18924,
     strictPort: true,
     watch: {
-      // 告诉 Vite 忽略监听 src-tauri 文件夹，避免循环触发重绘
+      // Tell Vite to ignore watching src-tauri
       ignored: ["**/src-tauri/**"],
     },
   },
