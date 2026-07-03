@@ -360,6 +360,39 @@ fn init_background_services(handle: &AppHandle) -> Result<(), Box<dyn std::error
 /// 处理窗口特有事件（如关闭拦截）
 fn setup_window_handlers(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(window) = handle.get_webview_window("main") {
+        // ── 强制窗口圆角 (Win11 原生 + Win10 21H2+) ──
+        #[cfg(target_os = "windows")]
+        {
+            use std::mem::size_of;
+
+            #[link(name = "dwmapi")]
+            unsafe extern "system" {
+                fn DwmSetWindowAttribute(
+                    hwnd: *mut std::ffi::c_void,
+                    dwAttribute: u32,
+                    pvAttribute: *const std::ffi::c_void,
+                    cbAttribute: u32,
+                ) -> i32;
+            }
+
+            const DWMWA_WINDOW_CORNER_PREFERENCE: u32 = 33;
+            const DWMWCP_ROUND: u32 = 2;
+
+            if let Ok(hwnd) = window.hwnd() {
+                let ptr = hwnd.0;
+                if !ptr.is_null() {
+                    unsafe {
+                        let _ = DwmSetWindowAttribute(
+                            ptr,
+                            DWMWA_WINDOW_CORNER_PREFERENCE,
+                            &DWMWCP_ROUND as *const _ as *const std::ffi::c_void,
+                            size_of::<u32>() as u32,
+                        );
+                    }
+                }
+            }
+        }
+
         let w = window.clone();
         window.on_window_event(move |event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

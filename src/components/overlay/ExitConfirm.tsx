@@ -70,13 +70,13 @@ export default function ExitConfirm() {
             initial="initial"
             animate="animate"
             exit="exit"
-            className="p-10 rounded-[2.5rem] border border-white/10 w-full max-w-sm shadow-2xl text-center space-y-8 bg-[#0f0f14]/95"
+            className="p-12 rounded-4xl border border-white/10 w-full max-w-md shadow-2xl text-center space-y-8 bg-[#0f0f14]/95"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Title */}
             <div className="space-y-2">
-              <h2 className="text-xl font-bold text-white">确认退出程序？</h2>
-              <p className="text-sm text-zinc-400 leading-relaxed">
+              <h2 className="text-2xl font-bold text-white">确认退出程序？</h2>
+              <p className="text-base text-zinc-400 leading-relaxed">
                 建议最小化到系统托盘
                 <br />
                 程序将在后台持续守护您的隐私数据
@@ -88,7 +88,7 @@ export default function ExitConfirm() {
               <button
                 type="button"
                 onClick={() => handleExit("minimize")}
-                className="w-full py-4 bg-amber-500 text-black rounded-2xl font-bold text-xs hover:bg-amber-400 active:scale-95 transition-all shadow-lg shadow-amber-500/10"
+                className="w-full py-5 bg-amber-500 text-black rounded-2xl font-bold text-sm hover:bg-amber-400 active:scale-95 transition-all shadow-lg shadow-amber-500/10"
               >
                 最小化到系统托盘
               </button>
@@ -96,7 +96,7 @@ export default function ExitConfirm() {
               <button
                 type="button"
                 onClick={() => handleExit("quit")}
-                className="w-full py-4 bg-white/5 border border-white/10 text-zinc-400 rounded-2xl font-bold text-xs hover:bg-white/10 hover:text-white transition-all"
+                className="w-full py-5 bg-white/5 border border-white/10 text-zinc-400 rounded-2xl font-bold text-sm hover:bg-white/10 hover:text-white transition-all"
               >
                 彻底关闭程序
               </button>
@@ -110,7 +110,7 @@ export default function ExitConfirm() {
                 onChange={(e) => setRememberChoice(e.target.checked)}
                 className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-amber-500 focus:ring-amber-500/30 focus:ring-offset-0 cursor-pointer"
               />
-              <span className="text-xs text-zinc-500">记住我的选择</span>
+              <span className="text-sm text-zinc-500">记住我的选择</span>
             </label>
           </motion.div>
         </motion.div>

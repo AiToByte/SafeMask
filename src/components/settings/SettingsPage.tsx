@@ -4,13 +4,13 @@ import {
   Shield, Keyboard, Bell, Timer, RotateCcw,
   Save, Trash2, Monitor, Cpu, Volume2, Eye, AlertTriangle,
   User, Mail, Github, Globe, Info, ExternalLink, Copyright,
-  Copy, Check, Brain, Zap, Power, PowerOff, Loader2,
+  Copy, Check, Brain, Zap, Power, PowerOff, Loader2, Lock,
 } from "lucide-react";
 import { useAppStore } from "@/hooks/useAppStore";
 import { useAudioFeedback } from "@/hooks/useAudioFeedback";
 import { MaskAPI } from "@/services/api";
 import { cn } from "@/lib/utils";
-import { message } from "@tauri-apps/plugin-dialog";
+import { message, confirm } from "@tauri-apps/plugin-dialog";
 
 // ── Format helpers ──
 
@@ -57,15 +57,15 @@ export default function SettingsPage() {
   const [showKeyWarn, setShowWarn] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [emailCopied, setEmail] = useState(false);
-  const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [modelUnselectLock, setModelUnselectLock] = useState(false);
   const [aiToggling, setAiToggling] = useState(false);
   const { play } = useAudioFeedback(store.settings.enable_audio_feedback);
 
   // Auto-select first model when available models change
   useEffect(() => {
     if (store.aiEngineStatus?.available_count && store.aiEngineStatus?.available_count > 0) {
-      // If no model is selected yet or count changed, select first
-      setSelectedModels(new Set(["privacy-filter"]));
+      setSelectedModel(store.aiEngineStatus.model?.name || "privacy-filter");
     }
   }, [store.aiEngineStatus?.available_count, store.aiEngineStatus?.model?.name]);
 
@@ -223,7 +223,7 @@ export default function SettingsPage() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="max-w-5xl mx-auto space-y-8 pb-16"
+      className="max-w-5xl mx-auto space-y-10 pb-16"
     >
       {/* ════════════════ HEADER ════════════════ */}
       <div className="flex items-center gap-6 mb-10 px-2">
@@ -234,7 +234,7 @@ export default function SettingsPage() {
           <h2 className="text-3xl font-bold text-amber-50/90 tracking-tight">
             控制台偏好设置
           </h2>
-          <p className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.4em] mt-1.5">
+           <p className="text-xs text-zinc-600 font-black uppercase tracking-[0.4em] mt-1.5">
             System Configuration &amp; Developer Info
           </p>
         </div>
@@ -244,18 +244,18 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
         {/* ── Kernel Behaviour ── */}
-<div className="bg-[#0d0d0f]/80 border border-white/[0.04] rounded-[2.5rem] p-8 shadow-2xl">
-  <div className="flex items-center gap-3 text-[11px] font-black text-amber-50/50 uppercase tracking-[0.3em] mb-8">
-    <Cpu size={16} className="text-blue-500" />
+<div className="bg-[#0d0d0f]/80 border border-white/[0.04] rounded-4xl p-10 shadow-2xl">
+  <div className="flex items-center gap-3 text-xs font-black text-amber-50/50 uppercase tracking-[0.3em] mb-8">
+    <Cpu size={18} className="text-blue-500/70" />
     <span>Kernel Behavior</span>
   </div>
   <div className="space-y-8">
     <div className="flex justify-between items-center">
       <div>
-        <div className="text-[15px] font-bold text-amber-50/80">启用影子宇宙模式</div>
-        <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">数据流在内存中脱敏，物理剪贴板保留原文</div>
+        <div className="text-base font-bold text-amber-50/80">启用影子宇宙模式</div>
+        <div className="text-xs text-zinc-600 font-bold uppercase tracking-widest">数据流在内存中脱敏，物理剪贴板保留原文</div>
       </div>
-      <label className="relative w-12 h-6 cursor-pointer">
+      <label className="relative w-14 h-7 cursor-pointer">
         <input
           type="checkbox"
           checked={store.settings.shadow_mode_enabled}
@@ -263,12 +263,12 @@ export default function SettingsPage() {
           className="opacity-0 w-0 h-0 absolute"
         />
         <div className={cn("absolute inset-0 rounded-full transition-all duration-500 border border-white/[0.05]", store.settings.shadow_mode_enabled ? "bg-blue-600/80 border-blue-400/20" : "bg-zinc-800")}>
-          <div className={cn("absolute h-4 w-4 left-1 bottom-1 bg-white rounded-full shadow-lg transition-all duration-500", store.settings.shadow_mode_enabled && "translate-x-6")} />
+          <div className={cn("absolute h-5 w-5 left-1 bottom-1 bg-white rounded-full shadow-lg transition-all duration-500", store.settings.shadow_mode_enabled && "translate-x-7")} />
         </div>
       </label>
     </div>
     <div className="p-7 bg-black/40 rounded-[2rem] border border-white/[0.03] shadow-inner">
-      <div className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-5">Paste Shortcut</div>
+      <div className="text-xs font-black text-zinc-600 uppercase tracking-widest mb-5">Paste Shortcut</div>
       <div className="relative">
         <input
           readOnly
@@ -280,7 +280,7 @@ export default function SettingsPage() {
         />
         {showKeyWarn && (
           <div className="absolute -bottom-7 left-0 right-0 flex justify-center">
-            <span className="text-[9px] text-red-500 font-bold uppercase bg-[#0c0b0a] px-3 py-1 rounded-full border border-red-500/20">Alt+M is reserved</span>
+            <span className="text-[10px] text-red-500 font-bold uppercase bg-[#0c0b0a] px-3 py-1 rounded-full border border-red-500/20">Alt+M is reserved</span>
           </div>
         )}
       </div>
@@ -290,58 +290,69 @@ export default function SettingsPage() {
 
 
         {/* ── Feedback ── */}
-<div className="bg-[#0d0d0f]/80 border border-white/[0.04] rounded-[2.5rem] p-8 shadow-2xl">
-  <div className="flex items-center gap-3 text-[11px] font-black text-amber-50/50 uppercase tracking-[0.3em] mb-8">
-    <Volume2 size={16} className="text-amber-500" />
+<div className="bg-[#0d0d0f]/80 border border-white/[0.04] rounded-4xl p-10 shadow-2xl">
+  <div className="flex items-center gap-3 text-xs font-black text-amber-50/50 uppercase tracking-[0.3em] mb-8">
+    <Volume2 size={18} className="text-amber-500/70" />
     <span>实时感官反馈 (Feedback)</span>
   </div>
   <div className="space-y-6">
-    <div className="flex justify-between items-center py-1">
-      <div className="flex items-center gap-3">
-        <Eye size={14} className="text-zinc-700" />
+    <div className="flex justify-between items-center py-2 px-1 rounded-xl hover:bg-white/[0.01] transition-colors">
+      <div className="flex items-center gap-4">
+        <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+          <Eye size={16} className="text-blue-400/80" />
+        </div>
         <div>
-          <div className="text-[13px] font-bold text-zinc-400">开启蓝盾视觉气泡</div>
+          <div className="text-sm font-bold text-zinc-300">蓝盾视觉气泡</div>
+          <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mt-0.5">桌面叠加层实时反馈</div>
         </div>
       </div>
-      <label className="relative w-9 h-5 cursor-pointer">
+      <label className="relative w-11 h-6 cursor-pointer">
         <input
           type="checkbox"
           checked={store.settings.enable_visual_feedback}
           onChange={() => store.updateSettings({ ...store.settings, enable_visual_feedback: !store.settings.enable_visual_feedback })}
           className="opacity-0 w-0 h-0 absolute"
         />
-        <div className={cn("absolute inset-0 rounded-full transition-all duration-500 border border-white/[0.05]", store.settings.enable_visual_feedback ? "bg-blue-600/80 border-blue-400/20" : "bg-zinc-800")}>
-          <div className={cn("absolute h-3 w-3 left-1 bottom-1 bg-white rounded-full shadow-lg transition-all duration-500", store.settings.enable_visual_feedback && "translate-x-4")} />
+        <div className={cn("absolute inset-0 rounded-full transition-all duration-500 border border-white/[0.05]", store.settings.enable_visual_feedback ? "bg-blue-600/80 border-blue-400/20 shadow-[0_0_8px_rgba(59,130,246,0.2)]" : "bg-zinc-800")}>
+          <div className={cn("absolute h-4 w-4 left-1 bottom-1 bg-white rounded-full shadow-lg transition-all duration-500", store.settings.enable_visual_feedback && "translate-x-5")} />
         </div>
       </label>
     </div>
-    <div className="flex justify-between items-center py-1">
-      <div className="flex items-center gap-3">
-        <Volume2 size={14} className="text-zinc-700" />
+    <div className="flex justify-between items-center py-2 px-1 rounded-xl hover:bg-white/[0.01] transition-colors">
+      <div className="flex items-center gap-4">
+        <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+          <Volume2 size={16} className="text-amber-400/80" />
+        </div>
         <div>
-          <div className="text-[13px] font-bold text-zinc-400">开启物理机械音效</div>
+          <div className="text-sm font-bold text-zinc-300">物理机械音效</div>
+          <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mt-0.5">系统声音反馈</div>
         </div>
       </div>
-      <label className="relative w-9 h-5 cursor-pointer">
+      <label className="relative w-11 h-6 cursor-pointer">
         <input
           type="checkbox"
           checked={store.settings.enable_audio_feedback}
           onChange={() => store.updateSettings({ ...store.settings, enable_audio_feedback: !store.settings.enable_audio_feedback })}
           className="opacity-0 w-0 h-0 absolute"
         />
-        <div className={cn("absolute inset-0 rounded-full transition-all duration-500 border border-white/[0.05]", store.settings.enable_audio_feedback ? "bg-blue-600/80 border-blue-400/20" : "bg-zinc-800")}>
-          <div className={cn("absolute h-3 w-3 left-1 bottom-1 bg-white rounded-full shadow-lg transition-all duration-500", store.settings.enable_audio_feedback && "translate-x-4")} />
+        <div className={cn("absolute inset-0 rounded-full transition-all duration-500 border border-white/[0.05]", store.settings.enable_audio_feedback ? "bg-amber-600/80 border-amber-400/20 shadow-[0_0_8px_rgba(245,158,11,0.2)]" : "bg-zinc-800")}>
+          <div className={cn("absolute h-4 w-4 left-1 bottom-1 bg-white rounded-full shadow-lg transition-all duration-500", store.settings.enable_audio_feedback && "translate-x-5")} />
         </div>
       </label>
     </div>
-    <div className="pt-8 border-t border-white/[0.03] space-y-6">
+    <div className="pt-6 border-t border-white/[0.03] space-y-5">
       <div className="flex justify-between items-end">
-        <span className="text-[13px] font-bold text-zinc-300 flex items-center gap-2">
-          <Timer size={14} className="text-amber-500/60" />
-          粘贴注入延迟
-        </span>
-        <span className="font-mono text-amber-200 text-sm font-bold bg-amber-500/10 px-3 py-1 rounded-lg border border-amber-500/20">
-          {store.settings.paste_delay_ms}ms
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+            <Timer size={16} className="text-amber-400/80" />
+          </div>
+          <div>
+            <div className="text-sm font-bold text-zinc-300">粘贴注入延迟</div>
+            <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mt-0.5">快捷键注入后延迟毫秒数</div>
+          </div>
+        </div>
+        <span className="font-mono text-amber-300 text-sm font-bold bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.08)]">
+          {store.settings.paste_delay_ms} ms
         </span>
       </div>
       <div className="relative py-2">
@@ -352,9 +363,23 @@ export default function SettingsPage() {
           step="50"
           value={store.settings.paste_delay_ms}
           onChange={(e) => store.updateSettings({ ...store.settings, paste_delay_ms: parseInt(e.target.value) })}
-          className="w-full h-2.5 bg-zinc-900 rounded-full appearance-none cursor-pointer outline-none border border-white/[0.05] shadow-inner"
+          className="w-full h-3.5 bg-zinc-900 rounded-full appearance-none cursor-pointer outline-none border border-white/[0.05] shadow-inner slider-amber-glow"
           style={{ backgroundImage: "linear-gradient(#f59e0b,#f59e0b)", backgroundSize: sliderProgress + "% 100%", backgroundRepeat: "no-repeat" }}
         />
+        {/* Tick marks */}
+        <div className="flex justify-between px-0.5 mt-2">
+          {[50, 200, 400, 600, 800].map((ms) => (
+            <span
+              key={ms}
+              className={cn(
+                "text-[8px] font-mono transition-colors",
+                store.settings.paste_delay_ms === ms ? "text-amber-500/60" : "text-zinc-800",
+              )}
+            >
+              {ms}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   </div>
@@ -362,9 +387,9 @@ export default function SettingsPage() {
 
 
         {/* ── AI Engine (span-2) ── */}
-<div className="lg:col-span-2 bg-[#0d0d0f]/80 border border-white/[0.04] rounded-[2.5rem] p-8 shadow-2xl">
-  <div className="flex items-center gap-3 text-[11px] font-black text-amber-50/50 uppercase tracking-[0.3em] mb-8">
-    <Brain size={16} className="text-purple-500" />
+<div className="lg:col-span-2 bg-[#0d0d0f]/80 border border-white/[0.04] rounded-4xl p-10 shadow-2xl">
+  <div className="flex items-center gap-3 text-xs font-black text-amber-50/50 uppercase tracking-[0.3em] mb-8">
+    <Brain size={18} className="text-purple-500/70" />
     <span>AI Engine</span>
   </div>
 
@@ -373,8 +398,8 @@ export default function SettingsPage() {
     <div className="flex items-center gap-3">
       <div className={cn("w-3 h-3 rounded-full transition-colors", aiDot)} />
       <div>
-        <div className="text-[11px] text-zinc-300 font-medium">Status</div>
-        <p className="text-[9px] text-zinc-600 mt-0.5">{aiStatusText}</p>
+        <div className="text-xs text-zinc-300 font-medium">Status</div>
+        <p className="text-[10px] text-zinc-600 mt-0.5">{aiStatusText}</p>
       </div>
     </div>
     <div className="flex items-center gap-3">
@@ -386,7 +411,7 @@ export default function SettingsPage() {
       </button>
       <div
         className={cn(
-          "relative w-9 h-5 cursor-pointer select-none rounded-full transition-all duration-500 border",
+          "relative w-11 h-6 cursor-pointer select-none rounded-full transition-all duration-500 border",
           (aiActive || aiToggling) ? "bg-blue-600/80 border-blue-400/20" : "bg-zinc-800 border-white/[0.05]",
         )}
         onClick={() => {
@@ -395,7 +420,7 @@ export default function SettingsPage() {
           }
         }}
       >
-        <div className={cn("absolute h-3 w-3 left-1 bottom-1 bg-white rounded-full shadow-lg transition-all duration-500", (aiActive || aiToggling) && "translate-x-4")} />
+        <div className={cn("absolute h-4 w-4 left-1 bottom-1 bg-white rounded-full shadow-lg transition-all duration-500", (aiActive || aiToggling) && "translate-x-5")} />
       </div>
     </div>
   </div>
@@ -409,12 +434,12 @@ export default function SettingsPage() {
           <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" style={{ animationDelay: "0.15s" }} />
           <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" style={{ animationDelay: "0.3s" }} />
         </div>
-        <span className="text-[11px] text-amber-400 font-medium flex items-center gap-2">
-          <Loader2 size={14} className="animate-spin" />
+        <span className="text-xs text-amber-400 font-medium flex items-center gap-2">
+          <Loader2 size={16} className="animate-spin" />
           正在加载 874MB 模型文件...
         </span>
       </div>
-      <p className="text-[10px] text-zinc-600 font-mono pl-8">
+      <p className="text-xs text-zinc-600 font-mono pl-8">
         已用时 {Math.floor(elapsed / 60)} 分 {elapsed % 60} 秒
       </p>
     </div>
@@ -425,11 +450,11 @@ export default function SettingsPage() {
     <div className="mt-4 p-5 bg-red-500/[0.06] rounded-xl border border-red-500/20 space-y-3">
       <div className="flex items-center gap-3">
         <AlertTriangle size={16} className="text-red-400 shrink-0" />
-        <span className="text-[11px] text-red-400 font-medium">{aiStatusText}</span>
+        <span className="text-xs text-red-400 font-medium">{aiStatusText}</span>
       </div>
       <button
         onClick={() => { store.fetchAiStatus(); store.fetchEngineInfo(); }}
-        className="flex items-center gap-2 text-[10px] text-red-300/70 hover:text-red-300 transition-colors font-bold uppercase tracking-wider ml-7"
+        className="flex items-center gap-2 text-xs text-red-300/70 hover:text-red-300 transition-colors font-bold uppercase tracking-wider ml-7"
       >
         <RotateCcw size={12} /> Retry
       </button>
@@ -442,17 +467,17 @@ export default function SettingsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Brain size={14} className="text-purple-400" />
-          <span className="text-[13px] font-bold text-zinc-200">{store.aiEngineStatus.model.name}</span>
+          <span className="text-sm font-bold text-zinc-200">{store.aiEngineStatus.model.name}</span>
         </div>
-        <span className="text-[10px] font-mono text-zinc-500 bg-white/[0.03] px-3 py-1 rounded-full">
+        <span className="text-xs font-mono text-zinc-500 bg-white/[0.03] px-3 py-1 rounded-full">
           v{store.aiEngineStatus.model.version}
         </span>
       </div>
-      <div className="flex items-center justify-between text-[10px] text-zinc-600 border-t border-white/[0.03] pt-3">
+      <div className="flex items-center justify-between text-xs text-zinc-600 border-t border-white/[0.03] pt-3">
         <span className="font-mono">{store.aiEngineStatus.model.size_mb.toFixed(0)} MB</span>
         <div className="flex flex-wrap gap-1.5">
           {store.aiEngineStatus.model.entity_types?.map((et) => (
-            <span key={et} className="px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 text-[9px] font-bold uppercase tracking-wider">
+            <span key={et} className="px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 text-[10px] font-bold uppercase tracking-wider">
               {formatEntityType(et)}
             </span>
           ))}
@@ -463,29 +488,67 @@ export default function SettingsPage() {
 
   {/* Available models list */}
   <div className="mt-4 p-5 bg-black/30 rounded-xl border border-white/[0.03]">
-    <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">Available Models ({store.aiEngineStatus?.available_count || 0})</p>
-    <div className="space-y-2">
-      {preparedModels.map((model, idx) => {
-        const checked = selectedModels.has(model.name);
+    <p className="text-xs font-black text-zinc-600 uppercase tracking-widest mb-4">
+      已载入模型 ({store.aiEngineStatus?.available_count || 0})
+    </p>
+    <div className="space-y-3">
+      {preparedModels.map((model) => {
+        const isActive = selectedModel === model.name;
+        const isOnly = preparedModels.length <= 1;
         return (
-          <label key={model.name} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-white/[0.02] cursor-pointer transition-colors">
+          <div
+            key={model.name}
+            onClick={async () => {
+              if (isActive && isOnly) {
+                if (!modelUnselectLock) {
+                  setModelUnselectLock(true);
+                  await message("当前仅有一个可用模型，至少需要选择一个模型才能运行 AI 识别", { title: "模型选择", kind: "info" });
+                  setModelUnselectLock(false);
+                }
+                return;
+              }
+              setSelectedModel(model.name);
+            }}
+            className={cn(
+              "flex items-center gap-4 p-3.5 rounded-xl border transition-all duration-300 cursor-pointer",
+              isActive
+                ? "bg-purple-500/10 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.08)]"
+                : "bg-white/[0.01] border-white/[0.04] hover:bg-white/[0.03] hover:border-white/[0.08]",
+            )}
+          >
+            {/* Radio indicator */}
             <div
-              onClick={() => {
-                const next = new Set(selectedModels);
-                if (next.has(model.name)) next.delete(model.name);
-                else next.add(model.name);
-                setSelectedModels(next);
-              }}
-              className={cn("w-4 h-4 rounded border flex items-center justify-center transition-colors", checked ? "bg-blue-600/80 border-blue-400/40" : "border-zinc-700")}
+              className={cn(
+                "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0",
+                isActive ? "border-purple-400" : "border-zinc-700",
+              )}
             >
-              {checked && <Check size={10} className="text-white" />}
+              {isActive && <div className="w-2.5 h-2.5 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.5)]" />}
             </div>
-            <div className="flex-1 flex items-center justify-between">
-              <span className="text-[11px] text-zinc-400 font-medium">{model.name}</span>
-              <span className="text-[9px] text-zinc-600 font-mono">{model.size_mb.toFixed(0)} MB</span>
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-zinc-300 truncate">{model.name}</span>
+                {isOnly && (
+                  <Lock size={10} className="text-purple-400/60 shrink-0" />
+                )}
+              </div>
+              <p className="text-[10px] text-zinc-600 mt-0.5 truncate">{model.description}</p>
             </div>
-            <div className={cn("w-2 h-2 rounded-full", model.loaded || (checked && store.aiEngineStatus?.state === 'ready') ? "bg-emerald-500" : "bg-zinc-700")} />
-          </label>
+            {/* Size */}
+            <span className="text-[10px] font-mono text-zinc-600 bg-white/[0.03] px-2.5 py-1 rounded-full">
+              {model.size_mb.toFixed(0)} MB
+            </span>
+            {/* Status dot */}
+            <div
+              className={cn(
+                "w-2 h-2 rounded-full shrink-0",
+                model.loaded || (isActive && store.aiEngineStatus?.state === 'ready')
+                  ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]"
+                  : "bg-zinc-700",
+              )}
+            />
+          </div>
         );
       })}
     </div>
@@ -494,12 +557,12 @@ export default function SettingsPage() {
   {/* Recognizer grid */}
   {store.engineInfo?.recognizers && store.engineInfo.recognizers.length > 0 && (
     <div className="mt-4 p-5 bg-black/30 rounded-xl border border-white/[0.03]">
-      <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">已注册识别器</p>
+      <p className="text-xs font-black text-zinc-600 uppercase tracking-widest mb-4">已注册识别器</p>
       <div className="grid grid-cols-2 gap-2">
         {store.engineInfo.recognizers.map((rec) => (
           <div key={rec} className="flex items-center gap-2.5 py-2 px-3 rounded-xl bg-white/[0.02] border border-white/[0.03]">
             <div className={cn("w-2 h-2 rounded-full shrink-0", getRecognizerColor(rec))} />
-            <span className="text-[10px] font-bold text-zinc-400">{formatRecognizer(rec)}</span>
+            <span className="text-xs font-bold text-zinc-400">{formatRecognizer(rec)}</span>
           </div>
         ))}
       </div>
@@ -509,9 +572,9 @@ export default function SettingsPage() {
 
 
         {/* ── About (span-2) ── */}
-<div className="lg:col-span-2 bg-[#0d0d0f]/80 border border-white/[0.04] rounded-[2.5rem] p-8 shadow-2xl">
-  <div className="flex items-center gap-3 text-[11px] font-black text-amber-50/50 uppercase tracking-[0.3em] mb-8">
-    <Info size={16} className="text-emerald-500" />
+<div className="lg:col-span-2 bg-[#0d0d0f]/80 border border-white/[0.04] rounded-4xl p-10 shadow-2xl">
+  <div className="flex items-center gap-3 text-xs font-black text-amber-50/50 uppercase tracking-[0.3em] mb-8">
+    <Info size={18} className="text-emerald-500/70" />
     <span>About</span>
   </div>
 
@@ -519,15 +582,15 @@ export default function SettingsPage() {
   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
     {/* Author */}
     <div className="space-y-4">
-      <div className="flex items-center gap-3 text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-4">
-        <User size={14} className="text-emerald-500/60" />
+      <div className="flex items-center gap-3 text-xs font-bold text-zinc-600 uppercase tracking-widest mb-4">
+        <User size={16} className="text-emerald-500/60" />
         <span>Author</span>
       </div>
       <div>
         <p className="text-lg font-bold text-amber-50/90">XiaoSheng</p>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-[11px] text-zinc-500">xiaosheng.tech@outlook.com</span>
+        <span className="text-xs text-zinc-500">xiaosheng.tech@outlook.com</span>
         <button
           onClick={copyEmail}
           className={cn("p-1.5 rounded-lg transition-all", emailCopied ? "bg-emerald-500/20 text-emerald-400" : "hover:bg-amber-500/10 text-zinc-600")}
@@ -539,8 +602,8 @@ export default function SettingsPage() {
 
     {/* Connect */}
     <div className="space-y-4">
-      <div className="flex items-center gap-3 text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-4">
-        <Globe size={14} className="text-blue-500/60" />
+      <div className="flex items-center gap-3 text-xs font-bold text-zinc-600 uppercase tracking-widest mb-4">
+        <Globe size={16} className="text-blue-500/60" />
         <span>Connect</span>
       </div>
       <a
@@ -550,64 +613,51 @@ export default function SettingsPage() {
         className="inline-flex items-center gap-3 bg-white/[0.02] hover:bg-white/[0.05] transition-colors p-3.5 rounded-xl border border-white/[0.04]"
       >
         <Github size={16} className="text-zinc-400" />
-        <span className="text-[12px] text-zinc-300 font-medium">GitHub</span>
-        <ExternalLink size={12} className="text-zinc-600" />
+        <span className="text-sm text-zinc-300 font-medium">GitHub</span>
+        <ExternalLink size={14} className="text-zinc-600" />
       </a>
     </div>
 
     {/* Project Info */}
     <div className="space-y-4">
-      <div className="flex items-center gap-3 text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-4">
-        <Copyright size={14} className="text-amber-500/60" />
+      <div className="flex items-center gap-3 text-xs font-bold text-zinc-600 uppercase tracking-widest mb-4">
+        <Copyright size={16} className="text-amber-500/60" />
         <span>Project Info</span>
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <span className="text-[12px] font-mono text-zinc-400 bg-white/[0.03] px-3 py-1 rounded-full">v1.2.4</span>
-        <span className="text-[11px] text-zinc-500">MIT License</span>
+        <span className="text-sm font-mono text-zinc-400 bg-white/[0.03] px-3 py-1 rounded-full">v1.2.4</span>
+        <span className="text-xs text-zinc-500">MIT License</span>
       </div>
       <blockquote className="border-l-2 border-emerald-500/40 pl-4 py-2 bg-emerald-500/[0.03] rounded-r-xl">
-        <p className="text-[11px] text-emerald-300/80 leading-relaxed">
+        <p className="text-xs text-emerald-300/80 leading-relaxed">
           SafeMask 核心脱敏逻辑完全离线运行，绝不上传任何原始敏感数据。
         </p>
       </blockquote>
     </div>
   </div>
 
-  {/* Developer section with feedback toggles */}
-  <div className="mt-8 pt-6 border-t border-white/[0.04] grid grid-cols-2 gap-6">
-    <div className="flex justify-between items-center py-1">
-      <div className="flex items-center gap-3">
-        <Eye size={14} className="text-zinc-700" />
-        <span className="text-[13px] font-bold text-zinc-400">enable_visual_feedback</span>
-      </div>
-      <label className="relative w-9 h-5 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={store.settings.enable_visual_feedback}
-          onChange={() => store.updateSettings({ ...store.settings, enable_visual_feedback: !store.settings.enable_visual_feedback })}
-          className="opacity-0 w-0 h-0 absolute"
-        />
-        <div className={cn("absolute inset-0 rounded-full transition-all duration-500 border border-white/[0.05]", store.settings.enable_visual_feedback ? "bg-blue-600/80 border-blue-400/20" : "bg-zinc-800")}>
-          <div className={cn("absolute h-3 w-3 left-1 bottom-1 bg-white rounded-full shadow-lg transition-all duration-500", store.settings.enable_visual_feedback && "translate-x-4")} />
+  {/* Danger Zone */}
+  <div className="mt-8 pt-6 border-t border-white/[0.04]">
+    <div className="p-5 rounded-2xl bg-red-500/[0.03] border border-red-500/10">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Trash2 size={16} className="text-red-400/70" />
+          <div>
+            <div className="text-sm font-bold text-red-300/80">危险操作</div>
+            <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mt-0.5">清空所有审计记录，不可恢复</div>
+          </div>
         </div>
-      </label>
-    </div>
-    <div className="flex justify-between items-center py-1">
-      <div className="flex items-center gap-3">
-        <Volume2 size={14} className="text-zinc-700" />
-        <span className="text-[13px] font-bold text-zinc-400">enable_audio_feedback</span>
+        <button
+          onClick={async () => {
+            const confirmed = await confirm("此操作将永久删除所有审计记录，且不可恢复。确定要继续吗？", { title: "危险操作", kind: "warning" });
+            if (confirmed) { store.clearHistory(); play("CLICK"); }
+          }}
+          className="flex items-center gap-2 px-5 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-red-500/20 transition-all active:scale-95"
+        >
+          <Trash2 size={14} />
+          销毁审计痕迹
+        </button>
       </div>
-      <label className="relative w-9 h-5 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={store.settings.enable_audio_feedback}
-          onChange={() => store.updateSettings({ ...store.settings, enable_audio_feedback: !store.settings.enable_audio_feedback })}
-          className="opacity-0 w-0 h-0 absolute"
-        />
-        <div className={cn("absolute inset-0 rounded-full transition-all duration-500 border border-white/[0.05]", store.settings.enable_audio_feedback ? "bg-blue-600/80 border-blue-400/20" : "bg-zinc-800")}>
-          <div className={cn("absolute h-3 w-3 left-1 bottom-1 bg-white rounded-full shadow-lg transition-all duration-500", store.settings.enable_audio_feedback && "translate-x-4")} />
-        </div>
-      </label>
     </div>
   </div>
 </div>
@@ -616,20 +666,14 @@ export default function SettingsPage() {
       </div>
 
       {/* ════════════════ BOTTOM BAR ════════════════ */}
-<div className="flex justify-between items-center pt-10 border-t border-white/[0.03]">
-  <button
-    onClick={store.clearHistory}
-    className="flex items-center gap-3 text-zinc-700 hover:text-red-400 transition-all font-black text-[10px] uppercase tracking-[0.2em] px-5 py-2.5 rounded-xl hover:bg-red-500/5"
-  >
-    <Trash2 size={14} />
-    销毁所有审计痕迹
-  </button>
+<div className="flex justify-end items-center pt-10 border-t border-white/[0.03]">
   <button
     onClick={handleSave}
-    className="flex items-center gap-4 px-12 py-4 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-500 hover:bg-amber-500 hover:text-black hover:shadow-[0_0_40px_rgba(245,158,11,0.25)] active:scale-95"
+    className="group relative flex items-center gap-4 px-16 py-5 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 hover:bg-amber-500 hover:text-black hover:shadow-[0_0_40px_rgba(245,158,11,0.25)] active:scale-95 overflow-hidden"
   >
-    <Save size={18} />
-    保存配置并重载内核
+    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+    <Save size={20} className="relative z-10" />
+    <span className="relative z-10">保存配置并重载内核</span>
   </button>
 </div>
 

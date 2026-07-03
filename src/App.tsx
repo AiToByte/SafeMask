@@ -63,22 +63,25 @@ export default function App() {
   });
 
   return (
-    <div className="flex h-screen bg-[#0c0b0a] text-amber-50/90 select-none overflow-hidden font-sans">
+    <div className="flex flex-col h-screen bg-[#0c0b0a] text-amber-50/90 select-none overflow-hidden font-sans relative">
+
       {/* Toast notifications */}
       <MagicFeedback />
 
-      {/* Navigation sidebar */}
-      <Sidebar />
+      {/* Body: sidebar + main */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Navigation sidebar */}
+        <Sidebar />
 
-      {/* Main area */}
-      <main className="flex-1 flex flex-col min-w-0 relative">
-        {/* Ambient background glow */}
-        <div className="absolute top-0 left-1/4 w-[60%] h-[30%] bg-amber-600/[0.02] blur-[120px] pointer-events-none" />
+        {/* Main area */}
+        <main className="flex-1 flex flex-col min-w-0 relative">
+          {/* Ambient background glow */}
+          <div className="absolute top-0 left-1/4 w-[60%] h-[30%] bg-amber-600/[0.02] blur-[120px] pointer-events-none" />
 
-        <Header />
+          <Header />
 
-        {/* Content area with page transitions */}
-        <div className="flex-1 overflow-hidden px-10 py-4 flex flex-col">
+          {/* Content area with page transitions */}
+          <div className="flex-1 overflow-hidden px-12 py-6 flex flex-col">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -121,6 +124,7 @@ export default function App() {
         {/* Exit confirmation modal */}
         <ExitConfirm />
       </main>
+      </div>
     </div>
   );
 }
@@ -139,9 +143,9 @@ function DashboardPage({
   onNavHistory: () => void;
 }) {
   return (
-    <div className="flex-1 flex flex-col gap-4">
+    <div className="flex-1 flex flex-col gap-6">
       {/* Stat cards row */}
-      <div className="grid grid-cols-3 gap-4 shrink-0">
+      <div className="grid grid-cols-3 gap-6 shrink-0">
         <StatCard
           title="已装载脱敏规则"
           value={ruleCount}
@@ -176,7 +180,7 @@ function DashboardPage({
 
       {/* Footer */}
       <footer className="flex justify-center py-1 opacity-10 shrink-0">
-        <p className="text-[7px] font-mono uppercase tracking-[0.5em] text-white">
+        <p className="text-[9px] font-mono uppercase tracking-[0.5em] text-white">
           Local Processing Instance
         </p>
       </footer>

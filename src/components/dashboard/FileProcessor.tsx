@@ -92,7 +92,7 @@ export default function FileProcessor({ className }: FileProcessorProps) {
       onDrop={() => setIsDragOver(false)}
       whileHover={{ scale: 1.002 }}
       className={cn(
-        "flex-1 border-2 border-dashed rounded-[3rem] flex flex-col items-center justify-center transition-all duration-300 cursor-pointer",
+        "flex-1 border-2 border-dashed rounded-5xl flex flex-col items-center justify-center transition-all duration-300 cursor-pointer",
         isDragOver
           ? "border-amber-500/50 bg-amber-500/5"
           : isProcessing
@@ -118,10 +118,10 @@ export default function FileProcessor({ className }: FileProcessorProps) {
             >
               📂
             </motion.div>
-            <h3 className="text-xl font-bold mb-2 text-zinc-200">
+            <h3 className="text-2xl font-bold mb-2 text-zinc-200">
               拖拽文件或点击上传
             </h3>
-            <p className="text-zinc-500 text-sm">
+            <p className="text-zinc-500 text-base">
               支持多 GB 级文件，保持行序 100% 一致
             </p>
           </motion.div>
@@ -135,12 +135,12 @@ export default function FileProcessor({ className }: FileProcessorProps) {
             className="w-3/4 space-y-4"
           >
             {/* File name + percentage */}
-            <div className="flex justify-between text-sm font-bold">
+            <div className="flex justify-between text-base font-bold">
               <span className="text-blue-400 truncate max-w-xs">
                 {currentFileName}
               </span>
               <motion.span
-                className="font-mono"
+                className="font-mono text-lg"
                 key={Math.round(progress)}
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -150,7 +150,7 @@ export default function FileProcessor({ className }: FileProcessorProps) {
             </div>
 
             {/* Progress bar */}
-            <div className="w-full bg-zinc-900 h-3 rounded-full overflow-hidden border border-zinc-800 p-[2px]">
+            <div className="w-full bg-zinc-900 h-4 rounded-full overflow-hidden border border-zinc-800 p-[2px]">
               <motion.div
                 className="bg-gradient-to-r from-blue-600 to-indigo-500 h-full rounded-full"
                 animate={{ width: `${progress}%` }}
@@ -161,7 +161,7 @@ export default function FileProcessor({ className }: FileProcessorProps) {
               </motion.div>
             </div>
 
-            <p className="text-center text-xs text-zinc-500 animate-pulse">
+            <p className="text-center text-sm text-zinc-500 animate-pulse">
               正在调用多核 Rust 引擎加速处理...
             </p>
           </motion.div>

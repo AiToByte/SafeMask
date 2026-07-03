@@ -14,7 +14,7 @@ export function Card({ children, className }: CardProps) {
   return (
     <section
       className={cn(
-        "bg-[#0d0d0f]/80 border border-white/[0.04] rounded-[2.5rem] p-8 shadow-2xl",
+        "bg-[#0d0d0f]/80 border border-white/[0.04] rounded-4xl p-10 shadow-2xl",
         className,
       )}
     >
@@ -34,7 +34,7 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 text-[11px] font-black text-amber-50/50 uppercase tracking-[0.3em]",
+        "flex items-center gap-3 text-xs font-black text-amber-50/50 uppercase tracking-[0.3em]",
         className,
       )}
     >

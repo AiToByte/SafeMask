@@ -224,6 +224,22 @@ export default function RuleManager() {
     [selectedName, clearForm, fetchAllRules, fetchStats],
   );
 
+  const handleSaveAsCopy = useCallback(() => {
+    if (!selectedRule) return;
+    setForm({
+      name: "",
+      pattern: selectedRule.pattern,
+      mask: selectedRule.mask,
+      priority: selectedRule.priority,
+      is_custom: true,
+      enabled: true,
+    });
+    setSelectedName(null);
+    setValidationErrors({});
+    setTestOutput("");
+    setTestError("");
+  }, [selectedRule]);
+
   // ── Sandbox ──
 
   useEffect(() => {
@@ -274,14 +290,14 @@ export default function RuleManager() {
   const renderSearchBar = () => (
     <div className="relative">
       <Search
-        size={13}
-        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-500/30 pointer-events-none"
+        size={14}
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-400/40 pointer-events-none"
       />
       <input
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         placeholder="快速检索..."
-        className="w-full bg-[#08080a] border border-amber-500/10 rounded-xl py-2.5 pl-10 pr-8 text-[11px] text-amber-50/80 outline-none transition-all duration-500 shadow-inner hover:border-white/20 focus:border-amber-500/40 focus:shadow-[0_0_15px_rgba(245,158,11,0.03),inset_0_2px_8px_rgba(0,0,0,0.6)]"
+        className="w-full bg-[#08080a] border border-amber-500/10 rounded-2xl py-3 pl-10 pr-8 text-xs text-amber-50/80 outline-none transition-all duration-500 shadow-inner hover:border-white/20 focus:border-amber-500/40 focus:shadow-[0_0_15px_rgba(245,158,11,0.03),inset_0_2px_8px_rgba(0,0,0,0.6)]"
       />
     </div>
   );
@@ -293,16 +309,16 @@ export default function RuleManager() {
         key={rule.name}
         onClick={() => selectRule(rule)}
         className={cn(
-          "group flex items-center p-4 rounded-2xl bg-white/[0.01] border border-white/[0.03] transition-all cursor-pointer relative overflow-hidden hover:bg-white/[0.03] hover:border-white/[0.08] hover:translate-x-1",
+          "group flex items-center p-5 rounded-3xl bg-white/[0.01] border border-white/[0.03] transition-all cursor-pointer relative overflow-hidden hover:bg-white/[0.03] hover:border-white/[0.08] hover:translate-x-1",
           active &&
             "border-amber-500/30 bg-amber-500/[0.04] shadow-[0_10px_30px_rgba(0,0,0,0.4)]",
-          active && "before:content-[''] before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[2px] before:bg-amber-500 before:rounded-full",
+            active && "before:content-[''] before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[2px] before:bg-indigo-500 before:rounded-full",
         )}
       >
         {/* Left icon */}
         <div className="mr-3">
           {rule.is_custom ? (
-            <Edit3 size={14} className="text-blue-400/60" />
+            <Edit3 size={14} className="text-indigo-400/60" />
           ) : (
             <Lock size={14} className="text-zinc-600" />
           )}
@@ -311,28 +327,28 @@ export default function RuleManager() {
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[13px] font-bold text-zinc-200 truncate">
+            <span className="text-sm font-bold text-zinc-200 truncate">
               {rule.name}
             </span>
             <span
               className={cn(
-                "text-[8px] border px-1.5 py-0.5 rounded font-black uppercase",
+                "text-[10px] border px-1.5 py-0.5 rounded font-black uppercase",
                 rule.is_custom
-                  ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                  ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
                   : "bg-zinc-800 text-zinc-500 border-white/5",
               )}
             >
               {rule.is_custom ? "CUSTOM" : "SYSTEM"}
             </span>
           </div>
-          <span className="text-[10px] font-mono text-zinc-600 truncate block whitespace-nowrap overflow-hidden max-w-[280px]">
+          <span className="text-xs font-mono text-zinc-600 truncate block whitespace-nowrap overflow-hidden max-w-[280px]">
             {rule.pattern}
           </span>
         </div>
 
         {/* Mask label */}
         <div className="mx-2 shrink-0">
-          <span className="text-[9px] font-mono font-bold text-emerald-400/70 bg-emerald-500/5 px-2.5 py-1 rounded-lg border border-emerald-500/10">
+          <span className="text-[11px] font-mono font-bold text-emerald-400/70 bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/10">
             {rule.mask}
           </span>
         </div>
@@ -346,7 +362,7 @@ export default function RuleManager() {
             }}
             className="p-1.5 rounded-lg text-zinc-700 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
           >
-            <Trash2 size={13} />
+            <Trash2 size={14} />
           </button>
         )}
       </div>
@@ -358,6 +374,7 @@ export default function RuleManager() {
     field: keyof FormState,
     type: "input" | "textarea" | "number" = "input",
     extraClass = "",
+    readOnly = false,
   ) => {
     const value = form[field];
     const rows = type === "textarea" ? 28 : undefined;
@@ -367,8 +384,12 @@ export default function RuleManager() {
         <textarea
           value={value as string}
           onChange={(e) => updateForm({ [field]: e.target.value })}
+          readOnly={readOnly}
           rows={rows}
-          className="w-full bg-transparent border-none outline-none p-3.5 text-[13px] text-amber-50/90 placeholder:text-zinc-800 font-medium resize-none"
+          className={cn(
+            "w-full bg-transparent border-none outline-none p-4 text-sm font-medium resize-none",
+            readOnly ? "text-zinc-500 cursor-not-allowed" : "text-amber-50/90 placeholder:text-zinc-800",
+          )}
           placeholder={
             field === "pattern"
               ? "正则表达式..."
@@ -389,9 +410,34 @@ export default function RuleManager() {
                   : e.target.value,
             })
           }
+          onBlur={
+            field === "name" && !readOnly
+              ? () => {
+                  const nameVal = form.name;
+                  setValidationErrors((prev) => {
+                    const next = { ...prev };
+                    if (!nameVal.trim()) {
+                      next.nameDuplicate = "Rule name is required";
+                      return next;
+                    }
+                    const dup = allRules.find(
+                      (r) => r.name === nameVal && r.name !== selectedName,
+                    );
+                    if (dup) {
+                      next.nameDuplicate = `Rule "${nameVal}" already exists`;
+                    } else {
+                      delete next.nameDuplicate;
+                    }
+                    return next;
+                  });
+                }
+              : undefined
+          }
+          readOnly={readOnly}
           className={cn(
-            "w-full bg-transparent border-none outline-none p-3.5 text-[13px] text-amber-50/90 placeholder:text-zinc-800 font-medium",
+            "w-full bg-transparent border-none outline-none p-4 text-sm font-medium",
             type === "number" && "text-center",
+            readOnly ? "text-zinc-500 cursor-not-allowed" : "text-amber-50/90 placeholder:text-zinc-800",
           )}
           placeholder={field === "name" ? "脱敏规则名称" : ""}
         />
@@ -399,12 +445,15 @@ export default function RuleManager() {
 
     return (
       <div className="flex flex-col gap-2">
-        <label className="text-[11px] font-bold text-amber-100/80 uppercase tracking-[0.12em]">
+        <label className="text-xs font-bold text-amber-100/80 uppercase tracking-[0.12em]">
           {label}
         </label>
         <div
           className={cn(
-            "relative rounded-xl bg-[#08080a] border border-white/[0.12] transition-all duration-300 shadow-inner hover:border-white/[0.2] focus-within:border-amber-500/40 focus-within:bg-[#0a0a0c] focus-within:shadow-[0_0_20px_rgba(245,158,11,0.05),inset_0_2px_10px_rgba(0,0,0,0.6)]",
+            "relative rounded-2xl bg-[#08080a] border transition-all duration-300 shadow-inner",
+            readOnly
+              ? "border-white/[0.05] bg-[#08080a]/40"
+              : "border-white/[0.12] hover:border-white/[0.2] focus-within:border-amber-500/40 focus-within:bg-[#0a0a0c] focus-within:shadow-[0_0_20px_rgba(245,158,11,0.05),inset_0_2px_10px_rgba(0,0,0,0.6)]",
             extraClass,
           )}
         >
@@ -413,14 +462,14 @@ export default function RuleManager() {
 
         {/* Validation messages */}
         {field === "name" && validationErrors.nameDuplicate && (
-          <span className="text-[10px] text-amber-400 font-bold mt-1.5 flex items-center gap-1.5 px-2">
-            <X size={10} />
+          <span className="text-xs text-red-400 font-bold mt-1.5 flex items-center gap-1.5 px-2">
+            <X size={12} className="text-red-400" />
             {validationErrors.nameDuplicate}
           </span>
         )}
         {field === "pattern" && validationErrors.patternDuplicate && (
-          <span className="text-[10px] text-amber-400 font-bold mt-1.5 flex items-center gap-1.5 px-2">
-            <X size={10} />
+          <span className="text-xs text-red-400 font-bold mt-1.5 flex items-center gap-1.5 px-2">
+            <X size={12} className="text-red-400" />
             {validationErrors.patternDuplicate}
           </span>
         )}
@@ -437,26 +486,26 @@ export default function RuleManager() {
     return (
       <div className="relative">
         {/* Label */}
-        <span className="text-[9px] font-bold uppercase tracking-widest absolute -top-2.5 left-5 px-2 bg-[#0c0b0a] z-10 text-amber-100/60">
+        <span className="text-xs font-bold uppercase tracking-widest absolute -top-2.5 left-5 px-2 bg-[#0c0b0a] z-10 text-amber-100/60">
           <div className="flex items-center gap-1.5">
             <Beaker size={10} className="text-amber-400/60" />
             调试沙盒实验室
           </div>
         </span>
 
-        <div className="bg-[#0d0d0f]/60 border border-white/[0.08] rounded-[2rem] p-5 pt-8 space-y-4">
+        <div className="bg-[#0d0d0f]/60 border border-white/[0.08] rounded-4xl p-5 pt-8 space-y-4">
           {/* Input */}
           <textarea
             value={testInput}
             onChange={(e) => setTestInput(e.target.value)}
             placeholder="输入测试文本..."
-            className="w-full bg-black/40 border border-white/[0.08] rounded-2xl p-5 text-[13px] font-mono leading-relaxed outline-none transition-all resize-none focus:border-amber-500/30 min-h-[80px] text-amber-50/70 placeholder:text-zinc-700"
+            className="w-full bg-black/40 border border-white/[0.08] rounded-2xl p-5 text-sm font-mono leading-relaxed outline-none transition-all resize-none focus:border-amber-500/30 min-h-[80px] text-amber-50/70 placeholder:text-zinc-700"
           />
 
           {/* Output area */}
           <div
             className={cn(
-              "w-full bg-black/40 border rounded-2xl p-5 text-[13px] font-mono leading-relaxed outline-none transition-all resize-none min-h-[100px]",
+              "w-full bg-black/40 border rounded-2xl p-5 text-sm font-mono leading-relaxed outline-none transition-all resize-none min-h-[100px]",
               showOutput &&
                 "bg-emerald-500/[0.01] border-emerald-500/10 text-emerald-300/80",
               showStandby &&
@@ -485,10 +534,10 @@ export default function RuleManager() {
                   className="text-zinc-700/60"
                 />
                 <div>
-                  <p className="text-zinc-600 font-bold text-[11px]">
+                  <p className="text-zinc-600 font-bold text-xs">
                     Engine Standby
                   </p>
-                  <p className="text-zinc-700 text-[10px] mt-1">
+                  <p className="text-zinc-700 text-xs mt-1">
                     Enter a pattern and test text to see live masking results
                   </p>
                 </div>
@@ -503,19 +552,19 @@ export default function RuleManager() {
   // ── Main render ──
 
   return (
-    <div className="flex items-stretch gap-6 h-full overflow-hidden">
+    <div className="flex items-stretch gap-8 h-full overflow-hidden">
       {/* ── Left panel: Rule list ── */}
-      <div className="flex-1 min-w-0 flex flex-col bg-[#0d0d0f]/60 border border-white/[0.04] rounded-[2rem] overflow-hidden">
+      <div className="flex-1 min-w-0 flex flex-col bg-[#0d0d0f]/60 border border-white/[0.04] rounded-4xl overflow-hidden">
         {/* Header */}
         <div className="px-8 py-6 border-b border-white/[0.04] flex items-center gap-6">
-          <Layers size={16} className="text-amber-500/60" />
-          <h3 className="font-black text-amber-50/90 text-[13px] uppercase tracking-[0.08em]">
+          <Layers size={18} className="text-indigo-400/60" />
+          <h3 className="font-black text-amber-50/90 text-sm uppercase tracking-[0.08em]">
             Pattern Repository
           </h3>
           <div className="flex-1">{renderSearchBar()}</div>
           <button
             onClick={clearForm}
-            className="p-2 rounded-xl bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all"
+            className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-all"
           >
             <Plus size={14} />
           </button>
@@ -547,19 +596,19 @@ export default function RuleManager() {
       </div>
 
       {/* ── Right panel: Editor + Sandbox ── */}
-      <div className="w-[420px] flex flex-col gap-5 overflow-y-auto custom-scroll pr-1">
+      <div className="w-[480px] flex flex-col gap-5 overflow-y-auto custom-scroll pr-1">
         {/* Form container */}
-        <div className="bg-[#0d0d0f]/80 border border-white/[0.04] rounded-[2.5rem] p-8 space-y-6 shadow-2xl">
+        <div className="bg-[#0d0d0f]/80 border border-white/[0.04] rounded-4xl p-10 space-y-6 shadow-2xl">
           {/* Title */}
           <div className="flex items-center gap-3">
             <ShieldCheck
-              size={16}
+              size={18}
               className={cn(
                 "transition-colors",
                 isEditing ? "text-amber-400" : "text-zinc-600",
               )}
             />
-            <h3 className="font-bold text-amber-50/90 text-[13px]">
+            <h3 className="font-bold text-amber-50/90 text-sm">
               {isEditing ? "配置既有模式" : "创建新脱敏模式"}
             </h3>
 
@@ -569,7 +618,7 @@ export default function RuleManager() {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
-                className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-black uppercase ml-auto"
+                className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-black uppercase ml-auto"
               >
                 <div className="flex items-center gap-1">
                   <Check size={8} />
@@ -580,10 +629,10 @@ export default function RuleManager() {
           </div>
 
           {/* Form fields */}
-          {renderFormField("NAME", "name")}
-          {renderFormField("PATTERN", "pattern", "textarea")}
-          {renderFormField("MASK", "mask")}
-          {renderFormField("PRIORITY", "priority", "number")}
+          {renderFormField("NAME", "name", "input", "", isSystemRule ?? false)}
+          {renderFormField("PATTERN", "pattern", "textarea", "", isSystemRule ?? false)}
+          {renderFormField("MASK", "mask", "input", "", isSystemRule ?? false)}
+          {renderFormField("PRIORITY", "priority", "number", "", isSystemRule ?? false)}
 
           {/* System rule warning */}
           {isSystemRule && (
@@ -596,7 +645,7 @@ export default function RuleManager() {
                 size={16}
                 className="text-amber-400/70 shrink-0 mt-0.5"
               />
-              <p className="text-[11px] text-amber-200/70 leading-relaxed">
+              <p className="text-xs text-amber-200/70 leading-relaxed">
                 系统预设模式不可直接覆盖。请修改参数后使用下方"另存为"功能创建副本。
               </p>
             </motion.div>
@@ -606,28 +655,40 @@ export default function RuleManager() {
           <div className="space-y-3 pt-2">
             {isEditing ? (
               <>
-                <button
-                  onClick={() => handleSave(false)}
-                  className="w-full py-4 bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded-2xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-3 hover:bg-amber-500 hover:text-black transition-all active:scale-[0.97]"
-                >
-                  <Save size={13} />
-                  保存修改
-                </button>
-                <button
-                  onClick={() => handleSave(true)}
-                  className="w-full py-3.5 bg-zinc-900 border border-white/5 text-zinc-500 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:text-amber-200 hover:border-amber-500/20 transition-all"
-                >
-                  <CopyPlus size={12} />
-                  另存为自定义规则
-                </button>
+                {isSystemRule ? (
+                  <button
+                    onClick={handleSaveAsCopy}
+                    className="w-full py-5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:bg-indigo-500 hover:text-white transition-all active:scale-[0.97]"
+                  >
+                    <CopyPlus size={14} />
+                    另存为自定义规则
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleSave(false)}
+                      className="w-full py-5 bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:bg-amber-500 hover:text-black transition-all active:scale-[0.97]"
+                    >
+                      <Save size={14} />
+                      保存修改
+                    </button>
+                    <button
+                      onClick={() => handleSave(true)}
+                      className="w-full py-4 bg-zinc-900 border border-white/5 text-zinc-500 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:text-amber-200 hover:border-amber-500/20 transition-all"
+                    >
+                      <CopyPlus size={13} />
+                      另存为自定义规则
+                    </button>
+                  </>
+                )}
               </>
             ) : (
               <button
                 onClick={() => handleSave(false)}
                 disabled={!form.name.trim() || !form.pattern.trim()}
-                className="w-full py-4 bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded-2xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-3 hover:bg-amber-500 hover:text-black transition-all active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-amber-500/10 disabled:hover:text-amber-500"
+                className="w-full py-5 bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:bg-amber-500 hover:text-black transition-all active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-amber-500/10 disabled:hover:text-amber-500"
               >
-                <Save size={13} />
+                <Save size={14} />
                 注入脱敏引擎
               </button>
             )}

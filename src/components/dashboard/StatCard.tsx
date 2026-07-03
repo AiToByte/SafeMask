@@ -47,12 +47,12 @@ export default function StatCard({
   return (
     <Component
       onClick={onClick}
-      whileHover={clickable ? { y: -2 } : undefined}
+      whileHover={clickable ? { y: -4 } : undefined}
       className={cn(
-        "relative group px-7 py-6 rounded-[1.25rem] border transition-all duration-700 overflow-hidden h-36 text-left",
+        "relative group px-8 py-7 rounded-3xl border transition-all duration-700 overflow-hidden h-40 text-left",
         typeStyles[type],
         clickable &&
-          "cursor-pointer hover:border-white/20 hover:bg-white/[0.03]",
+          "cursor-pointer hover:border-white/30 hover:bg-white/[0.05]",
       )}
     >
       {/* Ambient glow */}
@@ -66,7 +66,7 @@ export default function StatCard({
       <div className="relative z-10 flex flex-col justify-between h-full">
         {/* Title row */}
         <div className="flex justify-between items-start">
-          <p className="text-[10px] font-bold text-zinc-500 group-hover:text-amber-100/60 transition-colors tracking-[0.25em] uppercase">
+          <p className="text-xs font-bold text-zinc-500 group-hover:text-amber-100/60 transition-colors tracking-[0.25em] uppercase">
             {title}
           </p>
           {clickable && (
@@ -74,7 +74,7 @@ export default function StatCard({
               className="opacity-20 group-hover:opacity-100 transition-all"
               whileHover={{ x: 2, y: -2 }}
             >
-              <ArrowUpRight size={14} className="text-zinc-400" />
+              <ArrowUpRight size={16} className="text-zinc-400" />
             </motion.div>
           )}
         </div>
@@ -82,7 +82,7 @@ export default function StatCard({
         {/* Value row */}
         <div className="flex items-baseline gap-3">
           <motion.p
-            className="text-4xl font-mono font-medium tracking-tighter tabular-nums leading-none"
+            className="text-4xl font-mono font-bold tracking-tighter tabular-nums leading-none"
             style={{ color: undefined }}
             key={String(value)}
             initial={{ opacity: 0, y: 8 }}
@@ -92,7 +92,7 @@ export default function StatCard({
             <span className={color}>{value}</span>
           </motion.p>
           {unit && (
-            <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">
+            <span className="text-[11px] font-black text-zinc-600 uppercase tracking-widest mb-1">
               {unit}
             </span>
           )}

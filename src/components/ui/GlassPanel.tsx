@@ -12,7 +12,7 @@ export function GlassPanel({ children, className, ...props }: GlassPanelProps) {
   return (
     <motion.div
       className={cn(
-        "bg-[#0d0d0f]/80 border border-white/[0.04] rounded-[2.5rem] shadow-2xl",
+        "bg-[#0d0d0f]/80 border border-white/[0.04] rounded-4xl shadow-2xl",
         className,
       )}
       {...props}

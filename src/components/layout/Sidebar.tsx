@@ -31,19 +31,19 @@ export default function Sidebar() {
   const setActiveTab = useAppStore((s) => s.setActiveTab);
 
   return (
-    <nav className="w-20 flex flex-col items-center py-8 bg-[#0c0c0e] border-r border-zinc-800/50 z-50">
+    <nav className="w-24 flex flex-col items-center py-8 bg-[#0c0c0e] border-r border-zinc-800/50 z-50">
       {/* Logo */}
       <motion.div
-        className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 mb-12 cursor-pointer"
+        className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center shadow-lg shadow-blue-500/20 mb-12 cursor-pointer"
         whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(59,130,246,0.4)" }}
         whileTap={{ scale: 0.95 }}
       >
-        <ShieldCheck className="text-white w-7 h-7" />
+        <ShieldCheck className="text-white w-8 h-8" />
       </motion.div>
 
       {/* Navigation items */}
       <motion.div
-        className="flex flex-col gap-6 flex-1"
+        className="flex flex-col gap-8 flex-1"
         variants={staggerContainer}
         initial="initial"
         animate="animate"
@@ -75,7 +75,7 @@ export default function Sidebar() {
               )}
 
               <Icon
-                size={24}
+                size={28}
                 className="relative z-10 transition-all duration-300"
                 strokeWidth={isActive ? 2.5 : 2}
               />
@@ -84,13 +84,13 @@ export default function Sidebar() {
               {isActive && (
                 <motion.div
                   layoutId="sidebar-indicator"
-                  className="absolute -left-4 w-1 h-6 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-r-full shadow-[0_0_15px_rgba(59,130,246,0.8)]"
+                  className="absolute -left-4 w-1 h-6 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-r-full shadow-blue-glow"
                   transition={{ type: "spring", stiffness: 400, damping: 35 }}
                 />
               )}
 
               {/* Tooltip */}
-              <span className="absolute left-full ml-4 px-3 py-1.5 bg-zinc-800/90 text-white text-xs font-medium rounded-lg border border-blue-500/20 shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0 pointer-events-none z-50 whitespace-nowrap">
+              <span className="absolute left-full ml-4 px-4 py-2 bg-zinc-800/90 text-white text-sm font-medium rounded-lg border border-blue-500/20 shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0 pointer-events-none z-50 whitespace-nowrap">
                 {item.label}
               </span>
             </motion.button>
@@ -115,7 +115,7 @@ export default function Sidebar() {
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           />
         )}
-        <Settings size={24} className="relative z-10" />
+        <Settings size={28} className="relative z-10" />
       </motion.button>
     </nav>
   );
