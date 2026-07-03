@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { motion } from "framer-motion";
 import {
   Shield, Keyboard, Bell, Timer, RotateCcw,
   Save, Trash2, Monitor, Cpu, Volume2, Eye, AlertTriangle,
@@ -219,11 +218,8 @@ export default function SettingsPage() {
 
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="max-w-5xl mx-auto space-y-10 pb-16"
+    <div
+      className="max-w-5xl mx-auto space-y-10 pb-16 page-active"
     >
       {/* ════════════════ HEADER ════════════════ */}
       <div className="flex items-center gap-6 mb-10 px-2">
@@ -678,7 +674,7 @@ export default function SettingsPage() {
 </div>
 
 
-    </motion.div>
+    </div>
   );
 }
 

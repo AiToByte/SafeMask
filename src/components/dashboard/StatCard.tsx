@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -42,20 +41,19 @@ export default function StatCard({
   type = "blue",
   onClick,
 }: StatCardProps) {
-  const Component = clickable ? motion.button : motion.div;
+  const Component = clickable ? "button" : "div";
 
   return (
     <Component
-      onClick={onClick}
-      whileHover={clickable ? { y: -4 } : undefined}
+      {...(onClick ? { onClick } : {})}
       className={cn(
         "relative group px-8 py-7 rounded-3xl border transition-all duration-700 overflow-hidden h-40 text-left",
         typeStyles[type],
         clickable &&
-          "cursor-pointer hover:border-white/30 hover:bg-white/[0.05]",
+          "cursor-pointer hover:border-white/30 hover:bg-white/[0.05] hover:-translate-y-1",
+        clickable && "active:scale-[0.98]",
       )}
     >
-      {/* Ambient glow */}
       <div
         className={cn(
           "absolute -right-8 -bottom-8 w-32 h-32 blur-3xl opacity-20 pointer-events-none",
@@ -64,33 +62,25 @@ export default function StatCard({
       />
 
       <div className="relative z-10 flex flex-col justify-between h-full">
-        {/* Title row */}
         <div className="flex justify-between items-start">
           <p className="text-xs font-bold text-zinc-500 group-hover:text-amber-100/60 transition-colors tracking-[0.25em] uppercase">
             {title}
           </p>
           {clickable && (
-            <motion.div
-              className="opacity-20 group-hover:opacity-100 transition-all"
-              whileHover={{ x: 2, y: -2 }}
-            >
+            <div className="opacity-20 group-hover:opacity-100 transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
               <ArrowUpRight size={16} className="text-zinc-400" />
-            </motion.div>
+            </div>
           )}
         </div>
 
-        {/* Value row */}
         <div className="flex items-baseline gap-3">
-          <motion.p
+          <p
             className="text-4xl font-mono font-bold tracking-tighter tabular-nums leading-none"
             style={{ color: undefined }}
             key={String(value)}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
           >
             <span className={color}>{value}</span>
-          </motion.p>
+          </p>
           {unit && (
             <span className="text-[11px] font-black text-zinc-600 uppercase tracking-widest mb-1">
               {unit}
@@ -99,7 +89,6 @@ export default function StatCard({
         </div>
       </div>
 
-      {/* Left glowing indicator bar */}
       <div
         className={cn(
           "absolute left-0 top-0 bottom-0 w-[1.5px] opacity-40 group-hover:opacity-100 transition-opacity",

@@ -1,33 +1,42 @@
-import { AnimatePresence, motion } from "framer-motion";
 import { ShieldCheck, Ghost, ShieldAlert, RotateCcw } from "lucide-react";
 import { useAppStore, type FeedbackPayload } from "@/hooks/useAppStore";
-import { toastVariants } from "@/lib/animations";
+import { useEffect, useState } from "react";
 
 const containerClass =
-  "fixed top-8 left-1/2 -translate-x-1/2 z-[999] pointer-events-none";
+  "fixed inset-0 z-[999] flex items-center justify-center pointer-events-none";
 const toastClass =
-  "bg-[#0f0f14]/90 backdrop-blur-[20px] border border-white/10 rounded-full px-8 py-4 shadow-2xl shadow-blue-500/10 flex items-center gap-4 text-base font-bold text-white/90";
+  "bg-[#0f0f14]/90 backdrop-blur-[20px] border border-white/10 rounded-full px-8 py-4 shadow-2xl shadow-blue-500/10 flex items-center gap-4 text-base font-bold text-white/90 toast-animate";
 
-/** Toast notification that reads from the Zustand store's activeFeedback state */
 export default function MagicFeedback() {
   const activeFeedback = useAppStore((s) => s.activeFeedback);
+  const [exiting, setExiting] = useState(false);
+  const [current, setCurrent] = useState<FeedbackPayload | null>(null);
+
+  useEffect(() => {
+    if (activeFeedback) {
+      setCurrent(activeFeedback);
+      setExiting(false);
+    } else if (current) {
+      setExiting(true);
+      const timer = setTimeout(() => {
+        setCurrent(null);
+        setExiting(false);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [activeFeedback, current]);
+
+  if (!current && !exiting) return null;
+
+  const show = current || activeFeedback;
 
   return (
     <div className={containerClass}>
-      <AnimatePresence mode="wait">
-        {activeFeedback && (
-          <motion.div
-            key={activeFeedback.id}
-            variants={toastVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className={toastClass}
-          >
-            <ToastContent feedback={activeFeedback} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div
+        className={`${toastClass} ${exiting ? "toast-exit" : "toast-enter"}`}
+      >
+        <ToastContent feedback={show!} />
+      </div>
     </div>
   );
 }
@@ -78,7 +87,7 @@ function ModeChangeContent({ mode }: { mode: "SHADOW" | "SENTRY" }) {
       )}
       <div className="flex flex-col leading-tight">
         <span className="text-sm font-bold">
-          {isShadow ? "🌑 SHADOW" : "🛡️ SENTRY"}
+          {isShadow ? "SHADOW" : "SENTRY"}
         </span>
         <span className="text-xs text-zinc-400 font-normal">
           {isShadow

@@ -1,6 +1,4 @@
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
-import { springSnappy } from "@/lib/animations";
 
 interface ToggleProps {
   checked: boolean;
@@ -35,31 +33,24 @@ export function Toggle({
         disabled={disabled}
         className="opacity-0 w-0 h-0 absolute"
       />
-      <motion.div
+      <div
         className={cn(
           "absolute inset-0 rounded-full border border-white/[0.05] transition-colors duration-300",
           checked ? "bg-blue-600/80 border-blue-400/20" : "bg-zinc-800",
         )}
-        animate={checked ? "checked" : "unchecked"}
       >
-        <motion.div
+        <div
           className={cn(
-            "absolute rounded-full shadow-lg",
+            "absolute rounded-full shadow-lg transition-all duration-300",
             isSm
-              ? "h-4 w-4 left-1 bottom-1"
-              : "h-5 w-5 left-1 bottom-1",
+              ? "h-4 w-4 top-1"
+              : "h-5 w-5 top-1",
+            checked
+              ? (isSm ? "left-[24px] bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]" : "left-[32px] bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]")
+              : "left-1 bg-zinc-400",
           )}
-          variants={{
-            unchecked: { x: 0, backgroundColor: "#71717a" },
-            checked: {
-              x: isSm ? 20 : 28,
-              backgroundColor: "#ffffff",
-              boxShadow: "0 0 15px rgba(255,255,255,0.5)",
-            },
-          }}
-          transition={springSnappy}
         />
-      </motion.div>
+      </div>
     </label>
   );
 }

@@ -66,7 +66,7 @@ SafeMask/                    # repo root — Cargo workspace
 
 ### Frontend stack
 
-React 19 + TypeScript + Zustand + Tailwind CSS v3 + Framer Motion + Vite 6. No routing library — tabs managed via Zustand `activeTab` state and `AnimatePresence`. UI components in `src/components/{dashboard,feedback,history,layout,overlay,rules,settings,ui}/`.
+React 19 + TypeScript + Zustand + Tailwind CSS v3 + Vite 6. No routing library — tabs managed via Zustand `activeTab` state. UI components in `src/components/{dashboard,feedback,history,layout,overlay,rules,settings,ui}/`.
 
 ### Conventions
 
@@ -81,3 +81,48 @@ React 19 + TypeScript + Zustand + Tailwind CSS v3 + Framer Motion + Vite 6. No r
 
 - CI: `.github/workflows/release.yml` — triggers on `v*` tag push, builds for macOS/Linux/Windows via `tauri-action`.
 - Updater: configured via `tauri.conf.json` plugins.updater pointing to GitHub releases.
+
+## Session Summary
+
+### Completed
+- **Window decor revert**: tauri.conf.json: `decorations: false` + `transparent: true` → `decorations: true`; deleted TitleBar.tsx; removed transparent CSS
+- **Rounded Win32 corners**: Added `DwmSetWindowAttribute(DWMWCP_ROUND)` via raw FFI in `main.rs:setup_window_handlers()`
+- **UI audit**: 42 issues across 8 categories documented
+- **UI fix batch 1** (this session):
+  - HistoryList.tsx:132 — `group/card` added (fixes broken group-hover/card on Audit-ID)
+  - HistoryList.tsx:158 — `text-zinc-800` → `text-zinc-600` (better Audit-ID contrast)
+  - HistoryList.tsx:60,79 — `type="button"` added (prevents unwanted form submissions)
+  - FileProcessor.tsx:155 — `relative` added to progress bar (fixes shimmer positioned against viewport)
+  - App.tsx:182 — `opacity-10` → `opacity-30` (footer now faintly visible)
+  - style.css: deleted 38 lines of dead CSS (legacy animations: fade-in, zoom-in, slide-in-from-top, shake; glow utilities: glow-{amber,blue,indigo})
+  - style.css: added global `*:focus-visible` ring via `@apply`
+- **All builds pass**: `npm run build` (tsc + vite) clean
+
+### Startup Performance Optimization (session 1)
+- **bootstrap IPC 并行化**: `useAppStore.ts:76-96` — 6 个串行 `await` 改为 `Promise.all`，启动时间预计减少 500-1500ms
+- **首屏免动画**: `App.tsx` `AnimatePresence` + `Sidebar.tsx` stagger container 添加 `initial={hasMounted.current}`，跳过首帧入场动画，内容直接呈现
+- **字体加载优化**: `@import` 从 `style.css` 移出 → `index.html` 的 `<link rel="stylesheet">`；添加 `<link rel="preconnect">` 到 fonts.googleapis.com / fonts.gstatic.com，消除 CSS @import 阻塞
+- **Vite 代码分割**: `vite.config.ts` 添加 `manualChunks`，单包 437 KB → 6 个并行 chunk：
+  - `vendor-react`: 3.9 KB
+  - `vendor-framer`: 135 KB
+  - `vendor-lucide`: 19.7 KB
+  - `vendor-tauri`: 16 KB
+  - `vendor-state`: 0.65 KB
+  - `index` (app code): 270 KB
+- **Build time**: 22s → 5s (得益于并行 chunk 和 esbuild 默认压缩)
+- `npm run build` + `cargo check -p SafeMask` clean
+
+### Deep Optimization: framer-motion removal, font swap, bootstrap split (session 2)
+- **Crash fix (startup)**: Removed `visible: false` from tauri.conf.json; removed redundant `getCurrentWindow().show()` calls from `bootstrap()` — window now appears after explicit `show()` only
+- **framer-motion → CSS transitions**: Removed all `motion.*` / `AnimatePresence` imports from 9 files (Sidebar, Header, StatCard, FileProcessor, MagicFeedback, ExitConfirm, SkeletonPage, App.tsx, style.css). Replaced with CSS `transition-*` + Tailwind `opacity`/`translate` classes. Eliminated ~400 modules from bundle (2011 → 1610). Vendor chunk for framer-motion removed from vite.config.ts.
+- **Bootstrap split**: Changed from 6× parallel IPC calls to 2 critical (settings, stats) + 4 deferred (history, appInfo, aiStatus, engineInfo) via `setTimeout(cb, 100)` — first screen renders without waiting for non-critical data
+- **Font optimization**: Removed self-hosted `inter.woff2` and `jetbrains-mono.woff2`, dropped Google Fonts `<link>` from index.html, switched to system font stack (`system-ui`). Removed all `@font-face` declarations from style.css.
+- **Lazy loading**: Added `React.lazy(() => import(...))` for MagicFeedback, ExitConfirm, FileProcessor — these components no longer block initial render
+- **Skeleton cleanup**: Removed `animate-pulse` CSS class from skeleton page, deleted `src/lib/animations.ts` (was only used by framer-motion wrappers)
+- **Build verified**: `npm run build` (tsc + vite) clean at 4.12s; `cargo check -p SafeMask` clean
+
+### Next Up
+- Refactor SettingsPage inline toggles → shared Toggle component
+- React.lazy 懒加载非首屏页面 (History/Rules/Settings)
+- Add aria-labels across interactive elements
+- Ongoing P1-P2 items from audit

@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { motion } from "framer-motion";
 import {
   Plus, Layers, Trash2, ShieldCheck, Search, Edit3, X,
   Beaker, Check, Save, CopyPlus, Lock, Info, Fingerprint,
@@ -614,17 +613,12 @@ export default function RuleManager() {
 
             {/* Badge */}
             {showBadge && (
-              <motion.span
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-black uppercase ml-auto"
-              >
+              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-black uppercase ml-auto opacity-0 animate-[fadeIn_0.3s_ease_forwards]">
                 <div className="flex items-center gap-1">
                   <Check size={8} />
                   SAVED
                 </div>
-              </motion.span>
+              </span>
             )}
           </div>
 
@@ -636,11 +630,7 @@ export default function RuleManager() {
 
           {/* System rule warning */}
           {isSystemRule && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-amber-900/10 border border-amber-500/20 p-4 rounded-2xl flex gap-4"
-            >
+            <div className="bg-amber-900/10 border border-amber-500/20 p-4 rounded-2xl flex gap-4 animate-[fadeSlideIn_0.3s_ease_forwards]">
               <Info
                 size={16}
                 className="text-amber-400/70 shrink-0 mt-0.5"
@@ -648,7 +638,7 @@ export default function RuleManager() {
               <p className="text-xs text-amber-200/70 leading-relaxed">
                 系统预设模式不可直接覆盖。请修改参数后使用下方"另存为"功能创建副本。
               </p>
-            </motion.div>
+            </div>
           )}
 
           {/* Action buttons */}

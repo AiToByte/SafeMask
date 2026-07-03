@@ -75,20 +75,21 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   bootstrap: async () => {
     try {
-      const settings = await MaskAPI.getSettings();
-      const stats = await MaskAPI.getStats();
-      const history = await MaskAPI.getHistory();
-      const appInfo = await MaskAPI.getAppInfo();
-      const aiStatus = await MaskAPI.getAiEngineStatus();
-      const engineInfo = await MaskAPI.getEngineInfo();
+      // Phase 1: critical — dashboard needs settings + ruleCount
+      const [settings, stats] = await Promise.all([
+        MaskAPI.getSettings(),
+        MaskAPI.getStats(),
+      ]);
+      set({ settings, ruleCount: stats.rule_count });
 
-      set({
-        settings,
-        ruleCount: stats.rule_count,
-        historyList: history,
-        appInfo,
-        aiEngineStatus: aiStatus,
-        engineInfo,
+      // Phase 2: deferred — non-blocking background fetch
+      Promise.all([
+        MaskAPI.getHistory(),
+        MaskAPI.getAppInfo(),
+        MaskAPI.getAiEngineStatus(),
+        MaskAPI.getEngineInfo(),
+      ]).then(([history, appInfo, aiStatus, engineInfo]) => {
+        set({ historyList: history, appInfo, aiEngineStatus: aiStatus, engineInfo });
       });
     } catch (e) {
       console.error("Bootstrap Error:", e);

@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   ClipboardCopy,
   ClipboardCheck,
@@ -14,7 +13,6 @@ import {
 import { useAppStore } from "@/hooks/useAppStore";
 import { MaskAPI, type HistoryItem } from "@/services/api";
 import { cn } from "@/lib/utils";
-import { staggerContainer, staggerItem } from "@/lib/animations";
 
 export default function HistoryList() {
   const historyList = useAppStore((s) => s.historyList);
@@ -56,6 +54,7 @@ export default function HistoryList() {
             </p>
           </div>
           <button
+            type="button"
             onClick={clearHistory}
             className="flex items-center gap-2 text-xs font-black text-zinc-600 hover:text-red-400 transition-all uppercase tracking-widest py-2 px-4 rounded-xl border border-white/5 hover:bg-red-500/5"
           >
@@ -76,7 +75,7 @@ export default function HistoryList() {
               className="flex-1 bg-transparent border-none outline-none px-4 text-amber-50 font-medium text-sm placeholder:text-zinc-600"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="p-2 rounded-lg text-zinc-600 hover:text-amber-200 hover:bg-white/5 transition-all">
+              <button type="button" onClick={() => setSearchQuery("")} className="p-2 rounded-lg text-zinc-600 hover:text-amber-200 hover:bg-white/5 transition-all">
                 <X size={14} />
               </button>
             )}
@@ -104,13 +103,11 @@ export default function HistoryList() {
       )}
 
       {/* History cards */}
-      <motion.div variants={staggerContainer} initial="initial" animate="animate">
-        <AnimatePresence>
-          {filteredHistory.map((item) => (
-            <HistoryCard key={item.id} item={item} copiedId={copiedId} onCopy={handleCopy} />
-          ))}
-        </AnimatePresence>
-      </motion.div>
+      <div>
+        {filteredHistory.map((item) => (
+          <HistoryCard key={item.id} item={item} copiedId={copiedId} onCopy={handleCopy} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -125,11 +122,9 @@ function HistoryCard({
   onCopy: (id: string, text: string, type: "org" | "msk") => void;
 }) {
   return (
-    <motion.div
-      variants={staggerItem}
-      layout
+    <div
       className={cn(
-        "p-10 rounded-4xl border border-white/[0.03] bg-[#0c0b0a]/40 hover:bg-[#110f0e]/60 transition-all duration-700 mb-6 relative overflow-hidden",
+        "group/card p-10 rounded-4xl border border-white/[0.03] bg-[#0c0b0a]/40 hover:bg-[#110f0e]/60 transition-all duration-700 mb-6 relative overflow-hidden",
         item.mode === "SHADOW"
           ? "before:content-[''] before:absolute before:top-0 before:left-8 before:right-8 before:h-[2px] before:bg-gradient-to-r before:from-amber-500/0 before:via-amber-400/60 before:to-amber-500/0"
           : "before:content-[''] before:absolute before:top-0 before:left-8 before:right-8 before:h-[2px] before:bg-gradient-to-r before:from-blue-500/0 before:via-blue-400/60 before:to-blue-500/0",
@@ -155,7 +150,7 @@ function HistoryCard({
           )}
         </div>
 
-        <span className="text-[10px] font-mono text-zinc-800 uppercase tracking-widest group-hover/card:text-zinc-600 transition-colors">
+        <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest group-hover/card:text-zinc-400 transition-colors">
           Audit-ID: {item.id.split("-")[0]}
         </span>
       </div>
@@ -213,7 +208,7 @@ function HistoryCard({
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -233,11 +228,11 @@ function CopyButton({
 }) {
   const isCopied = copiedId === `${id}_${type}`;
   return (
-    <motion.button
+    <button
+      type="button"
       onClick={() => onCopy(id, text, type)}
-      whileTap={{ scale: 0.95 }}
       className={cn(
-        "flex items-center gap-2 text-[10px] font-bold transition-all px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.05]",
+        "flex items-center gap-2 text-[10px] font-bold transition-all px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.05] active:scale-95",
         isCopied
           ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
           : isMasked
@@ -247,6 +242,6 @@ function CopyButton({
     >
       {isCopied ? <ClipboardCheck size={12} /> : <ClipboardCopy size={12} />}
       {isCopied ? labelDone : label}
-    </motion.button>
+    </button>
   );
 }

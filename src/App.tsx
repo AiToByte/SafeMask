@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, lazy, Suspense } from "react";
 import { useAppStore } from "@/hooks/useAppStore";
 import { useAudioFeedback } from "@/hooks/useAudioFeedback";
 import { useTauriEvent } from "@/hooks/useTauriEvents";
@@ -7,14 +6,14 @@ import type { HistoryItem } from "@/services/api";
 import type { FeedbackPayload as RawFeedback } from "@/hooks/useAppStore";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
-import MagicFeedback from "@/components/feedback/MagicFeedback";
-import ExitConfirm from "@/components/overlay/ExitConfirm";
 import StatCard from "@/components/dashboard/StatCard";
 import FileProcessor from "@/components/dashboard/FileProcessor";
-import HistoryList from "@/components/history/HistoryList";
-import RuleManager from "@/components/rules/RuleManager";
-import SettingsPage from "@/components/settings/SettingsPage";
-import { pageTransition } from "@/lib/animations";
+
+const HistoryList = lazy(() => import("@/components/history/HistoryList"));
+const RuleManager = lazy(() => import("@/components/rules/RuleManager"));
+const SettingsPage = lazy(() => import("@/components/settings/SettingsPage"));
+const MagicFeedback = lazy(() => import("@/components/feedback/MagicFeedback"));
+const ExitConfirm = lazy(() => import("@/components/overlay/ExitConfirm"));
 
 export default function App() {
   const bootstrap = useAppStore((s) => s.bootstrap);
@@ -31,6 +30,16 @@ export default function App() {
   useEffect(() => {
     bootstrap();
   }, [bootstrap]);
+
+  // Background preload lazy chunks after dashboard renders
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      import("@/components/history/HistoryList");
+      import("@/components/rules/RuleManager");
+      import("@/components/settings/SettingsPage");
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // ── Tauri Event Listeners ──
 
@@ -64,32 +73,22 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen bg-[#0c0b0a] text-amber-50/90 select-none overflow-hidden font-sans relative">
+      <Suspense fallback={null}>
+        <MagicFeedback />
+      </Suspense>
 
-      {/* Toast notifications */}
-      <MagicFeedback />
-
-      {/* Body: sidebar + main */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Navigation sidebar */}
         <Sidebar />
 
-        {/* Main area */}
         <main className="flex-1 flex flex-col min-w-0 relative">
-          {/* Ambient background glow */}
           <div className="absolute top-0 left-1/4 w-[60%] h-[30%] bg-amber-600/[0.02] blur-[120px] pointer-events-none" />
 
           <Header />
 
-          {/* Content area with page transitions */}
           <div className="flex-1 overflow-hidden px-12 py-6 flex flex-col">
-          <AnimatePresence mode="wait">
-            <motion.div
+            <div
               key={activeTab}
-              variants={pageTransition}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              className="max-w-6xl mx-auto w-full h-full flex flex-col"
+              className="max-w-6xl mx-auto w-full h-full flex flex-col page-active"
             >
               {activeTab === "dashboard" && (
                 <DashboardPage
@@ -102,34 +101,46 @@ export default function App() {
 
               {activeTab === "history" && (
                 <div className="flex-1 overflow-y-auto custom-scroll">
-                  <HistoryList />
+                  <Suspense fallback={<PageFallback />}>
+                    <HistoryList />
+                  </Suspense>
                 </div>
               )}
 
               {activeTab === "rules" && (
                 <div className="flex-1 overflow-y-auto custom-scroll">
-                  <RuleManager />
+                  <Suspense fallback={<PageFallback />}>
+                    <RuleManager />
+                  </Suspense>
                 </div>
               )}
 
               {activeTab === "settings" && (
                 <div className="flex-1 overflow-y-auto custom-scroll">
-                  <SettingsPage />
+                  <Suspense fallback={<PageFallback />}>
+                    <SettingsPage />
+                  </Suspense>
                 </div>
               )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+            </div>
+          </div>
 
-        {/* Exit confirmation modal */}
-        <ExitConfirm />
-      </main>
+          <Suspense fallback={null}>
+            <ExitConfirm />
+          </Suspense>
+        </main>
       </div>
     </div>
   );
 }
 
-// ── Dashboard Sub-page (inline to avoid extra file for small layout) ──
+function PageFallback() {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="w-6 h-6 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+    </div>
+  );
+}
 
 function DashboardPage({
   ruleCount,
@@ -144,7 +155,6 @@ function DashboardPage({
 }) {
   return (
     <div className="flex-1 flex flex-col gap-6">
-      {/* Stat cards row */}
       <div className="grid grid-cols-3 gap-6 shrink-0">
         <StatCard
           title="已装载脱敏规则"
@@ -173,13 +183,11 @@ function DashboardPage({
         />
       </div>
 
-      {/* File processor */}
       <div className="flex-1 min-h-0 relative">
         <FileProcessor className="h-full bg-[#110f0e]/50 border border-white/[0.02] shadow-2xl" />
       </div>
 
-      {/* Footer */}
-      <footer className="flex justify-center py-1 opacity-10 shrink-0">
+      <footer className="flex justify-center py-1 opacity-30 shrink-0">
         <p className="text-[9px] font-mono uppercase tracking-[0.5em] text-white">
           Local Processing Instance
         </p>

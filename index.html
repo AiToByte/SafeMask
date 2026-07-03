@@ -8,16 +8,192 @@
     <script type="module" src="/src/main.tsx" defer></script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
 
-    <style>
-      html, body {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        width: 100%;
-        overflow: hidden;
-      }
-    </style>
+      <!-- ── Skeleton Screen (replaced by React after hydration) ── -->
+      <div id="skeleton" aria-hidden="true">
+        <div class="sk-sidebar">
+          <div class="sk-logo"></div>
+          <div class="sk-nav-item"></div>
+          <div class="sk-nav-item"></div>
+          <div class="sk-nav-item"></div>
+          <div class="sk-nav-item"></div>
+          <div class="sk-spacer"></div>
+          <div class="sk-nav-item sk-small"></div>
+        </div>
+        <div class="sk-main">
+          <div class="sk-header">
+            <div class="sk-h-left">
+              <div class="sk-h-line sk-w-32"></div>
+              <div class="sk-h-line sk-w-48"></div>
+            </div>
+            <div class="sk-h-right">
+              <div class="sk-badge"></div>
+              <div class="sk-badge"></div>
+            </div>
+          </div>
+          <div class="sk-content">
+            <div class="sk-cards">
+              <div class="sk-card"></div>
+              <div class="sk-card"></div>
+              <div class="sk-card"></div>
+            </div>
+            <div class="sk-area">
+              <div class="sk-area-line sk-w-64"></div>
+              <div class="sk-area-line sk-w-96"></div>
+              <div class="sk-area-line sk-w-48"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        html, body {
+          margin: 0;
+          padding: 0;
+          height: 100%;
+          width: 100%;
+          overflow: hidden;
+          background: #0c0b0a;
+        }
+
+        /* ── Skeleton Layout ── */
+        #skeleton {
+          display: flex;
+          height: 100vh;
+          width: 100vw;
+          background: #0c0b0a;
+          color: #0c0b0a;
+        }
+
+        .sk-sidebar {
+          width: 80px;
+          flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 20px 0;
+          gap: 8px;
+          background: #0c0c0e;
+          border-right: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .sk-logo {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          background: rgba(255,255,255,0.04);
+          margin-bottom: 16px;
+        }
+
+        .sk-nav-item {
+          width: 44px;
+          height: 44px;
+          border-radius: 14px;
+          background: rgba(255,255,255,0.04);
+        }
+
+        .sk-nav-item.sk-small {
+          width: 32px;
+          height: 32px;
+          border-radius: 10px;
+          margin-top: auto;
+        }
+
+        .sk-spacer { flex: 1; }
+
+        .sk-main {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        .sk-header {
+          height: 64px;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 48px;
+          border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .sk-h-left, .sk-h-right {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .sk-h-line {
+          height: 14px;
+          border-radius: 7px;
+          background: rgba(255,255,255,0.04);
+        }
+
+        .sk-w-32 { width: 120px; }
+        .sk-w-48 { width: 180px; }
+        .sk-w-64 { width: 240px; }
+        .sk-w-96 { width: 360px; }
+
+        .sk-badge {
+          width: 80px;
+          height: 32px;
+          border-radius: 16px;
+          background: rgba(255,255,255,0.04);
+        }
+
+        .sk-content {
+          flex: 1;
+          padding: 24px 48px;
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        .sk-cards {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 24px;
+        }
+
+        .sk-card {
+          height: 120px;
+          border-radius: 20px;
+          background: rgba(255,255,255,0.03);
+        }
+
+        .sk-area {
+          flex: 1;
+          border-radius: 20px;
+          background: rgba(255,255,255,0.02);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .sk-area-line {
+          height: 14px;
+          border-radius: 7px;
+          background: rgba(255,255,255,0.04);
+        }
+
+        /* ── Static Skeleton (no pulse animation — lighter) ── */
+        #skeleton * {
+          /* static — no animation */
+        }
+
+        .sk-card:nth-child(2) { animation-delay: 0.15s; }
+        .sk-card:nth-child(3) { animation-delay: 0.3s; }
+        .sk-nav-item:nth-child(3) {}
+        .sk-nav-item:nth-child(4) {}
+        .sk-nav-item:nth-child(5) {}
+
+
+      </style>
+
+    </div>
   </body>
 </html>

@@ -15,6 +15,10 @@ export default {
         '4xl': '1.5rem',
         '5xl': '2rem',
       },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+      },
       colors: {
         surface: {
           DEFAULT: '#0c0b0a',

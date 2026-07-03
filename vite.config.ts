@@ -14,6 +14,27 @@ export default defineConfig(async () => ({
 
   // Vite options tuned for Tauri development
   clearScreen: false,
+
+  build: {
+    target: "esnext",
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react/jsx-runtime"],
+          "vendor-lucide": ["lucide-react"],
+          "vendor-tauri": [
+            "@tauri-apps/api",
+            "@tauri-apps/plugin-dialog",
+            "@tauri-apps/plugin-notification",
+            "@tauri-apps/plugin-global-shortcut",
+            "@tauri-apps/plugin-opener",
+          ],
+          "vendor-state": ["zustand"],
+        },
+      },
+    },
+  },
+
   server: {
     host: "127.0.0.1",
     port: 18924,
