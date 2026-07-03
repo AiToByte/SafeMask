@@ -88,7 +88,7 @@ export default function App() {
           <div className="flex-1 overflow-hidden px-12 py-6 flex flex-col">
             <div
               key={activeTab}
-              className="max-w-6xl mx-auto w-full h-full flex flex-col page-active"
+              className="w-full h-full flex flex-col page-active"
             >
               {activeTab === "dashboard" && (
                 <DashboardPage

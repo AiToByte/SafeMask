@@ -483,7 +483,7 @@ export default function RuleManager() {
     const showStandby = !hasPattern || !hasText;
 
     return (
-      <div className="relative">
+    <div className="relative w-full min-w-0">
         {/* Label */}
         <span className="text-xs font-bold uppercase tracking-widest absolute -top-2.5 left-5 px-2 bg-[#0c0b0a] z-10 text-amber-100/60">
           <div className="flex items-center gap-1.5">

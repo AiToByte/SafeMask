@@ -42,7 +42,7 @@ export default function HistoryList() {
   }, [historyList, searchQuery]);
 
   return (
-    <div className="flex flex-col gap-8 pb-20">
+    <div className="flex flex-col gap-8 pb-20 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex flex-col gap-6 px-2">
         <div className="flex justify-between items-end">
@@ -72,7 +72,7 @@ export default function HistoryList() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="搜索原文、脱敏结果或 Audit-ID..."
-              className="flex-1 bg-transparent border-none outline-none px-4 text-amber-50 font-medium text-sm placeholder:text-zinc-600"
+              className="flex-1 bg-transparent border-none outline-none px-4 text-amber-50 font-medium text-sm placeholder:text-zinc-600 focus-visible:ring-0 focus-visible:ring-offset-0"
             />
             {searchQuery && (
               <button type="button" onClick={() => setSearchQuery("")} className="p-2 rounded-lg text-zinc-600 hover:text-amber-200 hover:bg-white/5 transition-all">
