@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Plus, Layers, Trash2, ShieldCheck, Search, Edit3, X,
   Beaker, Check, Save, CopyPlus, Lock, Info, Fingerprint,
@@ -85,6 +85,11 @@ export default function RuleManager() {
   const [testInput, setTestInput] = useState("");
   const [testOutput, setTestOutput] = useState("");
   const [testError, setTestError] = useState("");
+
+  // Search bar expand state
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [shouldExpand, setShouldExpand] = useState(false);
+  const searchBarRef = useRef<HTMLDivElement>(null);
 
   // ── Derived ──
 
@@ -284,10 +289,33 @@ export default function RuleManager() {
     fetchAllRules();
   }, [fetchAllRules]);
 
+  // ── Search bar width detection ──
+
+  useEffect(() => {
+    const el = searchBarRef.current;
+    if (!el) return;
+
+    const check = () => {
+      setShouldExpand(el.getBoundingClientRect().width < 180);
+    };
+
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+
+    return () => observer.disconnect();
+  }, []);
+
   // ── Render helpers ──
 
   const renderSearchBar = () => (
-    <div className="relative">
+    <div
+      ref={searchBarRef}
+      className={cn(
+        "relative w-full transition-all duration-300",
+        searchFocused && shouldExpand && "min-w-[280px] z-10"
+      )}
+    >
       <Search
         size={14}
           className="absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-400/40 pointer-events-none"
@@ -295,6 +323,8 @@ export default function RuleManager() {
       <input
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
+        onFocus={() => setSearchFocused(true)}
+        onBlur={() => setSearchFocused(false)}
         placeholder="快速检索..."
         className="w-full bg-[#08080a] border border-amber-500/10 rounded-2xl py-3 pl-10 pr-8 text-xs text-amber-50/80 outline-none transition-all duration-500 shadow-inner hover:border-white/20 focus:border-amber-500/40 focus:shadow-[0_0_15px_rgba(245,158,11,0.03),inset_0_2px_8px_rgba(0,0,0,0.6)]"
       />
