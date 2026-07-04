@@ -9,18 +9,17 @@ impl ShortcutManager {
     /// 逻辑：先注销所有当前快捷键，再根据传入的字符串解析并注册新快捷键
     pub fn reload_magic_shortcut(app: &AppHandle, shortcut_str: &str) -> Result<(), String> {
         let gs = app.global_shortcut();
-        
-        // 🚀 修复点：不再使用 unregister_all()，因为它会杀掉 Alt+M
-        // 我们只注销旧的，或者先全部清空后再把 Alt+M 补回来
-        let _ = gs.unregister_all(); 
 
-        // 1. 注册动态的 Magic Paste (Alt+V)
-        let magic_v = Self::parse_shortcut_string(shortcut_str)?;
-        gs.register(magic_v).map_err(|e| e.to_string())?;
+        let _ = gs.unregister_all();
 
-        // 2. 🚀 关键：必须在这里把静态的 Alt+M 重新注册回来
+        // 1. 注册动态 Magic Paste（失败不阻塞 Alt+M）
+        if let Ok(magic_v) = Self::parse_shortcut_string(shortcut_str) {
+            let _ = gs.register(magic_v);
+        }
+
+        // 2. 独立注册 Alt+M
         let alt_m = Shortcut::new(Some(Modifiers::ALT), Code::KeyM);
-        let _ = gs.register(alt_m); 
+        let _ = gs.register(alt_m);
 
         Ok(())
     }

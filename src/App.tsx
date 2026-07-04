@@ -59,8 +59,13 @@ export default function App() {
   });
 
   useTauriEvent<string>("mode-switch-event", (mode) => {
+    const isShadow = mode === "SHADOW";
+    useAppStore.getState().updateSettings({
+      ...useAppStore.getState().settings,
+      shadow_mode_enabled: isShadow,
+    });
     if (settings.enable_audio_feedback) {
-      play(mode === "SHADOW" ? "ASCEND" : "DESCEND");
+      play(isShadow ? "ASCEND" : "DESCEND");
     }
     const fb = { type: "MODE_CHANGE" as const, mode: mode as "SHADOW" | "SENTRY", id: Date.now() };
     setActiveFeedback(fb);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Plus, Layers, Trash2, ShieldCheck, Search, Edit3, X,
   Beaker, Check, Save, CopyPlus, Lock, Info, Fingerprint,
@@ -85,11 +85,6 @@ export default function RuleManager() {
   const [testInput, setTestInput] = useState("");
   const [testOutput, setTestOutput] = useState("");
   const [testError, setTestError] = useState("");
-
-  // Search bar expand state
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [shouldExpand, setShouldExpand] = useState(false);
-  const searchBarRef = useRef<HTMLDivElement>(null);
 
   // ── Derived ──
 
@@ -289,47 +284,33 @@ export default function RuleManager() {
     fetchAllRules();
   }, [fetchAllRules]);
 
-  // ── Search bar width detection ──
-
-  useEffect(() => {
-    const el = searchBarRef.current;
-    if (!el) return;
-
-    const check = () => {
-      setShouldExpand(el.getBoundingClientRect().width < 180);
-    };
-
-    check();
-    const observer = new ResizeObserver(check);
-    observer.observe(el);
-
-    return () => observer.disconnect();
-  }, []);
-
   // ── Render helpers ──
 
-  const renderSearchBar = () => (
-    <div
-      ref={searchBarRef}
-      className={cn(
-        "relative w-full transition-all duration-300",
-        searchFocused && shouldExpand && "min-w-[280px] z-10"
-      )}
-    >
-      <Search
-        size={14}
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-400/40 pointer-events-none"
-      />
-      <input
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        onFocus={() => setSearchFocused(true)}
-        onBlur={() => setSearchFocused(false)}
-        placeholder="快速检索..."
-        className="w-full bg-[#08080a] border border-amber-500/10 rounded-2xl py-3 pl-10 pr-8 text-xs text-amber-50/80 outline-none transition-all duration-500 shadow-inner hover:border-white/20 focus:border-amber-500/40 focus:shadow-[0_0_15px_rgba(245,158,11,0.03),inset_0_2px_8px_rgba(0,0,0,0.6)]"
-      />
-    </div>
-  );
+  const renderSearchBar = () => {
+    return (
+      <div className="relative w-full max-w-[320px] focus-within:max-w-[400px] transition-all duration-500 group/search">
+        <div className="absolute -inset-1 bg-amber-500/5 rounded-2xl blur-lg opacity-0 group-focus-within/search:opacity-100 transition-opacity duration-300 pointer-events-none" />
+        <div className="relative flex items-center bg-[#08080a] border border-amber-500/10 rounded-2xl transition-all duration-300 shadow-inner group-hover/search:border-white/20 group-focus-within/search:border-amber-500/40 group-focus-within/search:shadow-input-glow">
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-400/40 pointer-events-none" />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="快速搜索..."
+            className="w-full bg-transparent border-none outline-none py-2.5 pl-10 pr-8 text-xs text-amber-50/80 placeholder:text-zinc-600 focus-visible:ring-0 focus-visible:ring-offset-0"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg text-zinc-600 hover:text-amber-200 transition-colors"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const renderRuleItem = (rule: Rule) => {
     const active = selectedName === rule.name;
@@ -585,11 +566,9 @@ export default function RuleManager() {
       {/* ── Left panel: Rule list ── */}
       <div className="flex-1 min-w-0 flex flex-col bg-[#0d0d0f]/60 border border-white/[0.04] rounded-4xl overflow-hidden">
         {/* Header */}
-        <div className="px-8 py-6 border-b border-white/[0.04] flex items-center gap-6">
+        <div className="px-8 py-6 border-b border-white/[0.04] flex items-center gap-6 ">
           <Layers size={18} className="text-indigo-400/60" />
-          <h3 className="font-black text-amber-50/90 text-sm uppercase tracking-[0.08em]">
-            Pattern Repository
-          </h3>
+          <h3 className="sr-only">Pattern Repository</h3>
           <div className="flex-1">{renderSearchBar()}</div>
           <button
             onClick={clearForm}

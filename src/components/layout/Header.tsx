@@ -91,8 +91,9 @@ export default function Header() {
           className="flex items-center gap-6 bg-[#141210] border border-white/[0.08] h-14 px-8 rounded-3xl cursor-pointer hover:border-amber-500/30 transition-all duration-500 shadow-xl hover:scale-[1.02] active:scale-[0.95]"
         >
           <div className="flex flex-col items-end">
-            <span className="text-xs font-black text-zinc-600 uppercase tracking-tighter mb-0.5">
-              Universe Mode
+            <span className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.2em] mb-0.5">
+              <kbd className="px-1.5 py-0.5 bg-white/[0.04] rounded border border-white/[0.06] font-mono text-zinc-600">Alt+M</kbd>
+              <span className="mx-1.5">Universe Mode</span>
             </span>
             <span
               className={cn(
