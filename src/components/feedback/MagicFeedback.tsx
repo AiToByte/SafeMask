@@ -2,10 +2,8 @@ import { ShieldCheck, Ghost, ShieldAlert, RotateCcw } from "lucide-react";
 import { useAppStore, type FeedbackPayload } from "@/hooks/useAppStore";
 import { useEffect, useState } from "react";
 
-const containerClass =
-  "fixed inset-0 z-[999] flex items-center justify-center pointer-events-none";
-const toastClass =
-  "bg-[#0f0f14]/90 backdrop-blur-[20px] border border-white/10 rounded-full px-8 py-4 shadow-2xl shadow-blue-500/10 flex items-center gap-4 text-base font-bold text-white/90 toast-animate";
+const containerClass = "relative w-full h-full flex items-center justify-center pointer-events-none";
+const toastClass = "bg-[#141210] border border-amber-500/10 rounded-2xl px-6 py-2.5 shadow-xl shadow-black/40 flex items-center gap-3 text-sm font-bold text-white/90 toast-animate pointer-events-none";
 
 export default function MagicFeedback() {
   const activeFeedback = useAppStore((s) => s.activeFeedback);
@@ -49,24 +47,24 @@ function ToastContent({ feedback }: { feedback: FeedbackPayload }) {
     case "PASTE_MASKED":
       return (
         <>
-          <ShieldCheck className="w-6 h-6 text-emerald-400 shrink-0" />
-          <span className="text-sm">已注入脱敏副本</span>
+          <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 animate-pulse" />
+          <span className="text-xs tracking-wide">已注入脱敏副本</span>
         </>
       );
 
     case "PASTE_ORIGINAL":
       return (
         <>
-          <RotateCcw className="w-6 h-6 text-amber-400 shrink-0" />
-          <span className="text-sm">已回溯粘贴原文</span>
+          <RotateCcw className="w-5 h-5 text-amber-400 shrink-0 animate-spin" />
+          <span className="text-xs tracking-wide">已回溯粘贴原文</span>
         </>
       );
 
     case "SUCCESS":
       return (
         <>
-          <ShieldCheck className="w-6 h-6 text-blue-400 shrink-0" />
-          <span className="text-sm">脱敏成功</span>
+          <ShieldCheck className="w-5 h-5 text-blue-400 shrink-0" />
+          <span className="text-xs tracking-wide">文本脱敏成功</span>
         </>
       );
 
@@ -81,18 +79,16 @@ function ModeChangeContent({ mode }: { mode: "SHADOW" | "SENTRY" }) {
   return (
     <>
       {isShadow ? (
-        <Ghost className="w-6 h-6 text-amber-400 shrink-0" />
+        <Ghost className="w-5 h-5 text-amber-400 shrink-0" />
       ) : (
-        <ShieldAlert className="w-6 h-6 text-blue-400 shrink-0" />
+        <ShieldAlert className="w-5 h-5 text-blue-400 shrink-0" />
       )}
       <div className="flex flex-col leading-tight">
-        <span className="text-sm font-bold">
-          {isShadow ? "SHADOW" : "SENTRY"}
+        <span className="text-xs font-black tracking-wider text-amber-50/90">
+          {isShadow ? '影子宇宙模式激活' : '哨兵宇宙模式激活'}
         </span>
-        <span className="text-xs text-zinc-400 font-normal">
-          {isShadow
-            ? "隐身模式：仅 Alt+V 注入脱敏数据"
-            : "哨兵模式：剪贴板全量主动脱敏"}
+        <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest mt-0.5">
+          {isShadow ? '手动按需脱敏粘贴' : '全局自动实时洗白'}
         </span>
       </div>
     </>

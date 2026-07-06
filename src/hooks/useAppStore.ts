@@ -56,6 +56,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
     paste_delay_ms: 150,
     enable_visual_feedback: true,
     enable_audio_feedback: true,
+    model_download_urls: [
+      "https://github.com/AiToByte/SafeMask/releases/download/v1.2.4/privacy-filter.zip",
+    ],
   },
   isMonitorOn: true,
   ruleCount: 0,

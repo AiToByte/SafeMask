@@ -1,5 +1,12 @@
 use serde::{Deserialize, Serialize};
 
+fn default_model_urls() -> Vec<String> {
+    vec![
+        "https://github.com/AiToByte/SafeMask/releases/download/v1.2.4/privacy-filter.zip"
+            .to_string(),
+    ]
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     // --- 快捷键配置 ---
@@ -17,6 +24,11 @@ pub struct AppSettings {
     pub enable_visual_feedback: bool,
     /// 是否开启粘贴后的听觉音效提示
     pub enable_audio_feedback: bool,
+
+    // --- AI 模型下载 ---
+    /// 模型下载 URL 列表（优先级顺序，首个可用即使用）
+    #[serde(default = "default_model_urls")]
+    pub model_download_urls: Vec<String>,
 }
 
 impl Default for AppSettings {
@@ -27,6 +39,10 @@ impl Default for AppSettings {
             paste_delay_ms: 150,
             enable_visual_feedback: true,
             enable_audio_feedback: true,
+            model_download_urls: vec![
+                "https://github.com/AiToByte/SafeMask/releases/download/v1.2.4/privacy-filter.zip"
+                    .to_string(),
+            ],
         }
     }
 }

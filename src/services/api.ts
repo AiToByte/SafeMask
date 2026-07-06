@@ -31,6 +31,7 @@ export interface AppSettings {
   paste_delay_ms: number;
   enable_visual_feedback: boolean;
   enable_audio_feedback: boolean;
+  model_download_urls: string[];
 }
 
 /** 规则库统计 */
