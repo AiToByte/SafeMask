@@ -77,6 +77,29 @@ export const useModelDownloader = create<ModelDownloaderState>((set, get) => {
         etaSeconds: -1,
       });
 
+      // 鉴权代理健康预检 — 1.5 秒超时，失败立即降级
+      if (url.includes('/download?token=')) {
+        const healthUrl = url.substring(0, url.indexOf('/download')) + '/health';
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 1500);
+          const resp = await fetch(healthUrl, { signal: controller.signal });
+          clearTimeout(timer);
+          if (!resp.ok) throw new Error(`health returned ${resp.status}`);
+        } catch {
+          console.log("[ModelDownload] health check failed, skipping to next URL");
+          cleanup();
+          const nextIdx = currentIdx + 1;
+          if (nextIdx < urls.length) {
+            set({ currentUrlIndex: nextIdx });
+            get().startDownload(urls);
+          } else {
+            set({ status: "ERROR", errorMessage: "鉴权服务器不可达，且无备用下载地址" });
+          }
+          return;
+        }
+      }
+
       unlistenProgress = await listen<ProgressData>("model-download-progress", (e) => {
         const remaining = e.payload.total_bytes - e.payload.downloaded_bytes;
         const speed = e.payload.speed_mbps * 1024 * 1024;

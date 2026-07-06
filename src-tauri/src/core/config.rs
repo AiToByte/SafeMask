@@ -2,6 +2,10 @@ use serde::{Deserialize, Serialize};
 
 fn default_model_urls() -> Vec<String> {
     vec![
+        "https://obs.behource.com:9004/gxzh/2026/07/06/privacy-filter.zip"
+            .to_string(),
+        "https://950544b1401caf10f82ba1e82b03f89a.r2.cloudflarestorage.com/safemask-ai-model/privacy-filter/privacy-filter.zip"
+            .to_string(),
         "https://github.com/AiToByte/SafeMask/releases/download/v1.2.4/privacy-filter.zip"
             .to_string(),
     ]
@@ -27,7 +31,8 @@ pub struct AppSettings {
 
     // --- AI 模型下载 ---
     /// 模型下载 URL 列表（优先级顺序，首个可用即使用）
-    #[serde(default = "default_model_urls")]
+    /// 仅跳过序列化（不写入 YAML）；反序列化时若字段不存在则使用 `default_model_urls`
+    #[serde(skip_serializing, default = "default_model_urls")]
     pub model_download_urls: Vec<String>,
 }
 
@@ -40,6 +45,10 @@ impl Default for AppSettings {
             enable_visual_feedback: true,
             enable_audio_feedback: true,
             model_download_urls: vec![
+                "https://obs.behource.com:9004/gxzh/2026/07/06/privacy-filter.zip"
+                    .to_string(),
+                "https://950544b1401caf10f82ba1e82b03f89a.r2.cloudflarestorage.com/safemask-ai-model/privacy-filter/privacy-filter.zip"
+                    .to_string(),
                 "https://github.com/AiToByte/SafeMask/releases/download/v1.2.4/privacy-filter.zip"
                     .to_string(),
             ],

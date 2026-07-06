@@ -18,6 +18,9 @@ pub struct AppState {
     
     /// 持久化配置
     pub settings: Arc<RwLock<AppSettings>>,
+
+    /// 设备指纹（UUID v4，持久化到磁盘，用于下载令牌签名）
+    pub device_id: Arc<String>,
     
     /// 正在执行魔术粘贴的标记 (原子操作，防止递归触发)
     pub is_magic_pasting: Arc<AtomicBool>,

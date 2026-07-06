@@ -1,0 +1,8 @@
+name = "safemask-dl-proxy"
+main = "src/index.ts"
+compatibility_date = "2026-07-01"
+
+# Rate-limit KV store (token + IP counters, auto-expire)
+[[kv_namespaces]]
+binding = "SAFEMASK_DL"
+id = ""  # TODO: run `npx wrangler kv namespace create SAFEMASK_DL` and paste the ID here

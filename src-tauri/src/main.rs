@@ -220,6 +220,11 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
     // 加载持久化设置
     let settings = ConfigLoader::load_settings(handle);
 
+    // 设备指纹（用于下载令牌 HMAC 签名）
+    let custom_dir = ConfigLoader::get_custom_storage_path(handle);
+    let device_id = crate::core::download_auth::get_or_create_device_id(&custom_dir);
+    info!("🔑 设备 ID: {}", device_id);
+
     // 加载并编译规则引擎
     let rules = ConfigLoader::load_all_rules(handle);
     let mut engine = HybridEngine::from_rules(rules);
@@ -240,6 +245,7 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
     let app_state = AppState {
         engine: Arc::new(RwLock::new(engine)),
         settings: Arc::new(RwLock::new(settings)),
+        device_id: Arc::new(device_id),
         shadow_store: Arc::new(RwLock::new(crate::common::state::ShadowClipboard::default())),
         is_magic_pasting: Arc::new(AtomicBool::new(false)),
         is_monitor_on: Arc::new(Mutex::new(true)),
