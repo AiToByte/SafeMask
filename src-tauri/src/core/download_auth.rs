@@ -4,7 +4,7 @@ use uuid::Uuid;
 use base64::Engine;
 
 /// Worker 代理的公共 URL（由部署者更新为实际 Worker 域名）
-pub const WORKER_BASE_URL: &str = "https://safemask-dl-proxy.xxx.workers.dev";
+pub const WORKER_BASE_URL: &str = "https://www.xiaosheng.org.cn/safemask";
 
 /// 令牌有效时长（秒）— 用于 Worker 端校验，Rust 侧仅作文档参考
 #[allow(dead_code)]
