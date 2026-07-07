@@ -127,7 +127,7 @@ impl ConfigLoader {
         Ok(())
     }
     /// 🚀 智能路径判定：适配安装版、ZIP便携版、NSIS单文件版
-    fn get_custom_storage_path(app_handle: &AppHandle) -> PathBuf {
+    pub fn get_custom_storage_path(app_handle: &AppHandle) -> PathBuf {
         // 获取当前 EXE 所在目录
         let exe_path = std::env::current_exe().unwrap_or_default();
         let exe_dir = exe_path.parent().unwrap_or(Path::new(""));

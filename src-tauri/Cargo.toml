@@ -40,6 +40,9 @@ arboard = "3.6.1"  # 跨平台剪贴板读写
 crossbeam-channel = "0.5" # 高性能通道 (用于背压控制)
 clipboard-master = "4.0.0" # 系统级剪贴板事件监听
 rand = "0.8.5"   # 用于 jitter 随机抖动，防止雷鸣群效应
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.22"
 parking_lot = "0.12"      # 比 std::sync::Mutex 更快更小的锁
 env_logger = "0.11"  # 添加日志库
 log = "0.4"
@@ -55,12 +58,15 @@ enigo = "0.1.2" # 建议使用稳定版本 0.1.x
 tauri-plugin-global-shortcut = "2.2.0"
 # Tauri 增强
 tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["stream"] }
+futures-util = "0.3"
+fs2 = "0.4"
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-opener = "2.2.5"
 serde_json = "1.0"
 tauri-plugin-dialog = "2.6.0"
 # --- AI 引擎 (ONNX NER) ---
-ort = "2.0.0-rc.12"  # ONNX Runtime (静态链接)
+ort = { version = "2.0.0-rc.12", features = ["copy-dylibs"] }  # ONNX Runtime (静态链接)
 tokenizers = { version = "0.20", default-features = false, features = ["onig"] }  # HuggingFace tokenizers
 ndarray = "0.16"  # 数组处理
 

@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod ai_downloader;
 mod api;
 mod common;
 mod core;
@@ -64,6 +65,7 @@ fn main() {
         .plugin(tauri_plugin_notification::init())
          // 1. 注册快捷键插件（这里由于插件机制，必须在 Builder 链中声明）
         .plugin(init_shortcut_plugin()) 
+        .manage(ai_downloader::DownloadState::default())
         .setup(setup_application)
         .invoke_handler(tauri::generate_handler![
             api::system::get_rules_stats,
@@ -87,6 +89,9 @@ fn main() {
             api::system::get_engine_info,        // 完整引擎信息
             api::system::toggle_ai_engine,       // AI 启用/停用
             api::system::get_registered_recognizers, // 已注册识别器
+            ai_downloader::check_model_file,
+            ai_downloader::start_model_download,
+            ai_downloader::cancel_model_download,
         ])
         .run(tauri::generate_context!())
     {
@@ -215,6 +220,11 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
     // 加载持久化设置
     let settings = ConfigLoader::load_settings(handle);
 
+    // 设备指纹（用于下载令牌 HMAC 签名）
+    let custom_dir = ConfigLoader::get_custom_storage_path(handle);
+    let device_id = crate::core::download_auth::get_or_create_device_id(&custom_dir);
+    info!("🔑 设备 ID: {}", device_id);
+
     // 加载并编译规则引擎
     let rules = ConfigLoader::load_all_rules(handle);
     let mut engine = HybridEngine::from_rules(rules);
@@ -235,6 +245,7 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
     let app_state = AppState {
         engine: Arc::new(RwLock::new(engine)),
         settings: Arc::new(RwLock::new(settings)),
+        device_id: Arc::new(device_id),
         shadow_store: Arc::new(RwLock::new(crate::common::state::ShadowClipboard::default())),
         is_magic_pasting: Arc::new(AtomicBool::new(false)),
         is_monitor_on: Arc::new(Mutex::new(true)),
@@ -249,51 +260,33 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
-/// 查找模型目录
-fn find_models_dir(handle: &AppHandle) -> std::path::PathBuf {
-    let current_dir = std::env::current_dir().unwrap_or_default();
-
-    // 调试：写入日志文件
-    let debug_log = current_dir.join("models_debug.log");
-    let _ = std::fs::write(&debug_log, format!(
-        "当前工作目录: {}\n资源目录: {:?}\n",
-        current_dir.display(),
-        handle.path().resource_dir().ok()
-    ));
-
-    // 1. 尝试多个可能的路径
-    let possible_paths = vec![
-        current_dir.join("src-tauri").join("models"),
-        current_dir.join("models"),
-        std::path::PathBuf::from("src-tauri/models"),
-        std::path::PathBuf::from("models"),
-        handle.path().resource_dir().map(|p| p.join("models")).unwrap_or_default(),
-    ];
-
-    for path in &possible_paths {
-        let privacy_filter_dir = path.join("privacy-filter");
-        // 检查 model_q4.onnx 或 model.onnx
-        let model_exists = privacy_filter_dir.join("model_q4.onnx").exists()
-            || privacy_filter_dir.join("model.onnx").exists();
-        let tokenizer_exists = privacy_filter_dir.join("tokenizer.json").exists();
-
-        // 写入调试信息
-        let _ = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log)
-            .and_then(|mut f| {
-                use std::io::Write;
-                writeln!(f, "检查: {} | 存在:{} | model:{} | tokenizer:{}",
-                    path.display(), path.exists(), model_exists, tokenizer_exists)
-            });
-
-        if path.exists() && model_exists && tokenizer_exists {
-            info!("✅ 找到模型目录: {}", path.display());
-            return path.clone();
+/// 查找模型目录 — 兼顾便携版(先)和安装版(后)
+fn find_models_dir(app: &AppHandle) -> std::path::PathBuf {
+    // 1. 优先检查便携式路径：可执行文件同级或 resources
+    if let Ok(p_dir) = app.path().resource_dir() {
+        let portable_path = p_dir.join("models").join("privacy-filter");
+        if portable_path.exists() && portable_path.join("model_q4.onnx").exists() {
+            info!("✅ 便携式路径找到模型目录: {}", portable_path.display());
+            return portable_path;
         }
     }
 
-    let default_path = current_dir.join("src-tauri").join("models");
-    info!("⚠️ 未找到模型目录，使用默认路径: {}", default_path.display());
-    default_path
+    // 2. 其次检查用户本地数据目录
+    if let Ok(l_dir) = app.path().app_local_data_dir() {
+        let local_path = l_dir.join("models").join("privacy-filter");
+        if local_path.exists() && local_path.join("model_q4.onnx").exists() {
+            info!("✅ 本地数据路径找到模型目录: {}", local_path.display());
+            return local_path;
+        }
+        // 即使此时不存在，下载后也写到这里
+        info!("📁 模型尚未下载，目标数据目录: {}", local_path.display());
+        return local_path;
+    }
+
+    // 3. 极端的备用保底：CWD 相对路径
+    let fallback = std::path::PathBuf::from("./models/privacy-filter");
+    info!("⚠️ 无法获取标准路径，使用保底路径: {}", fallback.display());
+    fallback
 }
 
 fn init_shortcut_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {

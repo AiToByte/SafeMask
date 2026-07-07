@@ -7,6 +7,7 @@ use crate::infra::config::loader::ConfigLoader;
 use tauri::{AppHandle, State, Emitter}; 
 use std::sync::Arc;
 use crate::core::config::AppSettings;
+use crate::core::download_auth;
 use log::{info};
 use regex::bytes::Regex;
 use std::sync::atomic::Ordering; 
@@ -122,10 +123,16 @@ pub async fn toggle_vault_mode(app: tauri::AppHandle, state: tauri::State<'_, Ap
     Ok(current_mode)
 }
 
-/// 获取当前应用配置
+/// 获取当前应用配置（自动注入 Worker 代理下载 URL）
 #[tauri::command]
 pub async fn get_app_settings(state: State<'_, AppState>) -> AppResult<AppSettings> {
-    Ok(state.settings.read().clone())
+    let mut settings = state.settings.read().clone();
+    // 清除内存中可能残留的旧 Worker 代理 URL
+    settings.model_download_urls.retain(|u| !u.contains(download_auth::WORKER_BASE_URL));
+    // 前置插入实时生成的 Worker 代理 URL（含 HMAC 令牌）
+    let worker_url = download_auth::generate_worker_url(&state.device_id);
+    settings.model_download_urls.insert(0, worker_url);
+    Ok(settings)
 }
 
 /// 更新应用配置 (新增命令，用于设置页面保存所有开关)
@@ -133,8 +140,10 @@ pub async fn get_app_settings(state: State<'_, AppState>) -> AppResult<AppSettin
 pub async fn update_app_settings(
     app: AppHandle,
     state: State<'_, AppState>,
-    new_settings: AppSettings,
+    mut new_settings: AppSettings,
 ) -> AppResult<String> {
+    // 剥离前端可能回传的 Worker 代理 URL，防止污染持久化存储
+    new_settings.model_download_urls.retain(|u| !u.contains(download_auth::WORKER_BASE_URL));
     let old_shortcut = state.settings.read().magic_paste_shortcut.clone();
     let shortcut_changed = old_shortcut != new_settings.magic_paste_shortcut;
 

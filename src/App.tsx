@@ -12,7 +12,6 @@ import FileProcessor from "@/components/dashboard/FileProcessor";
 const HistoryList = lazy(() => import("@/components/history/HistoryList"));
 const RuleManager = lazy(() => import("@/components/rules/RuleManager"));
 const SettingsPage = lazy(() => import("@/components/settings/SettingsPage"));
-const MagicFeedback = lazy(() => import("@/components/feedback/MagicFeedback"));
 const ExitConfirm = lazy(() => import("@/components/overlay/ExitConfirm"));
 
 export default function App() {
@@ -78,10 +77,6 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen bg-[#0c0b0a] text-amber-50/90 select-none overflow-hidden font-sans relative">
-      <Suspense fallback={null}>
-        <MagicFeedback />
-      </Suspense>
-
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
 

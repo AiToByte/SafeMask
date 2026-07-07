@@ -6,3 +6,4 @@ pub mod resolver;
 pub mod hybrid_engine;
 pub mod masking;
 pub mod orchestrator;
+pub mod download_auth;
