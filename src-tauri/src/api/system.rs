@@ -123,16 +123,31 @@ pub async fn toggle_vault_mode(app: tauri::AppHandle, state: tauri::State<'_, Ap
     Ok(current_mode)
 }
 
-/// 获取当前应用配置（自动注入 Worker 代理下载 URL）
+/// 获取当前应用配置（自动注入 Worker 代理下载 URL，保证前端可见性）
 #[tauri::command]
-pub async fn get_app_settings(state: State<'_, AppState>) -> AppResult<AppSettings> {
+pub async fn get_app_settings(state: State<'_, AppState>) -> AppResult<serde_json::Value> {
     let mut settings = state.settings.read().clone();
     // 清除内存中可能残留的旧 Worker 代理 URL
     settings.model_download_urls.retain(|u| !u.contains(download_auth::WORKER_BASE_URL));
     // 前置插入实时生成的 Worker 代理 URL（含 HMAC 令牌）
     let worker_url = download_auth::generate_worker_url(&state.device_id);
     settings.model_download_urls.insert(0, worker_url);
-    Ok(settings)
+
+    // 1. 将 settings 序列化为 JSON Value
+    let mut json = serde_json::to_value(&settings)
+        .map_err(|e| crate::common::errors::AppError::Internal(e.to_string()))?;
+
+    // 2. 🚀 关键修复：由于 AppSettings 内有 skip_serializing，我们在这里手动注入 model_download_urls
+    // 这样既防止了写入本地 settings.yaml 导致旧 URL 固化，又保证了前端 API 100% 能拿到下载链接
+    if let Some(obj) = json.as_object_mut() {
+        obj.insert(
+            "model_download_urls".to_string(),
+            serde_json::to_value(&settings.model_download_urls)
+                .map_err(|e| crate::common::errors::AppError::Internal(e.to_string()))?,
+        );
+    }
+
+    Ok(json)
 }
 
 /// 更新应用配置 (新增命令，用于设置页面保存所有开关)

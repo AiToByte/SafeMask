@@ -9,6 +9,7 @@ import { useAppStore } from "@/hooks/useAppStore";
 import { useAudioFeedback } from "@/hooks/useAudioFeedback";
 import { MaskAPI } from "@/services/api";
 import { Toggle } from "@/components/ui/Toggle";
+import { SettingToggle } from "@/components/ui/SettingToggle";
 import ModelDownloadCard from "@/components/settings/ModelDownloadCard";
 import { cn } from "@/lib/utils";
 import { message, confirm } from "@tauri-apps/plugin-dialog";
@@ -246,20 +247,12 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-8">
-              <div className="flex justify-between items-center bg-black/20 p-5 rounded-2xl border border-white/[0.02]">
-                <div>
-                  <div className="text-base font-bold text-amber-50/80">启用影子宇宙模式</div>
-                  <div className="text-xs text-zinc-600 font-bold uppercase tracking-widest mt-1">
-                    数据流在内存中脱敏，物理剪贴板保留原文
-                  </div>
-                </div>
-                <Toggle
-                  checked={store.settings.shadow_mode_enabled}
-                  onChange={(checked) =>
-                    store.updateSettings({ ...store.settings, shadow_mode_enabled: checked })
-                  }
-                />
-              </div>
+              <SettingToggle
+                title="启用影子宇宙模式"
+                description="数据流在内存中脱敏，物理剪贴板保留原文"
+                checked={store.settings.shadow_mode_enabled}
+                onChange={(checked) => store.updateSettings({ ...store.settings, shadow_mode_enabled: checked })}
+              />
 
               <div className="p-7 bg-black/40 rounded-[2rem] border border-white/[0.03] shadow-inner">
                 <div className="text-xs font-black text-zinc-600 uppercase tracking-widest mb-5">Paste Shortcut</div>
@@ -348,41 +341,23 @@ export default function SettingsPage() {
             </div>
             
             <div className="space-y-6">
-              <div className="flex justify-between items-center py-4 px-5 rounded-2xl bg-black/20 border border-white/[0.02] hover:bg-white/[0.01] transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                    <Eye size={16} className="text-blue-400/80" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-bold text-zinc-300">蓝盾视觉气泡</div>
-                    <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mt-0.5">桌面叠加层实时反馈</div>
-                  </div>
-                </div>
-                <Toggle
-                  checked={store.settings.enable_visual_feedback}
-                  onChange={(checked) =>
-                    store.updateSettings({ ...store.settings, enable_visual_feedback: checked })
-                  }
-                />
-              </div>
+              <SettingToggle
+                icon={Eye}
+                iconColor="blue"
+                title="蓝盾视觉气泡"
+                description="桌面叠加层实时反馈"
+                checked={store.settings.enable_visual_feedback}
+                onChange={(checked) => store.updateSettings({ ...store.settings, enable_visual_feedback: checked })}
+              />
 
-              <div className="flex justify-between items-center py-4 px-5 rounded-2xl bg-black/20 border border-white/[0.02] hover:bg-white/[0.01] transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                    <Volume2 size={16} className="text-amber-400/80" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-bold text-zinc-300">物理机械音效</div>
-                    <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mt-0.5">系统声音反馈</div>
-                  </div>
-                </div>
-                <Toggle
-                  checked={store.settings.enable_audio_feedback}
-                  onChange={(checked) =>
-                    store.updateSettings({ ...store.settings, enable_audio_feedback: checked })
-                  }
-                />
-              </div>
+              <SettingToggle
+                icon={Volume2}
+                iconColor="amber"
+                title="物理机械音效"
+                description="系统声音反馈"
+                checked={store.settings.enable_audio_feedback}
+                onChange={(checked) => store.updateSettings({ ...store.settings, enable_audio_feedback: checked })}
+              />
 
               <div className="pt-8 border-t border-white/[0.03] space-y-5">
                 <div className="flex justify-between items-end">
