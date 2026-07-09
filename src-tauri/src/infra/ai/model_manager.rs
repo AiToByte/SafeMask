@@ -100,6 +100,33 @@ impl ModelManager {
 
         let mut models = Vec::new();
 
+        // 优先检测根目录直接放置的模型文件（下载解压后的常见布局）
+        let root_model_file = if self.models_dir.join("model_q4.onnx").exists() {
+            Some(self.models_dir.join("model_q4.onnx"))
+        } else if self.models_dir.join("model.onnx").exists() {
+            Some(self.models_dir.join("model.onnx"))
+        } else {
+            None
+        };
+        if let Some(ref model_file) = root_model_file {
+            let tokenizer_file = self.models_dir.join("tokenizer.json");
+            if tokenizer_file.exists() {
+                let model_size = std::fs::metadata(model_file)
+                    .map(|m| m.len())
+                    .unwrap_or(0);
+                models.push(ModelMetadata {
+                    name: "privacy-filter".to_string(),
+                    version: "1.0".to_string(),
+                    model_path: model_file.clone(),
+                    tokenizer_path: tokenizer_file,
+                    model_size_bytes: model_size,
+                    entity_types: Self::default_entity_types(),
+                    description: "AI NER 模型（根目录）".to_string(),
+                });
+                info!("🔍 发现根目录模型: privacy-filter ({:.1} MB)", model_size as f64 / 1024.0 / 1024.0);
+            }
+        }
+
         // 扫描子目录，每个子目录是一个模型
         if let Ok(entries) = std::fs::read_dir(&self.models_dir) {
             for entry in entries.flatten() {

@@ -83,7 +83,14 @@ impl HybridEngine {
     /// 启用 AI 引擎
     ///
     /// 如果模型目录存在可用模型，注册 NER 识别器。
+    /// 可重复调用——第二次调用会重新扫描模型目录；
+    /// 如果 AI 已启用且有模型，则跳过以避免重复注册。
     pub fn enable_ai_engine(&mut self, models_dir: impl AsRef<std::path::Path>) {
+        // 如果 AI 已启用且已有模型管理器，跳过重复初始化
+        if self.ai_enabled.load(Ordering::SeqCst) && self.model_manager.is_some() {
+            info!("🤖 AI 引擎已启用，跳过重复初始化");
+            return;
+        }
         let model_manager = Arc::new(ModelManager::new(models_dir));
 
         if model_manager.has_models() {

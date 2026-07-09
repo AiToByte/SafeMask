@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use futures_util::StreamExt;
-use log::{info, error};
+use log::{info, error, warn};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 use std::time::{Duration, Instant};
@@ -126,7 +126,19 @@ pub async fn start_model_download(
         match result {
             Ok(_) => {
                 info!("[ModelDownload] pipeline completed successfully");
+
+                // 通知前端下载完成
                 let _ = app_clone.emit("model-download-status", "READY");
+
+                // 重新初始化 AI 引擎（下载前可能因模型缺失而跳过）
+                let state = app_clone.state::<crate::common::state::AppState>();
+                let mut guard = state.engine.write();
+                if let Some(engine_ref) = std::sync::Arc::get_mut(&mut *guard) {
+                    engine_ref.enable_ai_engine(&model_dir);
+                    info!("🤖 AI 引擎已重新初始化（下载后）");
+                } else {
+                    warn!("⚠️ 引擎引用不唯一，跳过 AI 引擎热加载");
+                }
             }
             Err(e) => {
                 error!("[ModelDownload] pipeline failed: {}", e);
