@@ -252,7 +252,8 @@ impl ModelManager {
     /// 获取模型状态信息（用于前端展示）
     pub fn status_info(&self) -> serde_json::Value {
         let state = self.state();
-        let metadata = self.metadata();
+        let metadata = self.metadata()
+            .or_else(|| self.available_models.first().cloned());
 
         serde_json::json!({
             "state": match &state {
