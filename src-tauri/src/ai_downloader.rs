@@ -8,6 +8,7 @@ use log::{info, error, warn};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 use std::time::{Duration, Instant};
+use crate::infra::ai::model_manager::validate_model_dir;
 
 // ── Consts ──
 const DOWNLOAD_TIMEOUT: u64 = 300;          // 5 min
@@ -35,46 +36,62 @@ pub struct DownloadState {
 
 // ── Commands ──
 
-/// 检查模型文件完整性 (四件套校验)
+/// 检查模型文件完整性
+/// 优先级: AppData → 便携式; 支持 privacy-filter/ 子目录、根级文件、子目录三种布局
 #[tauri::command]
 pub fn check_model_file(app: AppHandle) -> Result<String, String> {
-    let portable_dir = app
-        .path()
-        .resource_dir()
-        .unwrap_or_default()
-        .join("models")
-        .join("privacy-filter");
-    if verify_model_integrity(&portable_dir) {
-        return Ok("READY_PORTABLE".to_string());
+    // Priority 1: AppData/models/ 及所有嵌套布局
+    if let Ok(local) = app.path().app_local_data_dir() {
+        let base = local.join("models");
+        clean_stale_lock(&base.join("privacy-filter").join(LOCK_FILE));
+        if has_valid_model_in(&base) {
+            return Ok("READY".to_string());
+        }
     }
-
-    let local_dir = app
-        .path()
-        .app_local_data_dir()
-        .unwrap_or_default()
-        .join("models")
-        .join("privacy-filter");
-    if verify_model_integrity(&local_dir) {
-        // 清除残留锁文件（若有）
-        let _ = std::fs::remove_file(local_dir.join(LOCK_FILE));
-        return Ok("READY".to_string());
+    // Priority 2: 便携式 models/ 及所有嵌套布局
+    if let Ok(portable) = app.path().resource_dir() {
+        if has_valid_model_in(&portable.join("models")) {
+            return Ok("READY_PORTABLE".to_string());
+        }
     }
+    Ok("MISSING".to_string())
+}
 
-    // 清理过期锁文件
-    let lock_path = local_dir.join(LOCK_FILE);
-    if lock_path.exists() {
-        if let Ok(meta) = std::fs::metadata(&lock_path) {
-            if let Ok(modified) = meta.modified() {
-                if let Ok(elapsed) = modified.elapsed() {
-                    if elapsed > Duration::from_secs(STALE_LOCK_MINS * 60) {
-                        let _ = std::fs::remove_file(&lock_path);
-                    }
+/// 扫描 parent 目录下所有可能的模型布局
+fn has_valid_model_in(parent: &Path) -> bool {
+    if !parent.exists() {
+        return false;
+    }
+    // 快速路径: privacy-filter/ 子目录（下载后的标准位置）
+    if validate_model_dir(&parent.join("privacy-filter")) {
+        return true;
+    }
+    // 根级文件直接放置
+    if validate_model_dir(parent) {
+        return true;
+    }
+    // 其他子目录
+    if let Ok(entries) = std::fs::read_dir(parent) {
+        entries.filter_map(Result::ok).any(|e| e.path().is_dir() && validate_model_dir(&e.path()))
+    } else {
+        false
+    }
+}
+
+/// 清理过期锁文件
+fn clean_stale_lock(lock_path: &Path) {
+    if !lock_path.exists() {
+        return;
+    }
+    if let Ok(meta) = std::fs::metadata(lock_path) {
+        if let Ok(modified) = meta.modified() {
+            if let Ok(elapsed) = modified.elapsed() {
+                if elapsed > Duration::from_secs(STALE_LOCK_MINS * 60) {
+                    let _ = std::fs::remove_file(lock_path);
                 }
             }
         }
     }
-
-    Ok("MISSING".to_string())
 }
 
 /// 启动下载与解压流水线
@@ -369,25 +386,3 @@ fn extract_zip(zip_path: &Path, extract_to: &Path) -> Result<(), String> {
 }
 
 // ── Helpers ──
-
-/// 内部函数：验证4个核心模型组件是否健全
-fn verify_model_integrity(dir: &Path) -> bool {
-    let files = [
-        "model_q4.onnx",
-        "model_q4.onnx_data",
-        "tokenizer.json",
-        "config.json",
-    ];
-    for file in &files {
-        let path = dir.join(file);
-        if !path.exists() {
-            return false;
-        }
-        if let Ok(meta) = std::fs::metadata(&path) {
-            if meta.len() == 0 {
-                return false;
-            }
-        }
-    }
-    true
-}

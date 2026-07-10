@@ -6,7 +6,7 @@
 //! - 状态管理（未加载、加载中、就绪、错误）
 //! - 模型元数据
 
-use log::{info, warn, error};
+use log::info;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use parking_lot::RwLock;
@@ -59,6 +59,27 @@ pub struct ModelManager {
     active_metadata: Arc<RwLock<Option<ModelMetadata>>>,
 }
 
+/// 验证目录是否包含有效的模型文件。
+/// 必需: ONNX 模型 (model_q4.onnx / model.onnx) + tokenizer.json。
+/// 可选: model_q4.onnx_data / config.json — 存在则校验非空。
+pub(crate) fn validate_model_dir(dir: &Path) -> bool {
+    let has_onnx = dir.join("model_q4.onnx").exists()
+                || dir.join("model.onnx").exists();
+    if !has_onnx {
+        return false;
+    }
+    if !dir.join("tokenizer.json").exists() {
+        return false;
+    }
+    for opt in ["model_q4.onnx_data", "config.json"] {
+        let p = dir.join(opt);
+        if p.exists() && p.metadata().map(|m| m.len() == 0).unwrap_or(false) {
+            return false;
+        }
+    }
+    true
+}
+
 impl ModelManager {
     /// 创建模型管理器
     ///
@@ -85,14 +106,6 @@ impl ModelManager {
 
     /// 扫描模型目录，发现可用模型
     fn discover_models(&mut self) {
-        // 调试：写入日志
-        let debug_log = std::path::PathBuf::from("models_debug.log");
-        let _ = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log)
-            .and_then(|mut f| {
-                use std::io::Write;
-                writeln!(f, "\n[ModelManager] 扫描目录: {} | 存在: {}", self.models_dir.display(), self.models_dir.exists())
-            });
-
         if !self.models_dir.exists() {
             info!("📁 模型目录不存在，跳过扫描: {}", self.models_dir.display());
             return;
@@ -100,92 +113,59 @@ impl ModelManager {
 
         let mut models = Vec::new();
 
-        // 优先检测根目录直接放置的模型文件（下载解压后的常见布局）
-        let root_model_file = if self.models_dir.join("model_q4.onnx").exists() {
-            Some(self.models_dir.join("model_q4.onnx"))
-        } else if self.models_dir.join("model.onnx").exists() {
-            Some(self.models_dir.join("model.onnx"))
-        } else {
-            None
-        };
-        if let Some(ref model_file) = root_model_file {
+        // 根级文件（下载解压后直接放在 models/ 根目录的常见布局）
+        if validate_model_dir(&self.models_dir) {
+            let model_file = if self.models_dir.join("model_q4.onnx").exists() {
+                self.models_dir.join("model_q4.onnx")
+            } else {
+                self.models_dir.join("model.onnx")
+            };
             let tokenizer_file = self.models_dir.join("tokenizer.json");
-            if tokenizer_file.exists() {
-                let model_size = std::fs::metadata(model_file)
-                    .map(|m| m.len())
-                    .unwrap_or(0);
-                models.push(ModelMetadata {
-                    name: "privacy-filter".to_string(),
-                    version: "1.0".to_string(),
-                    model_path: model_file.clone(),
-                    tokenizer_path: tokenizer_file,
-                    model_size_bytes: model_size,
-                    entity_types: Self::default_entity_types(),
-                    description: "AI NER 模型（根目录）".to_string(),
-                });
-                info!("🔍 发现根目录模型: privacy-filter ({:.1} MB)", model_size as f64 / 1024.0 / 1024.0);
-            }
+            let model_size = std::fs::metadata(&model_file).map(|m| m.len()).unwrap_or(0);
+            models.push(ModelMetadata {
+                name: "privacy-filter".to_string(),
+                version: "1.0".to_string(),
+                model_path: model_file,
+                tokenizer_path: tokenizer_file,
+                model_size_bytes: model_size,
+                entity_types: Self::default_entity_types(),
+                description: "AI NER 模型（根目录）".to_string(),
+            });
+            info!("🔍 发现根目录模型: privacy-filter ({:.1} MB)", model_size as f64 / 1024.0 / 1024.0);
         }
 
-        // 扫描子目录，每个子目录是一个模型
+        // 子目录，每个子目录是一个模型
         if let Ok(entries) = std::fs::read_dir(&self.models_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if !path.is_dir() {
+                if !path.is_dir() || !validate_model_dir(&path) {
                     continue;
                 }
-
-                // 优先查找 q4 量化版本
                 let model_file = if path.join("model_q4.onnx").exists() {
                     path.join("model_q4.onnx")
                 } else {
                     path.join("model.onnx")
                 };
                 let tokenizer_file = path.join("tokenizer.json");
-
-                // 调试
-                let debug_log = std::path::PathBuf::from("models_debug.log");
-                let _ = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log)
-                    .and_then(|mut f| {
-                        use std::io::Write;
-                        writeln!(f, "[discover] 子目录: {} | model:{} | tokenizer:{}",
-                            path.display(), model_file.file_name().unwrap_or_default().to_string_lossy(), tokenizer_file.exists())
-                    });
-
-                if model_file.exists() && tokenizer_file.exists() {
-                    let name = path
-                        .file_name()
-                        .map(|n| n.to_string_lossy().to_string())
-                        .unwrap_or_else(|| "unknown".to_string());
-
-                    let model_size = std::fs::metadata(&model_file)
-                        .map(|m| m.len())
-                        .unwrap_or(0);
-
-                    models.push(ModelMetadata {
-                        name: name.clone(),
-                        version: "1.0".to_string(),
-                        model_path: model_file,
-                        tokenizer_path: tokenizer_file,
-                        model_size_bytes: model_size,
-                        entity_types: Self::default_entity_types(),
-                        description: format!("AI NER 模型: {}", name),
-                    });
-
-                    info!("🔍 发现模型: {} ({:.1} MB)", name, model_size as f64 / 1024.0 / 1024.0);
-                }
+                let name = path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "unknown".to_string());
+                let model_size = std::fs::metadata(&model_file).map(|m| m.len()).unwrap_or(0);
+                models.push(ModelMetadata {
+                    name: name.clone(),
+                    version: "1.0".to_string(),
+                    model_path: model_file,
+                    tokenizer_path: tokenizer_file,
+                    model_size_bytes: model_size,
+                    entity_types: Self::default_entity_types(),
+                    description: format!("AI NER 模型: {}", name),
+                });
+                info!("🔍 发现模型: {} ({:.1} MB)", name, model_size as f64 / 1024.0 / 1024.0);
             }
         }
 
         self.available_models = models;
-
-        // 调试
-        let debug_log = std::path::PathBuf::from("models_debug.log");
-        let _ = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log)
-            .and_then(|mut f| {
-                use std::io::Write;
-                writeln!(f, "[discover] 发现模型数量: {}", self.available_models.len())
-            });
 
         if self.available_models.is_empty() {
             info!("⚠️ 未发现任何模型。请将模型文件放置在: {}", self.models_dir.display());

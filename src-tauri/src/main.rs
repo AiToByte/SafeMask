@@ -1,4 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+// 允许未使用的代码（库/二进制共享模块，API 表面在积极开发中）
+#![allow(dead_code)]
 
 mod ai_downloader;
 mod api;
@@ -8,8 +10,10 @@ mod infra;
 
 use crate::common::state::AppState;
 use crate::core::hybrid_engine::HybridEngine;
+use crate::infra::ai::model_manager::validate_model_dir;
 use crate::infra::config::loader::ConfigLoader;
 use crate::infra::config::shortcut_manager::ShortcutManager;
+use std::path::Path;
 use std::sync::{Arc, atomic::AtomicBool};
 // 统一使用 parking_lot
 // 🚀 显式从 parking_lot 导入
@@ -260,33 +264,54 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
-/// 查找模型目录 — 兼顾便携版(先)和安装版(后)
+/// 查找模型目录 — 优先 AppData, 其次便携式
 fn find_models_dir(app: &AppHandle) -> std::path::PathBuf {
-    // 1. 优先检查便携式路径：可执行文件同级或 resources
-    if let Ok(p_dir) = app.path().resource_dir() {
-        let portable_path = p_dir.join("models").join("privacy-filter");
-        if portable_path.exists() && portable_path.join("model_q4.onnx").exists() {
-            info!("✅ 便携式路径找到模型目录: {}", portable_path.display());
-            return portable_path;
-        }
-    }
-
-    // 2. 其次检查用户本地数据目录
-    if let Ok(l_dir) = app.path().app_local_data_dir() {
-        let local_path = l_dir.join("models").join("privacy-filter");
-        if local_path.exists() && local_path.join("model_q4.onnx").exists() {
-            info!("✅ 本地数据路径找到模型目录: {}", local_path.display());
-            return local_path;
+    // 1. AppData 优先（下载目标目录）
+    if let Ok(local) = app.path().app_local_data_dir() {
+        let base = local.join("models");
+        if let Some(dir) = first_valid_model_dir(&base) {
+            info!("✅ 本地数据路径找到模型目录: {}", dir.display());
+            return dir;
         }
         // 即使此时不存在，下载后也写到这里
-        info!("📁 模型尚未下载，目标数据目录: {}", local_path.display());
-        return local_path;
+        let target = base.join("privacy-filter");
+        info!("📁 模型尚未下载，目标数据目录: {}", target.display());
+        return target;
     }
-
-    // 3. 极端的备用保底：CWD 相对路径
+    // 2. 便携式路径：可执行文件同级或 resources
+    if let Ok(portable) = app.path().resource_dir() {
+        let base = portable.join("models");
+        if let Some(dir) = first_valid_model_dir(&base) {
+            info!("✅ 便携式路径找到模型目录: {}", dir.display());
+            return dir;
+        }
+    }
+    // 3. 备用保底
     let fallback = std::path::PathBuf::from("./models/privacy-filter");
     info!("⚠️ 无法获取标准路径，使用保底路径: {}", fallback.display());
     fallback
+}
+
+/// 在 base/models 下查找第一个有效的模型目录
+fn first_valid_model_dir(base: &Path) -> Option<std::path::PathBuf> {
+    if !base.exists() {
+        return None;
+    }
+    // 快速路径: privacy-filter/ 子目录
+    let pf = base.join("privacy-filter");
+    if validate_model_dir(&pf) {
+        return Some(pf);
+    }
+    // 根级文件
+    if validate_model_dir(base) {
+        return Some(base.to_path_buf());
+    }
+    // 其他子目录
+    if let Ok(entries) = std::fs::read_dir(base) {
+        entries.filter_map(Result::ok).find(|e| e.path().is_dir() && validate_model_dir(&e.path())).map(|e| e.path())
+    } else {
+        None
+    }
 }
 
 fn init_shortcut_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {

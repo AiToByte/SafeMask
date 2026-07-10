@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use crate::core::hybrid_engine::HybridEngine;
-use crate::infra::ai::ModelManager;
 use serde::{Serialize, Deserialize};
 use parking_lot::{Mutex, RwLock};
 use crate::core::config::AppSettings;

@@ -6,5 +6,5 @@
 pub mod model_manager;
 pub mod ner_engine;
 
-pub use model_manager::{ModelManager, ModelState, ModelMetadata};
+pub use model_manager::{ModelManager, ModelState};
 pub use ner_engine::NerEngine;

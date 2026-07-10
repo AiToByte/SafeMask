@@ -12,7 +12,7 @@
 use super::types::*;
 use super::Recognizer;
 use crate::infra::ai::{NerEngine, ModelManager, ModelState};
-use log::{info, warn, error};
+use log::{warn, error};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use parking_lot::Mutex;

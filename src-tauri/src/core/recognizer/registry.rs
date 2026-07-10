@@ -9,7 +9,6 @@
 use super::types::*;
 use super::Recognizer;
 use log::{debug, info, warn};
-use std::sync::Arc;
 
 /// 识别器注册表
 ///
@@ -224,6 +223,12 @@ impl RecognizerRegistry {
         let name = registered.recognizer.name().to_string();
 
         let mut result = registered.recognizer.analyze(context);
+
+        // 🚀 注入识别器优先级到每个 span，供冲突解决层使用
+        let priority = registered.recognizer.priority();
+        for span in &mut result.spans {
+            span.priority = priority;
+        }
 
         if self.config.enable_tracing {
             let elapsed = start.elapsed();

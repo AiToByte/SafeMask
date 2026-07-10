@@ -6,7 +6,6 @@
 use super::strategies::*;
 use super::{MaskConfig, MaskStrategyType, MaskingStrategy};
 use crate::core::recognizer::{EntitySpan, MaskResult};
-use log::debug;
 use std::collections::HashMap;
 
 /// 脱敏引擎

@@ -9,16 +9,19 @@ import {
   Trash2,
   Search,
   X,
+  Maximize2,
 } from "lucide-react";
 import { useAppStore } from "@/hooks/useAppStore";
 import { MaskAPI, type HistoryItem } from "@/services/api";
 import { cn } from "@/lib/utils";
+import DocumentPreview from "./DocumentPreview";
 
 export default function HistoryList() {
   const historyList = useAppStore((s) => s.historyList);
   const clearHistory = useAppStore((s) => s.clearHistory);
   const [copiedId, setCopiedId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [previewItem, setPreviewItem] = useState<HistoryItem | null>(null);
 
   const handleCopy = useCallback(async (id: string, text: string, type: "org" | "msk") => {
     if (type === "org") await MaskAPI.copyOriginal(text);
@@ -105,9 +108,11 @@ export default function HistoryList() {
       {/* History cards */}
       <div>
         {filteredHistory.map((item) => (
-          <HistoryCard key={item.id} item={item} copiedId={copiedId} onCopy={handleCopy} />
+          <HistoryCard key={item.id} item={item} copiedId={copiedId} onCopy={handleCopy} onPreview={setPreviewItem} />
         ))}
       </div>
+
+      <DocumentPreview item={previewItem} onClose={() => setPreviewItem(null)} />
     </div>
   );
 }
@@ -116,10 +121,12 @@ function HistoryCard({
   item,
   copiedId,
   onCopy,
+  onPreview,
 }: {
   item: HistoryItem;
   copiedId: string;
   onCopy: (id: string, text: string, type: "org" | "msk") => void;
+  onPreview: (item: HistoryItem | null) => void;
 }) {
   return (
     <div
@@ -148,6 +155,14 @@ function HistoryCard({
               <ShieldAlert size={13} /> 哨兵宇宙拦截
             </span>
           )}
+          <button
+            type="button"
+            onClick={() => onPreview(item)}
+            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 hover:text-amber-400 transition-all px-3 py-1.5 rounded-lg border border-white/5 bg-black/40 hover:border-amber-500/20 active:scale-95"
+          >
+            <Maximize2 size={13} />
+            全文对比
+          </button>
         </div>
 
         <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest group-hover/card:text-zinc-400 transition-colors">

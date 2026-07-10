@@ -42,8 +42,7 @@ pub use registry::RecognizerRegistry;
 pub use regex_recognizer::RegexRecognizer;
 pub use aho_corasick_recognizer::AhoCorasickRecognizer;
 pub use ner_recognizer::NerRecognizer;
-pub use context_enhancer::ContextEnhancer;
-pub use checksum_recognizer::ChecksumRecognizer;
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Recognizer Trait

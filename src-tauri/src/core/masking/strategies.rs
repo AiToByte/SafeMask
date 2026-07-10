@@ -45,14 +45,76 @@ impl MaskingStrategy for ReplaceStrategy {
 pub struct PartialMaskStrategy;
 
 impl PartialMaskStrategy {
-    /// 计算保留字符数
-    fn visible_count(len: usize) -> usize {
-        match len {
+    fn mask_email(original: &str) -> String {
+        if let Some(at_idx) = original.find('@') {
+            let username = &original[..at_idx];
+            let domain = &original[at_idx..];
+            let chars: Vec<char> = username.chars().collect();
+            let char_len = chars.len();
+            let visible = match char_len {
+                0..=1 => 0,
+                2..=4 => 1,
+                _ => 2.min(char_len.saturating_sub(1)),
+            };
+            let prefix: String = chars[..visible].iter().collect();
+            let mask_len = char_len.saturating_sub(visible).max(1);
+            format!("{}{}{}", prefix, "*".repeat(mask_len), domain)
+        } else {
+            Self::mask_fallback(original)
+        }
+    }
+
+    fn mask_phone(original: &str) -> String {
+        let total_digits = original.chars().filter(|c| c.is_ascii_digit()).count();
+        if total_digits < 7 {
+            return Self::mask_fallback(original);
+        }
+
+        let (mask_start, mask_end) = if total_digits >= 11 {
+            (3, total_digits - 4)
+        } else {
+            (2, total_digits - 2)
+        };
+
+        let mut digit_idx = 0;
+        original.chars().map(|c| {
+            if c.is_ascii_digit() {
+                let current = digit_idx;
+                digit_idx += 1;
+                if current >= mask_start && current < mask_end {
+                    '*'
+                } else {
+                    c
+                }
+            } else {
+                c
+            }
+        }).collect()
+    }
+
+    fn mask_ip(original: &str) -> String {
+        let parts: Vec<&str> = original.split('.').collect();
+        if parts.len() == 4 {
+            format!("{}.*.*.{}", parts[0], parts[3])
+        } else {
+            Self::mask_fallback(original)
+        }
+    }
+
+    fn mask_fallback(original: &str) -> String {
+        let chars: Vec<char> = original.chars().collect();
+        let len = chars.len();
+        if len <= 2 { return "*".repeat(len); }
+        let visible = match len {
             0..=4 => 1,
             5..=8 => 2,
             9..=12 => 3,
             _ => 4,
-        }
+        };
+        let prefix: String = chars[..visible].iter().collect();
+        let suffix: String = chars[len - visible..].iter().collect();
+        let mask_count = len - visible * 2;
+        format!("{}{}{}", prefix, "*".repeat(mask_count.max(3)), suffix)
     }
 }
 
@@ -65,20 +127,13 @@ impl MaskingStrategy for PartialMaskStrategy {
         MaskStrategyType::PartialMask
     }
 
-    fn mask(&self, original: &str, _span: &EntitySpan, _config: &MaskConfig) -> String {
-        let chars: Vec<char> = original.chars().collect();
-        let len = chars.len();
-
-        if len <= 2 {
-            return "*".repeat(len);
+    fn mask(&self, original: &str, span: &EntitySpan, _config: &MaskConfig) -> String {
+        match span.entity_type {
+            EntityType::Email => Self::mask_email(original),
+            EntityType::Phone => Self::mask_phone(original),
+            EntityType::IpAddress => Self::mask_ip(original),
+            _ => Self::mask_fallback(original),
         }
-
-        let visible = Self::visible_count(len);
-        let prefix: String = chars[..visible].iter().collect();
-        let suffix: String = chars[len - visible..].iter().collect();
-        let mask_count = len - visible * 2;
-
-        format!("{}{}{}", prefix, "*".repeat(mask_count.max(3)), suffix)
     }
 }
 
@@ -253,7 +308,7 @@ mod tests {
         let strategy = PartialMaskStrategy;
         let span = make_span(EntityType::Phone);
         let result = strategy.mask("13812345678", &span, &default_config());
-        assert_eq!(result, "138*****678");
+        assert_eq!(result, "138****5678");
     }
 
     #[test]
@@ -309,5 +364,55 @@ mod tests {
         let span = make_span(EntityType::Person);
         let result = strategy.mask("张三", &span, &default_config());
         assert_eq!(result, "[人名]"); // 回退到替换策略
+    }
+
+    #[test]
+    fn test_partial_mask_email() {
+        let strategy = PartialMaskStrategy;
+        let span = make_span(EntityType::Email);
+        let result = strategy.mask("zhangsan@example.com", &span, &default_config());
+        assert_eq!(result, "zh******@example.com");
+    }
+
+    #[test]
+    fn test_partial_mask_ip() {
+        let strategy = PartialMaskStrategy;
+        let span = make_span(EntityType::IpAddress);
+        let result = strategy.mask("192.168.1.100", &span, &default_config());
+        assert_eq!(result, "192.*.*.100");
+    }
+
+    #[test]
+    fn test_partial_mask_short_email() {
+        let strategy = PartialMaskStrategy;
+        let span = make_span(EntityType::Email);
+        let result = strategy.mask("a@b.com", &span, &default_config());
+        assert_eq!(result, "*@b.com");
+    }
+
+    #[test]
+    fn test_partial_mask_chinese_email() {
+        let strategy = PartialMaskStrategy;
+        let span = make_span(EntityType::Email);
+        let result = strategy.mask("张三@company.cn", &span, &default_config());
+        assert_eq!(result, "张*@company.cn");
+    }
+
+    #[test]
+    fn test_partial_mask_formatted_phone() {
+        // +86 138-0013-8000 = 13 digits, mask_start=3, mask_end=9
+        let strategy = PartialMaskStrategy;
+        let span = make_span(EntityType::Phone);
+        let result = strategy.mask("+86 138-0013-8000", &span, &default_config());
+        assert_eq!(result, "+86 1**-****-8000");
+    }
+
+    #[test]
+    fn test_partial_mask_phone_with_dash() {
+        // 010-82345678 = 11 digits, mask_start=3, mask_end=7
+        let strategy = PartialMaskStrategy;
+        let span = make_span(EntityType::Phone);
+        let result = strategy.mask("010-82345678", &span, &default_config());
+        assert_eq!(result, "010-****5678");
     }
 }

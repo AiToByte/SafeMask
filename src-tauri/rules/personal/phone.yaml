@@ -2,7 +2,7 @@ group: "SENSITIVE_INFO"
 rules:
   - name: "Global_Phone_E164"
     # 增加对 + 号的倾向或更严格的边界
-    pattern: '(?:\+|00)[1-9]\d{7,14}\b' 
+    pattern: '\b(?:\+|00)[1-9]\d{7,14}\b' 
     mask: "<GLOBAL_PHONE>"
     priority: 5
 

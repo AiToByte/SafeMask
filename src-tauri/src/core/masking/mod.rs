@@ -23,11 +23,9 @@
 pub mod strategies;
 pub mod engine;
 
-// 重新导出核心类型
-pub use strategies::*;
 pub use engine::MaskingEngine;
 
-use crate::core::recognizer::{EntitySpan, EntityType};
+use crate::core::recognizer::EntitySpan;
 use serde::{Deserialize, Serialize};
 
 /// 脱敏配置

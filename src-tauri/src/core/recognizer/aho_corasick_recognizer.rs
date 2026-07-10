@@ -14,12 +14,9 @@
 use super::types::*;
 use super::Recognizer;
 use aho_corasick::{AhoCorasick, MatchKind};
-use log::warn;
 
 /// 字典条目
 struct DictEntry {
-    /// 模式文本
-    pattern: String,
     /// 关联的实体类型
     entity_type: EntityType,
     /// 来源标识（如词典名称）
@@ -66,7 +63,6 @@ impl AhoCorasickRecognizer {
 
             patterns.push(rule.pattern.clone());
             entries.push(DictEntry {
-                pattern: rule.pattern.clone(),
                 entity_type: guess_entity_type(&rule.name),
                 source: format!("rule:{}", rule.name),
                 mask: rule.mask.clone(),
@@ -111,7 +107,6 @@ impl AhoCorasickRecognizer {
             }
             patterns.push(word.to_string());
             entries.push(DictEntry {
-                pattern: word.to_string(),
                 entity_type: entity_type.clone(),
                 source: format!("dict:{}", dict_path),
                 mask: format!("[{}]", entity_type.display_label()),
@@ -172,6 +167,7 @@ impl Recognizer for AhoCorasickRecognizer {
                         source: self.name.clone(),
                         context: Some(entry.source.clone()),
                         mask: Some(entry.mask.clone()),
+                        priority: 0,
                     });
                 }
             }

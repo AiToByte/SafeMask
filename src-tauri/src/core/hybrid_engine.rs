@@ -153,7 +153,7 @@ impl HybridEngine {
     pub fn detect(&self, text: &[u8]) -> Vec<EntitySpan> {
         let context = AnalysisContext::from_text(text);
         let spans = self.registry.analyze(&context);
-        self.resolver.resolve(spans)
+        self.resolver.resolve(spans, text)
     }
 
     /// 脱敏文本（向后兼容原有 `MaskEngine::mask_line` 接口）

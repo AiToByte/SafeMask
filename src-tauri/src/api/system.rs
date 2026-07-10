@@ -233,7 +233,7 @@ pub async fn get_engine_info(state: State<'_, AppState>) -> AppResult<serde_json
 /// 启用/停用 AI 引擎
 #[tauri::command]
 pub async fn toggle_ai_engine(state: State<'_, AppState>, enabled: bool) -> AppResult<bool> {
-    let mut engine = state.engine.write();
+    let engine = state.engine.write();
     let result = engine.set_ai_enabled(enabled);
     Ok(result)
 }

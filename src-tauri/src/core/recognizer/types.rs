@@ -161,6 +161,11 @@ pub struct EntitySpan {
     ///
     /// 如果为 `None`，脱敏策略层将使用实体类型的默认标签。
     pub mask: Option<String>,
+    /// 识别器优先级（数值越大越优先）
+    ///
+    /// 冲突解决时，高 priority 的区间会在低 priority 区间中"雕刻"出位置，
+    /// 而不是简单丢弃低 priority 的一方。默认 0。
+    pub priority: i32,
 }
 
 impl EntitySpan {
@@ -180,6 +185,7 @@ impl EntitySpan {
             source: source.into(),
             context: None,
             mask: None,
+            priority: 0,
         }
     }
 
@@ -200,7 +206,14 @@ impl EntitySpan {
             source: source.into(),
             context: None,
             mask: Some(mask.into()),
+            priority: 0,
         }
+    }
+
+    /// 设置优先级（builder 模式）
+    pub fn with_priority(mut self, priority: i32) -> Self {
+        self.priority = priority;
+        self
     }
 
     /// 获取实体在原文中的文本内容

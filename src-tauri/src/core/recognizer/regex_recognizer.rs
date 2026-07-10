@@ -139,6 +139,7 @@ impl Recognizer for RegexRecognizer {
                     source: self.name.clone(),
                     context: Some(format!("rule:{}", rule.name)),
                     mask: Some(rule.mask.clone()),
+                    priority: 0,
                 });
             }
         }
