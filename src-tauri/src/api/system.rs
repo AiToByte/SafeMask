@@ -9,7 +9,6 @@ use std::sync::Arc;
 use crate::core::config::AppSettings;
 use crate::core::download_auth;
 use log::{info};
-use regex::bytes::Regex;
 use std::sync::atomic::Ordering; 
 
 /// 获取规则统计信息 (仪表盘使用)
@@ -186,7 +185,10 @@ pub async fn update_app_settings(
 /// 实时测试单条规则的有效性
 #[tauri::command]
 pub async fn test_rule_logic(pattern: String, mask: String, test_text: String) -> AppResult<String> {
-    let re = Regex::new(&pattern).map_err(|e| {
+    let re = regex::bytes::RegexBuilder::new(&pattern)
+        .unicode(false)
+        .build()
+        .map_err(|e| {
         crate::common::errors::AppError::Config(format!("正则语法错误: {}", e))
     })?;
 

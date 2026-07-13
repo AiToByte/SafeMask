@@ -127,7 +127,7 @@ export default function Header() {
               <div
                 className={cn(
                   "transition-all duration-500",
-                  isShadow ? "rotate-0 scale-100" : "rotate-180 scale-100",
+                  "scale-100",
                 )}
               >
                 {isShadow ? (

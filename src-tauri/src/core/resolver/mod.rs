@@ -46,6 +46,16 @@ fn can_swallow(container: &EntityType, child: &EntityType) -> bool {
     )
 }
 
+/// 判断来源是否为规则识别器（正则/字典）
+fn is_rule_source(source: &str) -> bool {
+    source == "aho_corasick_engine" || source == "regex_engine"
+}
+
+/// 判断来源是否为 AI 识别器
+fn is_ai_source(source: &str) -> bool {
+    source == "ner_engine"
+}
+
 /// 判断跨度是否为无意义碎片（空白/纯标点/单字符碎屑/非法 UTF-8）
 fn is_useless_fragment(span: &EntitySpan, text: &[u8]) -> bool {
     if span.start >= span.end || span.end > text.len() { return true; }
@@ -125,6 +135,24 @@ impl ConflictResolver {
                 )
                 .then((b.end - b.start).cmp(&(a.end - a.start)))
         });
+
+        // Step 2.5: 同类型 AI 跨度被规则跨度抑制
+        // 规则跨度（regex/ac）完全覆盖同一 EntityType 的 AI 跨度（ner）时，
+        // 直接丢弃 AI 跨度，不参与雕刻，防止产生丑陋的 [URL]<URL>[URL] 碎片
+        let mut deduped: Vec<EntitySpan> = Vec::with_capacity(candidates.len());
+        for candidate in candidates {
+            let suppressed = deduped.iter().any(|higher| {
+                higher.priority > candidate.priority
+                    && higher.entity_type == candidate.entity_type
+                    && higher.overlaps_with(&candidate)
+                    && is_rule_source(&higher.source)
+                    && is_ai_source(&candidate.source)
+            });
+            if !suppressed {
+                deduped.push(candidate);
+            }
+        }
+        candidates = deduped;
 
         let mut accepted: Vec<EntitySpan> = Vec::new();
 
@@ -488,5 +516,64 @@ mod tests {
         ];
         let result = resolver.resolve(spans, text.as_bytes());
         assert!(result.is_empty());
+    }
+
+    // ── Layer 2: AI 跨度被同类型规则跨度抑制 ──
+
+    #[test]
+    fn test_ai_url_suppressed_by_regex_url() {
+        let text = "https://github.com/shawnxie94/portal.git";
+        let resolver = ConflictResolver::new(0.0);
+        let spans = vec![
+            EntitySpan::with_mask(0, 40, EntityType::Url, 1.0, "regex_engine", "<URL>")
+                .with_priority(90),
+            EntitySpan::with_mask(8, 18, EntityType::Custom("FQDN_Domain".to_string()), 1.0, "regex_engine", "<DOMAIN>")
+                .with_priority(90),
+            EntitySpan::with_mask(0, 7, EntityType::Url, 0.9, "ner_engine", "[URL]")
+                .with_priority(50),
+            EntitySpan::with_mask(18, 40, EntityType::Url, 0.9, "ner_engine", "[URL]")
+                .with_priority(50),
+        ];
+        let result = resolver.resolve(spans, text.as_bytes());
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].entity_type, EntityType::Url);
+        assert_eq!(result[0].start, 0);
+        assert_eq!(result[0].end, 40);
+        assert_eq!(result[0].mask.as_deref(), Some("<URL>"));
+    }
+
+    #[test]
+    fn test_ai_span_survives_when_different_type() {
+        let text = "some text with url content";
+        let resolver = ConflictResolver::new(0.0);
+        let spans = vec![
+            EntitySpan::with_mask(0, 10, EntityType::Url, 1.0, "regex_engine", "<URL>")
+                .with_priority(90),
+            EntitySpan::with_mask(5, 20, EntityType::Email, 0.9, "ner_engine", "[EMAIL]")
+                .with_priority(50),
+        ];
+        let result = resolver.resolve(spans, text.as_bytes());
+        // Email != Url，类型不同 → AI 不被抑制，正常雕刻
+        assert!(result.len() >= 2);
+        let email_count = result.iter().filter(|s| s.entity_type == EntityType::Email).count();
+        assert!(email_count > 0);
+    }
+
+    #[test]
+    fn test_ai_url_fully_suppressed_even_when_extending_beyond_rule() {
+        let text = "visit https://site.com/page now";
+        let resolver = ConflictResolver::new(0.0);
+        let spans = vec![
+            EntitySpan::with_mask(6, 28, EntityType::Url, 1.0, "regex_engine", "<URL>")
+                .with_priority(90),
+            EntitySpan::with_mask(0, 33, EntityType::Url, 0.9, "ner_engine", "[URL]")
+                .with_priority(50),
+        ];
+        let result = resolver.resolve(spans, text.as_bytes());
+        // AI Url(0,33) 与规则 Url(6,28) 类型相同且重叠 → AI 被整条抑制
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].start, 6);
+        assert_eq!(result[0].end, 28);
+        assert_eq!(result[0].mask.as_deref(), Some("<URL>"));
     }
 }

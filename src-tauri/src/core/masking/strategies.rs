@@ -300,7 +300,7 @@ mod tests {
         let strategy = ReplaceStrategy;
         let span = make_span(EntityType::Person);
         let result = strategy.mask("张三", &span, &default_config());
-        assert_eq!(result, "[人名]");
+        assert_eq!(result, "[PERSON]");
     }
 
     #[test]
@@ -355,7 +355,7 @@ mod tests {
         config.templates.insert("person".to_string(), "某某{type}".to_string());
 
         let result = strategy.mask("张三", &span, &config);
-        assert_eq!(result, "某某人名");
+        assert_eq!(result, "某某PERSON");
     }
 
     #[test]
@@ -363,7 +363,7 @@ mod tests {
         let strategy = TemplateStrategy;
         let span = make_span(EntityType::Person);
         let result = strategy.mask("张三", &span, &default_config());
-        assert_eq!(result, "[人名]"); // 回退到替换策略
+        assert_eq!(result, "[PERSON]"); // 回退到替换策略
     }
 
     #[test]

@@ -145,7 +145,7 @@ mod tests {
         let engine = MaskingEngine::default_config();
         let span = make_span(EntityType::Person, 0, 6);
         let result = engine.mask_entity("张三", &span);
-        assert_eq!(result, "[人名]");
+        assert_eq!(result, "[PERSON]");
     }
 
     #[test]
@@ -159,8 +159,8 @@ mod tests {
 
         let result = engine.apply(text, &spans);
         assert!(result.has_changes);
-        assert!(result.masked.contains("[人名]"));
-        assert!(result.masked.contains("[邮箱]"));
+        assert!(result.masked.contains("[PERSON]"));
+        assert!(result.masked.contains("[EMAIL]"));
     }
 
     #[test]

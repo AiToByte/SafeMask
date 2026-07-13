@@ -13,7 +13,7 @@ use super::types::*;
 use super::Recognizer;
 use regex::bytes::Regex;
 use smallvec::SmallVec;
-use log::warn;
+use log::{debug, warn};
 
 /// 编译后的正则规则
 struct CompiledRule {
@@ -69,7 +69,10 @@ impl RegexRecognizer {
                 continue;
             }
 
-            match Regex::new(&rule.pattern) {
+            match regex::bytes::RegexBuilder::new(&rule.pattern)
+                .unicode(false)
+                .build()
+            {
                 Ok(re) => {
                     let entity_type = guess_entity_type(&rule.name, &rule.pattern);
                     compiled.push(CompiledRule {
@@ -80,8 +83,27 @@ impl RegexRecognizer {
                         entity_type,
                     });
                 }
-                Err(e) => {
-                    warn!("⚠️ [RegexRecognizer] 忽略无效正则 '{}': {}", rule.name, e);
+                Err(_) => {
+                    // 如果 unicode(false) 编译失败（如正则含 Unicode 字符类），尝试 unicode(true)
+                    match regex::bytes::RegexBuilder::new(&rule.pattern)
+                        .unicode(true)
+                        .build()
+                    {
+                        Ok(re) => {
+                            let entity_type = guess_entity_type(&rule.name, &rule.pattern);
+                            compiled.push(CompiledRule {
+                                name: rule.name.clone(),
+                                re,
+                                mask: rule.mask.clone(),
+                                priority: rule.priority,
+                                entity_type,
+                            });
+                            debug!("  → 回退 unicode(true) 编译成功 '{}'", rule.name);
+                        }
+                        Err(e) => {
+                            warn!("⚠️ [RegexRecognizer] 忽略无效正则 '{}': {}", rule.name, e);
+                        }
+                    }
                 }
             }
         }

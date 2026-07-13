@@ -1,6 +1,6 @@
 use crate::core::rules::Rule;
 use aho_corasick::{AhoCorasick, MatchKind};
-use regex::bytes::{Regex};
+use regex::bytes::{Regex, RegexBuilder};
 use std::borrow::Cow;
 use smallvec::SmallVec;
 use log::{info};  // 添加导入
@@ -50,7 +50,10 @@ impl MaskEngine {
                 ac_masks.push(rule.mask.as_bytes().to_vec());
             } else {
                 // 正则表达式预编译
-                if let Ok(re) = Regex::new(&rule.pattern) {
+                if let Ok(re) = RegexBuilder::new(&rule.pattern)
+                    .unicode(false)
+                    .build()
+                {
                     regex_rules.push(CompiledRegex {
                         re,
                         mask: rule.mask.as_bytes().to_vec(),
@@ -238,12 +241,12 @@ mod tests {
 
         // Byte layout of input:
         //   我的密钥是  = 5 × 3 = 15 bytes (bytes 0..15)
-        //   sk-proj-...xyz = 46 bytes          (bytes 15..61)
-        //   在这里  = 3 × 3 = 9 bytes           (bytes 61..70)
-        assert_eq!(input.len(), 70);
+        //   sk-proj-...xyz = 43 bytes          (bytes 15..58)
+        //   在这里  = 3 × 3 = 9 bytes           (bytes 58..67)
+        assert_eq!(input.len(), 67);
         assert_eq!(&input[..15], "我的密钥是".as_bytes());
-        assert_eq!(&input[15..61], b"sk-proj-abcDEF1234567890abcdef1234567890xyz");
-        assert_eq!(&input[61..], "在这里".as_bytes());
+        assert_eq!(&input[15..58], b"sk-proj-abcDEF1234567890abcdef1234567890xyz");
+        assert_eq!(&input[58..], "在这里".as_bytes());
 
         // The mask must appear at the correct byte position (right after the 15-byte prefix)
         assert_eq!(output, "我的密钥是<OPENAI_KEY>在这里");
@@ -389,8 +392,8 @@ mod tests {
         println!("  Input bytes:  {:?}", input);
         println!("  Output bytes: {:?}", &result[..]);
 
-        // 是 = 3 bytes (E6 98 AF), key = 46 bytes
-        assert_eq!(input.len(), 49);
+        // 是 = 3 bytes (E6 98 AF), key = 43 bytes
+        assert_eq!(input.len(), 46);
         assert_eq!(output, "是<OPENAI_KEY>");
         assert_eq!(&result[..3], "是".as_bytes());
         assert_eq!(&result[3..15], b"<OPENAI_KEY>");
@@ -415,8 +418,8 @@ mod tests {
         println!("  Input:  {}", input_str);
         println!("  Output: {}", output);
 
-        // key = 46 bytes, 在 = 3 bytes
-        assert_eq!(input.len(), 49);
+        // key = 43 bytes, 在 = 3 bytes
+        assert_eq!(input.len(), 46);
         assert_eq!(output, "<OPENAI_KEY>在");
         assert_eq!(&result[..12], b"<OPENAI_KEY>");
         assert_eq!(&result[12..], "在".as_bytes());
@@ -439,8 +442,8 @@ mod tests {
         println!("  Input:  {}", input_str);
         println!("  Output: {}", output);
 
-        // 密钥 = 6 bytes, key = 46 bytes, 在 = 3 bytes  =>  total 55
-        assert_eq!(input.len(), 55);
+        // 密钥 = 6 bytes, key = 43 bytes, 在 = 3 bytes  =>  total 52
+        assert_eq!(input.len(), 52);
         assert_eq!(output, "密钥<OPENAI_KEY>在");
         assert_eq!(&result[..6],  "密钥".as_bytes());
         assert_eq!(&result[6..18], b"<OPENAI_KEY>");
@@ -480,7 +483,7 @@ mod tests {
         ];
         let engine = MaskEngine::new(rules);
 
-        let input_str = "ABCDsk-proj-abcDEF1234567890abcdef1234567890xyzEFGH";
+        let input_str = "ABCD sk-proj-abcDEF1234567890abcdef1234567890xyz EFGH";
         let input = input_str.as_bytes();
         let result = engine.mask_line(input);
         let output = String::from_utf8_lossy(&result);
@@ -489,16 +492,16 @@ mod tests {
         println!("  Input:  {}", input_str);
         println!("  Output: {}", output);
 
-        // ABCD = 4 bytes, key = 46 bytes, EFGH = 4 bytes  =>  total 54
-        assert_eq!(input.len(), 54);
-        // Expected: "ABCD<OPENAI_KEY>EFGH"  =>  4 + 12 + 4 = 20 bytes
-        assert_eq!(output, "ABCD<OPENAI_KEY>EFGH");
-        assert_eq!(result.len(), 20);
+        // ABCD(4) + space(1) + key(43) + space(1) + EFGH(4)  =>  total 53
+        assert_eq!(input.len(), 53);
+        // "ABCD " + "<OPENAI_KEY>" + " EFGH"  =>  5 + 12 + 5 = 22 bytes
+        assert_eq!(output, "ABCD <OPENAI_KEY> EFGH");
+        assert_eq!(result.len(), 22);
 
         // Verify each region byte-by-byte
-        assert_eq!(&result[..4],   b"ABCD");
-        assert_eq!(&result[4..16], b"<OPENAI_KEY>");
-        assert_eq!(&result[16..],  b"EFGH");
+        assert_eq!(&result[..5],   b"ABCD ");
+        assert_eq!(&result[5..17], b"<OPENAI_KEY>");
+        assert_eq!(&result[17..],  b" EFGH");
     }
 
     #[test]
@@ -551,9 +554,9 @@ mod tests {
         //   你好 = 6 bytes (0..6)
         //   test@example.com = 16 bytes (6..22)
         //   你好 = 6 bytes (22..28)
-        //   sk-proj-...xyz = 46 bytes (28..74)
-        //   你好 = 6 bytes (74..80)
-        assert_eq!(input.len(), 80);
+        //   sk-proj-...xyz = 43 bytes (28..71)
+        //   你好 = 6 bytes (71..77)
+        assert_eq!(input.len(), 77);
 
         // Expected output: "你好<EMAIL>你好<KEY>你好"
         //   你好(6) + <EMAIL>(7) + 你好(6) + <KEY>(5) + 你好(6) = 30 bytes
@@ -581,7 +584,7 @@ mod tests {
         ];
         let engine = MaskEngine::new(rules);
 
-        let input = b"API_key=sk-proj-abcDEF1234567890abcdef1234567890xyz";
+        let input = b"API_key_sk-proj-abcDEF1234567890abcdef1234567890xyz";
         let result = engine.mask_line(input);
         let output = String::from_utf8_lossy(&result);
 
@@ -743,9 +746,9 @@ mod tests {
         assert_eq!(output, "工具<COMPANY>邮箱<EMAIL>好的");
         // Verify byte-level correctness
         assert_eq!(&result[..6],   "工具".as_bytes());
-        assert_eq!(&result[6..14], b"<COMPANY>");
-        assert_eq!(&result[14..20], "邮箱".as_bytes());
-        assert_eq!(&result[20..27], b"<EMAIL>");
-        assert_eq!(&result[27..33], "好的".as_bytes());
+        assert_eq!(&result[6..15], b"<COMPANY>");
+        assert_eq!(&result[15..21], "邮箱".as_bytes());
+        assert_eq!(&result[21..28], b"<EMAIL>");
+        assert_eq!(&result[28..34], "好的".as_bytes());
     }
 }

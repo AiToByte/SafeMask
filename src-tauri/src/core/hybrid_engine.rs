@@ -212,10 +212,30 @@ impl HybridEngine {
 
     /// 执行脱敏替换
     fn apply_replacements(&self, input: &[u8], spans: &[EntitySpan]) -> Vec<u8> {
+        // ── 合并相邻的相同类型跨度 ──
+        // 雕刻算法可能将同一实体切成多个相邻片段，此处合并为一个
+        let mut merged: Vec<EntitySpan> = Vec::with_capacity(spans.len());
+        for span in spans {
+            if let Some(last) = merged.last_mut() {
+                if last.entity_type == span.entity_type && span.start <= last.end {
+                    last.end = last.end.max(span.end);
+                    if span.priority > last.priority {
+                        last.mask.clone_from(&span.mask);
+                        last.priority = span.priority;
+                        last.source.clone_from(&span.source);
+                    } else if last.mask.is_none() && span.mask.is_some() {
+                        last.mask.clone_from(&span.mask);
+                    }
+                    continue;
+                }
+            }
+            merged.push(span.clone());
+        }
+
         let mut output = Vec::with_capacity(input.len());
         let mut last_pos = 0;
 
-        for span in spans {
+        for span in &merged {
             if span.start < last_pos {
                 continue; // 跳过重叠
             }
@@ -348,6 +368,17 @@ mod tests {
         }
     }
 
+    fn make_rule_pri(name: &str, pattern: &str, mask: &str, priority: i32) -> Rule {
+        Rule {
+            name: name.to_string(),
+            pattern: pattern.to_string(),
+            mask: mask.to_string(),
+            priority,
+            enabled: true,
+            is_custom: false,
+        }
+    }
+
     #[test]
     fn test_hybrid_engine_literal_match() {
         let rules = vec![
@@ -361,5 +392,59 @@ mod tests {
 
         assert!(result.has_changes);
         assert!(result.masked.contains("<COMPANY>"));
+    }
+
+    #[test]
+    fn test_url_domain_overlap() {
+        // 模拟实际规则文件和流程
+        let url_pat = r#"\bhttps?://[a-zA-Z0-9][-a-zA-Z0-9.]*\.[a-zA-Z]{2,}(?:/[^\s,;'"]*)?"#;
+        let domain_pat = r#"\b[a-zA-Z0-9-]+\.(?:com|net|org|cn|io|gov|me|edu|biz|info|xyz|icu|vip|us|cc|top|vip|local|internal|corp)\b"#;
+        let rules = vec![
+            make_rule_pri("URL_Address", url_pat, "<URL>", 70),
+            make_rule_pri("FQDN_Domain", domain_pat, "<DOMAIN>", 5),
+        ];
+
+        let engine = HybridEngine::from_rules(rules);
+
+        let text = "https://zhangsan.blog.com/about";
+        let result = engine.analyze(text);
+
+        println!("URL overlap test:");
+        println!("  Input:  {}", text);
+        println!("  Output: {}", result.masked);
+        println!("  Entities: {:?}", result.entities);
+
+        // 预期的完整 url 不应被 domain 内部分裂
+        // 正确输出应为 <URL>
+        assert!(result.has_changes, "URL should be detected and masked");
+        assert_eq!(
+            result.masked, "<URL>",
+            "Expected single <URL> replacement, got: {}", result.masked
+        );
+        // 应当只有一个实体（URL 覆盖整个匹配）
+        assert_eq!(
+            result.entities.len(), 1,
+            "Expected 1 entity (URL only), got {}: {:?}",
+            result.entities.len(), result.entities
+        );
+    }
+
+    #[test]
+    fn test_url_with_subdomain_clean() {
+        // 确保 子域名 + 域名 不会产生片段碎片
+        let url_pat = r#"\bhttps?://[a-zA-Z0-9][-a-zA-Z0-9.]*\.[a-zA-Z]{2,}(?:/[^\s,;'"]*)?"#;
+        let domain_pat = r#"\b[a-zA-Z0-9-]+\.(?:com|net|org|cn|io|gov|me|edu|biz|info|xyz|icu|vip|us|cc|top|vip|local|internal|corp)\b"#;
+        let rules = vec![
+            make_rule_pri("URL_Address", url_pat, "<URL>", 70),
+            make_rule_pri("FQDN_Domain", domain_pat, "<DOMAIN>", 5),
+        ];
+
+        let engine = HybridEngine::from_rules(rules);
+
+        let text = "联系 https://zhangsan.blog.com/about 我们";
+        let result = engine.analyze(text);
+
+        assert!(result.has_changes);
+        assert_eq!(result.masked, "联系 <URL> 我们");
     }
 }

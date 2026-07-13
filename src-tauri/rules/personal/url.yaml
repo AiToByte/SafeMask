@@ -1,6 +1,6 @@
 group: "PERSONAL"
 rules:
   - name: "URL_Address"
-    pattern: "\bhttps?://[a-zA-Z0-9][-a-zA-Z0-9.]*\.[a-zA-Z]{2,}(?:/[^\s,，。；;'\"]*)?"
+    pattern: '\bhttps?://[a-zA-Z0-9][-a-zA-Z0-9.]*\.[a-zA-Z]{2,}(?:/[^\s,;''"]*)?'
     mask: "<URL>"
     priority: 70
