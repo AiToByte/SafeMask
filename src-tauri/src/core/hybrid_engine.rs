@@ -16,6 +16,7 @@ use crate::core::recognizer::{AnalysisContext, EntitySpan, MaskResult, Recognize
 use crate::core::resolver::ConflictResolver;
 use crate::core::rules::Rule;
 use crate::core::masking::{MaskingEngine, MaskConfig};
+use crate::common::state::EntitySpanBrief;
 use crate::infra::ai::ModelManager;
 use log::info;
 use std::borrow::Cow;
@@ -173,6 +174,40 @@ impl HybridEngine {
         // 执行脱敏替换
         let result = self.apply_replacements(input, &spans);
         Cow::Owned(result)
+    }
+
+    /// 脱敏并返回实体跨度摘要（用于前端高亮展示）
+    ///
+    /// 与 `mask_line` 共享 `detect()` + `apply_replacements()`，零重复。
+    /// 返回 `(脱敏结果, 实体摘要列表)`，前端可据此进行原文/脱敏双向高亮。
+    pub fn mask_line_with_entities<'a>(
+        &self,
+        input: &'a [u8],
+    ) -> (Cow<'a, [u8]>, Vec<EntitySpanBrief>) {
+        if input.is_empty() {
+            return (Cow::Borrowed(input), vec![]);
+        }
+
+        let spans = self.detect(input);
+        if spans.is_empty() {
+            return (Cow::Borrowed(input), vec![]);
+        }
+
+        let result = self.apply_replacements(input, &spans);
+        let briefs: Vec<EntitySpanBrief> = spans
+            .iter()
+            .filter(|s| s.start < s.end)
+            .map(|s| EntitySpanBrief {
+                start: s.start,
+                end: s.end,
+                entity_type: s.entity_type.display_label().to_string(),
+                mask_label: s.mask.clone().unwrap_or_else(|| {
+                    format!("[{}]", s.entity_type.display_label())
+                }),
+            })
+            .collect();
+
+        (Cow::Owned(result), briefs)
     }
 
     /// 执行脱敏替换

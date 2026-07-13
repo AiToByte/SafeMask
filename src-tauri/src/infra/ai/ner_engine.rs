@@ -89,8 +89,8 @@ impl NerEngine {
         };
         let tokenizer_path = model_dir.join("tokenizer.json");
 
-        // SAFETY: 在单线程初始化阶段设置环境变量是安全的
-        unsafe { std::env::set_var("ORT_SKIP_DOWNLOAD", "1"); }
+        // 注意：ORT_SKIP_DOWNLOAD 是 ort-sys 编译期的 build env var，
+        // 运行时设置无效，已在 Cargo.toml 中通过 features = ["copy-dylibs"] 处理
 
         info!("NER: loading model from {}", model_path.display());
 
@@ -319,6 +319,15 @@ impl NerEngine {
         if let Some((start, entity_name, conf)) = current_entity.take() {
             let text_len = original_text.len();
             spans.push(make_span(start, text_len, &entity_name, conf));
+        }
+
+        // 修剪前导/后缀空白（模型常将前导空格纳入实体，导致残余碎片）
+        for span in &mut spans {
+            let span_bytes = &original_text.as_bytes()[span.start..span.end];
+            let leading = span_bytes.iter().take_while(|&&b| b == b' ' || b == b'\t' || b == b'\n' || b == b'\r').count();
+            let trailing = span_bytes.iter().rev().take_while(|&&b| b == b' ' || b == b'\t' || b == b'\n' || b == b'\r').count();
+            span.start += leading;
+            span.end = span.end.saturating_sub(trailing);
         }
 
         // 修复 offset

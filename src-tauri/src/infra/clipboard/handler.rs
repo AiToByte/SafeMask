@@ -1,4 +1,4 @@
-use crate::common::state::{AppState, MaskHistoryItem};
+use crate::common::state::{AppState, EntitySpanBrief, MaskHistoryItem};
 use arboard::Clipboard;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
@@ -67,14 +67,14 @@ impl GlobalClipboard {
         info!("🔔 [Handler] 开始处理新内容 ({} bytes)", text.len());
 
 
-        // 5. 执行脱敏计算
-        let masked_text = {
+        // 5. 执行脱敏计算（同时获取实体跨度摘要，用于前端高亮）
+        let (masked_result, entities) = {
             let engine = state.engine.read();
-            let result = engine.mask_line(text.as_bytes());
-            String::from_utf8_lossy(&result).to_string()
+            engine.mask_line_with_entities(text.as_bytes())
         };
-
+        let masked_text = String::from_utf8_lossy(&masked_result).to_string();
         let has_privacy = text != masked_text;
+
         info!("[Monitor] 脱敏计算完成，命中隐私: {}", has_privacy);
 
         // 6. 🚀 关键修复：无论是否命中隐私，都更新影子存储
@@ -85,7 +85,7 @@ impl GlobalClipboard {
         // 7. 🚀 核心改动：只要发现隐私，无论什么模式，立即记录历史
         if has_privacy {
             info!("[Handler] 检测到隐私内容，已记录历史");
-            self.record_privacy_history(text.clone(), masked_text.clone()).await;
+            self.record_privacy_history(text.clone(), masked_text.clone(), entities).await;
         }
 
          // 8. 模式分流
@@ -96,8 +96,8 @@ impl GlobalClipboard {
         }
     }
 
-    /// [新增] 统一的历史记录写入方法
-    async fn record_privacy_history(&self, original: String, masked: String) {
+    /// 统一的历史记录写入方法
+    async fn record_privacy_history(&self, original: String, masked: String, entities: Vec<EntitySpanBrief>) {
         let state = self.app.state::<AppState>();
         
         // 获取当前模式快照
@@ -112,7 +112,8 @@ impl GlobalClipboard {
             timestamp: Local::now().format("%H:%M:%S").to_string(),
             original,
             masked,
-            mode, // 🚀 记录该条记录产生时的模式
+            mode,
+            entities,
         };
 
         state.add_history(history_item.clone());

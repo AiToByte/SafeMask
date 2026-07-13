@@ -1,10 +1,15 @@
 use crate::common::state::AppState;
 use arboard::Clipboard;
 use enigo::{Enigo, Key, KeyboardControllable};
+use std::cell::RefCell;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 use tauri::{AppHandle, Manager, Emitter};
 use log::{info};
+
+thread_local! {
+    static ENIGO: RefCell<Enigo> = RefCell::new(Enigo::new());
+}
 
 pub struct MagicPaster;
 
@@ -63,33 +68,32 @@ impl MagicPaster {
     }
 
     fn simulate_paste_keys() {
-        let mut enigo = Enigo::new();
+        // 🚀 使用 thread_local! 缓存 Enigo 句柄，避免频繁申请系统底层句柄
+        ENIGO.with(|cell| {
+            let mut enigo = cell.borrow_mut();
 
-        // 🚀 核心修复逻辑：
-        // 因为用户触发快捷键时按住了物理 ALT 键，
-        // 我们必须先在软件层面发送一个 ALT 松开的信号，
-        // 否则系统会认为用户在按 Ctrl + Alt + V。
+            // 🚀 核心修复逻辑：
+            // 因为用户触发快捷键时按住了物理 ALT 键，
+            // 我们必须先在软件层面发送一个 ALT 松开的信号，
+            // 否则系统会认为用户在按 Ctrl + Alt + V。
 
-        #[cfg(target_os = "windows")]
-        {
-            enigo.key_up(Key::Alt); // 强制松开物理 Alt
-            let _ = tokio::time::sleep(Duration::from_millis(20)); // 微小停顿
-        }
+            #[cfg(target_os = "windows")]
+            {
+                enigo.key_up(Key::Alt); // 强制松开物理 Alt
+                std::thread::sleep(Duration::from_millis(20)); // 微小停顿
+            }
 
-        #[cfg(target_os = "macos")]
-        let modifier = Key::Meta;
-        #[cfg(not(target_os = "macos"))]
-        let modifier = Key::Control;
+            #[cfg(target_os = "macos")]
+            let modifier = Key::Meta;
+            #[cfg(not(target_os = "macos"))]
+            let modifier = Key::Control;
 
-        // 执行粘贴组合键
-        enigo.key_down(modifier);
-        let _ = tokio::time::sleep(Duration::from_millis(20)); // 模拟真人按下的间隔
-        enigo.key_click(Key::Layout('v'));
-        let _ = tokio::time::sleep(Duration::from_millis(20));
-        enigo.key_up(modifier);
-        
-        // 如果是 Windows，粘贴完后再把 Alt 补回来（可选，避免影响用户继续操作）
-        // #[cfg(target_os = "windows")]xiaosheng
-        // enigo.key_down(Key::Alt); 
+            // 执行粘贴组合键
+            enigo.key_down(modifier);
+            std::thread::sleep(Duration::from_millis(20)); // 模拟真人按下的间隔
+            enigo.key_click(Key::Layout('v'));
+            std::thread::sleep(Duration::from_millis(20));
+            enigo.key_up(modifier);
+        });
     }
 }

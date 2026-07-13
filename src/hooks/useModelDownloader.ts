@@ -131,10 +131,23 @@ export const useModelDownloader = create<ModelDownloaderState>((set, get) => {
         } else if (signal.startsWith("ERROR:")) {
           const rawErr = signal.replace("ERROR:", "").trim();
           const isCancelled = rawErr === "DOWNLOAD_CANCELLED";
-          set({
-            status: isCancelled ? "MISSING" : "ERROR",
-            errorMessage: isCancelled ? null : rawErr,
-          });
+          if (isCancelled) {
+            set({ status: "MISSING", errorMessage: null });
+            cleanup();
+            return;
+          }
+          // 🚀 时钟偏置/鉴权失败 403 → 自动跳过当前 Worker URL，用直连 OSS
+          if (rawErr.includes("403")) {
+            cleanup();
+            const nextIdx = get().currentUrlIndex + 1;
+            if (nextIdx < actualUrls.length) {
+              console.log(`🔄 [SafeMask AI] Worker 鉴权拒绝(403)，切换至备用通道 ${nextIdx}`);
+              set({ currentUrlIndex: nextIdx, status: "IDLE" });
+              get().startDownload(actualUrls);
+              return;
+            }
+          }
+          set({ status: "ERROR", errorMessage: rawErr });
           cleanup();
         }
       });

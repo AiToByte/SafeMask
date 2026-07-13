@@ -15,6 +15,18 @@ export interface Rule {
   enabled: boolean;
 }
 
+/** 实体跨度摘要（IPC 精简版，用于前端高亮） */
+export interface EntitySpanBrief {
+  /** 字节偏移起始 */
+  start: number;
+  /** 字节偏移结束（不含） */
+  end: number;
+  /** 实体类型英文标签 "PERSON" | "EMAIL" | "PHONE" | ... */
+  entity_type: string;
+  /** 脱敏标签 "<EMAIL>" | "[PERSON]" | ... */
+  mask_label: string;
+}
+
 /** 历史记录条目 (包含宇宙模式标记) */
 export interface HistoryItem {
   id: string;
@@ -22,6 +34,8 @@ export interface HistoryItem {
   original: string;
   masked: string;
   mode: 'SHADOW' | 'SENTRY'; // 标记该记录产生的环境
+  /** 实体跨度摘要列表，用于前端双向高亮 */
+  entities: EntitySpanBrief[];
 }
 
 /** 全局应用设置 (影子模式核心配置) */

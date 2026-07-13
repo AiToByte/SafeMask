@@ -43,10 +43,14 @@ pub async fn delete_rule_api(app: AppHandle, state: State<'_, AppState>, name: S
     Ok("规则已删除".into())
 }
 
-/// 内部函数：重新加载规则并替换引擎
+/// 内部函数：重新加载规则并替换引擎（保留 AI 引擎）
 async fn reload_engine_internal(app: AppHandle, state: State<'_, AppState>) -> AppResult<()> {
     let rules = ConfigLoader::load_all_rules(&app);
-    let new_engine = Arc::new(HybridEngine::from_rules(rules));
+    let models_dir = state.models_dir.clone();
+    let mut new_engine = HybridEngine::from_rules(rules);
+    // 🚀 重新启用 AI 引擎，确保 reload 后 AI 识别器不丢失
+    new_engine.enable_ai_engine(&models_dir);
+    let new_engine = Arc::new(new_engine);
 
     let mut guard = state.engine.write();
     *guard = new_engine;

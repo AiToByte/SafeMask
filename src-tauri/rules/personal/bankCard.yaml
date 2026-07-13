@@ -1,0 +1,6 @@
+group: "PERSONAL"
+rules:
+  - name: "China_Bank_Card"
+    pattern: '\b(?:62|60|99|30|58)\d{14,18}\b'
+    mask: "<BANK_CARD>"
+    priority: 80

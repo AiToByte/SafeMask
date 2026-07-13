@@ -13,6 +13,7 @@ use std::time::Instant;
 use calamine::{Reader, Xlsx, open_workbook, Data}; // 🚀 修正：calamine 使用 Data 而非 DataType
 use rust_xlsxwriter::{Workbook};
 use zip::write::SimpleFileOptions; // 🚀 修正：zip v2.x 推荐使用 SimpleFileOptions
+use quick_xml::escape::escape;
 use quick_xml::events::{Event, BytesText};
 use quick_xml::reader::Reader as XmlReader;
 use quick_xml::writer::Writer as XmlWriter;
@@ -273,7 +274,8 @@ fn mask_xml_content(xml_data: &[u8], engine: &Arc<HybridEngine>) -> Result<Vec<u
                 
                 // 将脱敏后的文本写回
                 let masked_text = String::from_utf8_lossy(&masked_bytes);
-                writer.write_event(Event::Text(BytesText::new(&masked_text)))?;
+                let escaped = escape(&masked_text);
+                writer.write_event(Event::Text(BytesText::from_escaped(escaped.as_ref())))?;
             },
             Ok(Event::Eof) => break,
             Ok(e) => {

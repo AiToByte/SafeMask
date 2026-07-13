@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use crate::core::hybrid_engine::HybridEngine;
@@ -34,7 +35,10 @@ pub struct AppState {
     pub last_content: Arc<Mutex<String>>,
 
     /// 🚀 新增：标记前端是否正在录制快捷键
-    pub is_recording_mode: Arc<AtomicBool>, 
+    pub is_recording_mode: Arc<AtomicBool>,
+
+    /// 模型目录路径（用于 AI 引擎热加载 / reload_engine 重建）
+    pub models_dir: PathBuf,
 }
 
 /// 影子剪贴板：存储当前的“影子宇宙”状态
@@ -47,6 +51,19 @@ pub struct ShadowClipboard {
     pub timestamp: u64,        // 捕获时间戳
 }
 
+/// IPC 传输用的实体跨度摘要（精简版，不含内部解析字段）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EntitySpanBrief {
+    /// 字节偏移起始
+    pub start: usize,
+    /// 字节偏移结束（不含）
+    pub end: usize,
+    /// 实体类型英文标签 "PERSON" | "EMAIL" | "PHONE" | ...
+    pub entity_type: String,
+    /// 脱敏标签 "<EMAIL>" | "[PERSON]" | ...
+    pub mask_label: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MaskHistoryItem {
     pub id: String,
@@ -54,6 +71,8 @@ pub struct MaskHistoryItem {
     pub original: String,
     pub masked: String,
     pub mode: String, // 🚀 新增：值为 "SHADOW" 或 "SENTRY"
+    /// 实体跨度摘要列表，用于前端高亮渲染
+    pub entities: Vec<EntitySpanBrief>,
 }
 
 impl AppState {

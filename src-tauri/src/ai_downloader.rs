@@ -37,10 +37,20 @@ pub struct DownloadState {
 // ── Commands ──
 
 /// 检查模型文件完整性
-/// 优先级: AppData → 便携式; 支持 privacy-filter/ 子目录、根级文件、子目录三种布局
+/// 优先级: .exe 同级 → AppData → 便携式; 支持 privacy-filter/ 子目录、根级文件、子目录三种布局
 #[tauri::command]
 pub fn check_model_file(app: AppHandle) -> Result<String, String> {
-    // Priority 1: AppData/models/ 及所有嵌套布局
+    // Priority 0: .exe 同级 models/
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            let base = exe_dir.join("models");
+            clean_stale_lock(&base.join("privacy-filter").join(LOCK_FILE));
+            if has_valid_model_in(&base) {
+                return Ok("READY_PORTABLE".to_string());
+            }
+        }
+    }
+    // Priority 1: AppData/models/
     if let Ok(local) = app.path().app_local_data_dir() {
         let base = local.join("models");
         clean_stale_lock(&base.join("privacy-filter").join(LOCK_FILE));
@@ -48,7 +58,7 @@ pub fn check_model_file(app: AppHandle) -> Result<String, String> {
             return Ok("READY".to_string());
         }
     }
-    // Priority 2: 便携式 models/ 及所有嵌套布局
+    // Priority 2: 资源目录 models/
     if let Ok(portable) = app.path().resource_dir() {
         if has_valid_model_in(&portable.join("models")) {
             return Ok("READY_PORTABLE".to_string());
@@ -105,11 +115,11 @@ pub async fn start_model_download(
     state.cancel_flag.store(false, Ordering::SeqCst);
     let cancel_token = state.cancel_flag.clone();
 
-    let local_data = app
-        .path()
-        .app_local_data_dir()
-        .map_err(|e| e.to_string())?;
-    let model_dir = local_data.join("models").join("privacy-filter");
+    let exe_path = std::env::current_exe()
+        .map_err(|e| format!("获取可执行文件路径失败: {}", e))?;
+    let exe_dir = exe_path.parent()
+        .ok_or_else(|| "无法获取可执行文件目录".to_string())?;
+    let model_dir = exe_dir.join("models").join("privacy-filter");
     tokio::fs::create_dir_all(&model_dir)
         .await
         .map_err(|e| e.to_string())?;

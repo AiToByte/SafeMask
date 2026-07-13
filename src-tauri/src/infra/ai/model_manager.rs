@@ -121,7 +121,21 @@ impl ModelManager {
                 self.models_dir.join("model.onnx")
             };
             let tokenizer_file = self.models_dir.join("tokenizer.json");
-            let model_size = std::fs::metadata(&model_file).map(|m| m.len()).unwrap_or(0);
+            let config_path = self.models_dir.join("config.json");
+            let model_size: u64 = [
+                model_file.as_path(),
+                tokenizer_file.as_path(),
+                config_path.as_path(),
+            ].into_iter()
+                .filter(|p| p.exists())
+                .map(|p| {
+                    let size = p.metadata().map(|m| m.len()).unwrap_or(0);
+                    if size > 0 {
+                        info!("📏 模型文件 {} 大小: {} bytes ({:.1} MB)", p.display(), size, size as f64 / 1024.0 / 1024.0);
+                    }
+                    size
+                })
+                .sum();
             models.push(ModelMetadata {
                 name: "privacy-filter".to_string(),
                 version: "1.0".to_string(),
@@ -151,7 +165,21 @@ impl ModelManager {
                     .file_name()
                     .map(|n| n.to_string_lossy().to_string())
                     .unwrap_or_else(|| "unknown".to_string());
-                let model_size = std::fs::metadata(&model_file).map(|m| m.len()).unwrap_or(0);
+                let config_path = path.join("config.json");
+                let model_size: u64 = [
+                    model_file.as_path(),
+                    tokenizer_file.as_path(),
+                    config_path.as_path(),
+                ].into_iter()
+                    .filter(|p| p.exists())
+                    .map(|p| {
+                        let size = p.metadata().map(|m| m.len()).unwrap_or(0);
+                        if size > 0 {
+                            info!("📏 模型文件 {} 大小: {} bytes ({:.1} MB)", p.display(), size, size as f64 / 1024.0 / 1024.0);
+                        }
+                        size
+                    })
+                    .sum();
                 models.push(ModelMetadata {
                     name: name.clone(),
                     version: "1.0".to_string(),

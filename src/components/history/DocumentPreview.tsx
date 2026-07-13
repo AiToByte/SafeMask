@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   X,
   Clock,
@@ -9,8 +9,9 @@ import {
   ClipboardCopy,
   ClipboardCheck,
 } from "lucide-react";
-import { MaskAPI, type HistoryItem } from "@/services/api";
+import { MaskAPI, type HistoryItem, type EntitySpanBrief } from "@/services/api";
 import { cn } from "@/lib/utils";
+import { getEntityColor } from "@/lib/maskColors";
 
 interface DocumentPreviewProps {
   item: HistoryItem | null;
@@ -54,7 +55,179 @@ function PreviewCopyButton({
   );
 }
 
+// ── 将 UTF-8 字节偏移映射为 JS 字符串索引 ──
+function buildByteToCharMap(text: string): Uint16Array {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(text);
+  const map = new Uint16Array(bytes.length);
+  let charIdx = 0;
+  let byteIdx = 0;
+  while (byteIdx < bytes.length) {
+    const cp = text.codePointAt(charIdx)!;
+    const utf8Len = cp <= 0x7f ? 1 : cp <= 0x7ff ? 2 : cp <= 0xffff ? 3 : 4;
+    for (let j = 0; j < utf8Len; j++) {
+      map[byteIdx + j] = charIdx;
+    }
+    byteIdx += utf8Len;
+    charIdx += cp > 0xffff ? 2 : 1;
+  }
+  return map;
+}
+
+// ── 原文高亮渲染 ──
+function OriginalHighlighter({
+  text,
+  entities,
+  hoveredIdx,
+  onHover,
+}: {
+  text: string;
+  entities: EntitySpanBrief[];
+  hoveredIdx: number | null;
+  onHover: (i: number | null) => void;
+}) {
+  const segments = useMemo(() => {
+    if (entities.length === 0) return [{ text, entity: null as EntitySpanBrief | null }];
+
+    const byteMap = buildByteToCharMap(text);
+    const lastByte = text.length > 0 ? new TextEncoder().encode(text).length - 1 : 0;
+    const result: Array<{ text: string; entity: EntitySpanBrief | null }> = [];
+    let cursor = 0;
+
+    for (const ent of entities) {
+      const segStart = byteMap[ent.start] ?? 0;
+      const segEnd = byteMap[Math.min(ent.end, lastByte)] ?? text.length;
+      if (segStart > cursor) {
+        result.push({ text: text.slice(cursor, segStart), entity: null });
+      }
+      if (segEnd > segStart) {
+        result.push({ text: text.slice(segStart, segEnd), entity: ent });
+      }
+      cursor = segEnd;
+    }
+    if (cursor < text.length) {
+      result.push({ text: text.slice(cursor), entity: null });
+    }
+    return result;
+  }, [text, entities]);
+
+  return (
+    <div className="text-sm font-mono leading-relaxed whitespace-pre-wrap break-words text-zinc-500">
+      {segments.map((seg, i) =>
+        seg.entity ? (
+          <HighlightedSpan
+            key={i}
+            entity={seg.entity}
+            isHovered={hoveredIdx !== null && entities.indexOf(seg.entity) === hoveredIdx}
+            entityIdx={entities.indexOf(seg.entity)}
+            onHover={onHover}
+          >
+            {seg.text}
+          </HighlightedSpan>
+        ) : (
+          <span key={i}>{seg.text}</span>
+        ),
+      )}
+    </div>
+  );
+}
+
+function HighlightedSpan({
+  entity,
+  isHovered,
+  entityIdx,
+  onHover,
+  children,
+}: {
+  entity: EntitySpanBrief;
+  isHovered: boolean;
+  entityIdx: number;
+  onHover: (i: number | null) => void;
+  children: React.ReactNode;
+}) {
+  const color = getEntityColor(entity.entity_type);
+  return (
+    <span
+      data-entity-idx={entityIdx}
+      className={cn(
+        "transition-all duration-200 rounded-sm px-0.5 border-b-2 cursor-default",
+        color.hlBg,
+        color.hlBorder,
+        isHovered ? "ring-1 ring-inset ring-white/10 opacity-100" : "opacity-70",
+      )}
+      onMouseEnter={() => onHover(entityIdx)}
+      onMouseLeave={() => onHover(null)}
+    >
+      {children}
+      <span className={cn("text-[9px] font-bold ml-1 align-middle", color.badge.split(" ")[1])}>
+        {color.chinese}
+      </span>
+    </span>
+  );
+}
+
+// ── 脱敏副本高亮渲染 ──
+function MaskedHighlighter({
+  text,
+  entities,
+  hoveredIdx,
+  onHover,
+}: {
+  text: string;
+  entities: EntitySpanBrief[];
+  hoveredIdx: number | null;
+  onHover: (i: number | null) => void;
+}) {
+  const segments = useMemo(() => {
+    if (entities.length === 0) return [{ text, entityIdx: -1 }];
+
+    const labels = [...new Set(entities.map((e) => e.mask_label))];
+    const pattern = labels
+      .map((l) => l.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .join("|");
+    const re = new RegExp(`(${pattern})`, "g");
+    const tokens = text.split(re);
+    let entityCounter = 0;
+    return tokens.map((token) => {
+      const matchIdx = entities.findIndex(
+        (e, ei) => ei >= entityCounter && e.mask_label === token,
+      );
+      if (matchIdx !== -1) {
+        entityCounter = matchIdx + 1;
+        return { text: token, entityIdx: matchIdx };
+      }
+      return { text: token, entityIdx: -1 };
+    });
+  }, [text, entities]);
+
+  return (
+    <div className="text-sm font-mono leading-relaxed whitespace-pre-wrap break-words text-zinc-200">
+      {segments.map((seg, i) =>
+        seg.entityIdx >= 0 ? (
+          <span
+            key={i}
+            data-entity-idx={seg.entityIdx}
+            className={cn(
+              "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all duration-200 cursor-default",
+              getEntityColor(entities[seg.entityIdx].entity_type).badge,
+              hoveredIdx === seg.entityIdx && "shadow-[0_0_14px_rgba(255,255,255,0.06)] scale-105",
+            )}
+            onMouseEnter={() => onHover(seg.entityIdx)}
+            onMouseLeave={() => onHover(null)}
+          >
+            {seg.text.replace(/[<>\[\]]/g, "")}
+          </span>
+        ) : (
+          <span key={i}>{seg.text}</span>
+        ),
+      )}
+    </div>
+  );
+}
+
 export default function DocumentPreview({ item, onClose }: DocumentPreviewProps) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
   useEffect(() => {
     if (!item) return;
     const handler = (e: KeyboardEvent) => {
@@ -125,9 +298,12 @@ export default function DocumentPreview({ item, onClose }: DocumentPreviewProps)
               <PreviewCopyButton text={item.original} isOriginal />
             </div>
             <div className="flex-1 overflow-y-auto custom-scroll px-8 pb-8">
-              <pre className="text-sm font-mono leading-relaxed whitespace-pre-wrap break-words text-zinc-500">
-                {item.original}
-              </pre>
+              <OriginalHighlighter
+                text={item.original}
+                entities={item.entities}
+                hoveredIdx={hoveredIdx}
+                onHover={setHoveredIdx}
+              />
             </div>
           </div>
 
@@ -151,9 +327,12 @@ export default function DocumentPreview({ item, onClose }: DocumentPreviewProps)
               <PreviewCopyButton text={item.masked} isOriginal={false} />
             </div>
             <div className="flex-1 overflow-y-auto custom-scroll px-8 pb-8">
-              <pre className="text-sm font-mono leading-relaxed whitespace-pre-wrap break-words text-zinc-200">
-                {item.masked}
-              </pre>
+              <MaskedHighlighter
+                text={item.masked}
+                entities={item.entities}
+                hoveredIdx={hoveredIdx}
+                onHover={setHoveredIdx}
+              />
             </div>
           </div>
         </div>

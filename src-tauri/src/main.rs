@@ -43,24 +43,21 @@ fn main() {
     info!("🚀 Tauri 应用启动中...");
 
     // 🚀 限制线程数，降低资源占用（适用于资源受限环境）
-    // 1. 限制 Rayon 线程池（文件并行处理）
-    if let Ok(threads_str) = std::env::var("SAFEMASK_THREADS") {
-        if let Ok(n) = threads_str.parse::<usize>() {
-            info!("🔧 限制 Rayon 线程数为: {}", n);
-            unsafe { std::env::set_var("RAYON_NUM_THREADS", threads_str); }
-        }
-    } else {
-        // 默认限制为 2 线程，避免占用全部 CPU
-        info!("🔧 默认限制 Rayon 线程数为: 2");
-        unsafe { std::env::set_var("RAYON_NUM_THREADS", "2"); }
-    }
+    // 1. 限制 Rayon 线程池（文件并行处理）— 使用安全 API，不操作环境变量
+    let rayon_threads: usize = std::env::var("SAFEMASK_THREADS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(2);
+    info!("🔧 设置 Rayon 线程数为: {}", rayon_threads);
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(rayon_threads)
+        .build_global()
+        .expect("Rayon 全局线程池初始化失败");
 
-    // 2. 限制 ONNX Runtime 线程数
+    // 2. ONNX Runtime 线程数由 ner_engine.rs Session builder 的
+    //    with_intra_threads / with_inter_threads 直接注入，不依赖环境变量
     if let Ok(ort_threads) = std::env::var("ORT_NUM_THREADS") {
-        info!("🔧 限制 ONNX Runtime 线程数为: {}", ort_threads);
-    } else {
-        unsafe { std::env::set_var("ORT_NUM_THREADS", "2"); }
-        info!("🔧 默认限制 ONNX Runtime 线程数为: 2");
+        info!("🔧 读取 ONNX Runtime 线程数配置: {}", ort_threads);
     }
 
     if let Err(e) = tauri::Builder::default()
@@ -245,7 +242,7 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
 
     let engine = Arc::new(engine);
 
-    // 构建核心状态机
+    // 构建核心状态机（持久化 models_dir，供 reload_engine_internal 重建 AI）
     let app_state = AppState {
         engine: Arc::new(RwLock::new(engine)),
         settings: Arc::new(RwLock::new(settings)),
@@ -256,6 +253,7 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
         history: Arc::new(Mutex::new(Vec::new())),
         last_content: Arc::new(Mutex::new(String::new())),
         is_recording_mode: Arc::new(AtomicBool::new(false)),
+        models_dir: models_dir.clone(),
     };
 
     // 托管状态
@@ -264,31 +262,53 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
-/// 查找模型目录 — 优先 AppData, 其次便携式
+/// 查找模型目录 — 优先 .exe 同级, 其次开发模式 CWD, 最后 AppData
 fn find_models_dir(app: &AppHandle) -> std::path::PathBuf {
-    // 1. AppData 优先（下载目标目录）
+    // 1. .exe 同级路径（便携式/安装模式）
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            let base = exe_dir.join("models");
+            if let Some(dir) = first_valid_model_dir(&base) {
+                info!("✅ .exe 同级路径找到模型目录: {}", dir.display());
+                return dir;
+            }
+        }
+    }
+    // 2. 开发模式路径：CWD/models/
+    if let Ok(cwd) = std::env::current_dir() {
+        let base = cwd.join("models");
+        if let Some(dir) = first_valid_model_dir(&base) {
+            info!("✅ 开发模式找到模型目录: {}", dir.display());
+            return dir;
+        }
+    }
+    // 3. 系统 AppData 路径（兼容旧安装）
     if let Ok(local) = app.path().app_local_data_dir() {
         let base = local.join("models");
         if let Some(dir) = first_valid_model_dir(&base) {
-            info!("✅ 本地数据路径找到模型目录: {}", dir.display());
+            info!("✅ AppData 找到模型目录: {}", dir.display());
             return dir;
         }
-        // 即使此时不存在，下载后也写到这里
-        let target = base.join("privacy-filter");
-        info!("📁 模型尚未下载，目标数据目录: {}", target.display());
-        return target;
     }
-    // 2. 便携式路径：可执行文件同级或 resources
+    // 4. 资源路径
     if let Ok(portable) = app.path().resource_dir() {
         let base = portable.join("models");
         if let Some(dir) = first_valid_model_dir(&base) {
-            info!("✅ 便携式路径找到模型目录: {}", dir.display());
+            info!("✅ 资源路径找到模型目录: {}", dir.display());
             return dir;
         }
     }
-    // 3. 备用保底
-    let fallback = std::path::PathBuf::from("./models/privacy-filter");
-    info!("⚠️ 无法获取标准路径，使用保底路径: {}", fallback.display());
+    // 5. 保底：返回 .exe 同级路径作为下载目标
+    let fallback = if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            exe_dir.join("models").join("privacy-filter")
+        } else {
+            std::path::PathBuf::from("./models/privacy-filter")
+        }
+    } else {
+        std::path::PathBuf::from("./models/privacy-filter")
+    };
+    info!("📁 模型尚未下载，目标数据目录: {}", fallback.display());
     fallback
 }
 

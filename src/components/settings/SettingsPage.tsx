@@ -27,6 +27,11 @@ const formatRecognizer = (name: string) => {
   return map[name] || name;
 };
 
+const formatSize = (mb: number): string => {
+  if (mb >= 1) return `${mb.toFixed(1)} MB`;
+  return `${Math.round(mb * 1024)} KB`;
+};
+
 const getRecognizerColor = (name: string) => {
   const map: Record<string, string> = {
     aho_corasick_engine: "bg-emerald-500",
@@ -62,7 +67,6 @@ export default function SettingsPage() {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [modelUnselectLock, setModelUnselectLock] = useState(false);
   const [aiToggling, setAiToggling] = useState(false);
-  const [aiLocalEnabled, setAiLocalEnabled] = useState(true);
   const { play } = useAudioFeedback(store.settings.enable_audio_feedback);
 
   // Auto-select first model when available models change
@@ -95,8 +99,6 @@ export default function SettingsPage() {
 
   const handleAiToggle = async (enabled: boolean) => {
     setAiToggling(true);
-    // Update local state immediately for responsive UI
-    setAiLocalEnabled(enabled);
     try {
       await store.toggleAiEngine(enabled);
       if (enabled) {
@@ -107,8 +109,6 @@ export default function SettingsPage() {
         await message("AI 识别已关闭，将使用规则引擎进行脱敏", { title: "AI 引擎", kind: "info" });
       }
     } catch (e) {
-      // Revert local state on error
-      setAiLocalEnabled(!enabled);
       await message("切换 AI 引擎失败: " + e, { title: "错误", kind: "error" });
     } finally {
       setAiToggling(false);
@@ -183,8 +183,13 @@ export default function SettingsPage() {
     }
   })();
 
-  
-  const aiActive = aiLocalEnabled;
+
+  const aiActive = useMemo(() => {
+    if (!store.aiEngineStatus) return false;
+    return store.aiEngineStatus.state === "ready"
+        || store.aiEngineStatus.state === "loading"
+        || store.aiEngineStatus.state === "not_loaded";
+  }, [store.aiEngineStatus]);
   // Build models list from available_count + model info
   const preparedModels = useMemo(() => {
     const models: { name: string; size_mb: number; loaded: boolean; description: string }[] = [];
@@ -554,7 +559,7 @@ export default function SettingsPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs text-zinc-600 border-t border-white/[0.03] pt-3 flex-wrap gap-4">
-                <span className="font-mono">{store.aiEngineStatus.model.size_mb.toFixed(0)} MB</span>
+                <span className="font-mono">{formatSize(store.aiEngineStatus.model.size_mb)}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {store.aiEngineStatus.model.entity_types?.map((et) => (
                     <span key={et} className="px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 text-[10px] font-bold uppercase tracking-wider">
@@ -611,7 +616,7 @@ export default function SettingsPage() {
                       <p className="text-[10px] text-zinc-600 mt-0.5 truncate">{model.description}</p>
                     </div>
                     <span className="text-[10px] font-mono text-zinc-600 bg-white/[0.03] px-2.5 py-1 rounded-full">
-                      {model.size_mb.toFixed(0)} MB
+                      {formatSize(model.size_mb)}
                     </span>
                     <div
                       className={cn(
