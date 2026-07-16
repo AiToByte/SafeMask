@@ -15,11 +15,11 @@ jobs:
       matrix:
         include:
           - platform: macos-latest
-            target: universal-apple-darwin
+            target: aarch64-apple-darwin
             config: '{"bundle":{"targets":["app","dmg"]}}'
             name: macOS
 
-          - platform: ubuntu-22.04
+          - platform: ubuntu-24.04
             target: ""
             config: '{"bundle":{"targets":["deb","appimage"]}}'
             name: Linux
