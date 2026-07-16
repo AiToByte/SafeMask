@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Monitor, Cpu, Volume2, Eye, AlertTriangle,
   User, Mail, Github, Globe, Info, ExternalLink, Copyright,
@@ -61,6 +61,7 @@ const formatEntityType = (type: string) => {
 export default function SettingsPage() {
   const store = useAppStore();
   const [isRecording, setRecording] = useState(false);
+  const recordingRef = useRef(false);
   const [showKeyWarn, setShowWarn] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [emailCopied, setEmail] = useState(false);
@@ -141,7 +142,7 @@ export default function SettingsPage() {
   };
 
   const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!isRecording) return;
+    if (!recordingRef.current) return;
     e.preventDefault();
     e.stopPropagation();
     const mods: string[] = [];
@@ -328,8 +329,8 @@ export default function SettingsPage() {
                     readOnly
                     value={isRecording ? "正在监听按键组合..." : store.settings.magic_paste_shortcut}
                     onKeyDown={handleKeyDown}
-                    onFocus={() => { setRecording(true); MaskAPI.setRecordingMode(true); }}
-                    onBlur={() => { setRecording(false); MaskAPI.setRecordingMode(false); }}
+                    onFocus={() => { recordingRef.current = true; setRecording(true); MaskAPI.setRecordingMode(true); }}
+                    onBlur={() => { recordingRef.current = false; setRecording(false); MaskAPI.setRecordingMode(false); }}
                     className={cn(
                       "w-full bg-[#08080a] border rounded-2xl py-5 text-base font-mono text-amber-200 text-center outline-none transition-all cursor-pointer shadow-inner",
                       isRecording
