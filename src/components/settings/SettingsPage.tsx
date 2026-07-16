@@ -774,7 +774,7 @@ export default function SettingsPage() {
                 <span>Project Info</span>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <span className="text-sm font-mono text-zinc-400 bg-white/[0.03] px-3 py-1 rounded-full">v1.2.4</span>
+                <span className="text-sm font-mono text-zinc-400 bg-white/[0.03] px-3 py-1 rounded-full">v{__APP_VERSION__}</span>
                 <span className="text-xs text-zinc-500">MIT License</span>
               </div>
               <blockquote className="border-l-2 border-emerald-500/40 pl-4 py-2 bg-emerald-500/[0.03] rounded-r-xl">

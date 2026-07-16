@@ -41,7 +41,7 @@ export default function Header() {
             </span>
           </h1>
           <p className="text-[8px] md:text-[10px] text-zinc-600 font-bold tracking-[0.1em] uppercase">
-            Secure Core Engine · v1.2.4
+            Secure Core Engine · v{__APP_VERSION__}
           </p>
         </div>
       </div>

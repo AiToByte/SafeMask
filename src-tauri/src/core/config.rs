@@ -6,8 +6,7 @@ fn default_model_urls() -> Vec<String> {
             .to_string(),
         "https://950544b1401caf10f82ba1e82b03f89a.r2.cloudflarestorage.com/safemask-ai-model/privacy-filter/privacy-filter.zip"
             .to_string(),
-        "https://github.com/AiToByte/SafeMask/releases/download/v1.2.4/privacy-filter.zip"
-            .to_string(),
+        format!("https://github.com/AiToByte/SafeMask/releases/download/v{}/privacy-filter.zip", env!("CARGO_PKG_VERSION")),
     ]
 }
 
@@ -54,8 +53,7 @@ impl Default for AppSettings {
                     .to_string(),
                 "https://950544b1401caf10f82ba1e82b03f89a.r2.cloudflarestorage.com/safemask-ai-model/privacy-filter/privacy-filter.zip"
                     .to_string(),
-                "https://github.com/AiToByte/SafeMask/releases/download/v1.2.4/privacy-filter.zip"
-                    .to_string(),
+                format!("https://github.com/AiToByte/SafeMask/releases/download/v{}/privacy-filter.zip", env!("CARGO_PKG_VERSION")),
             ],
             record_writer_enabled: false,
         }

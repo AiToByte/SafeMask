@@ -140,6 +140,13 @@ impl HybridEngine {
 
     /// 获取 AI 引擎状态信息
     pub fn ai_status(&self) -> serde_json::Value {
+        if !self.is_ai_enabled() {
+            return serde_json::json!({
+                "state": "not_available",
+                "error": "AI 引擎已停用",
+                "available_count": 0,
+            });
+        }
         match &self.model_manager {
             Some(mm) => mm.status_info(),
             None => serde_json::json!({

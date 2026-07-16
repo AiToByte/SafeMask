@@ -93,7 +93,7 @@ pub async fn copy_original_cmd(state: State<'_, AppState>, text: String) -> AppR
 #[tauri::command]
 pub fn get_app_info() -> serde_json::Value {
     serde_json::json!({
-        "version": "1.2.4",
+        "version": env!("CARGO_PKG_VERSION"),
         "author": "XiaoSheng",
         "github": "https://github.com/AiToByte/SafeMask",
         "description": "极致性能的本地隐私脱敏引擎"
@@ -304,9 +304,13 @@ pub async fn get_ai_engine_status(state: State<'_, AppState>) -> AppResult<serde
 #[tauri::command]
 pub async fn get_engine_info(state: State<'_, AppState>) -> AppResult<serde_json::Value> {
     let engine = state.engine.read();
+    let mut recognizers = engine.registry().recognizer_names();
+    if !engine.is_ai_enabled() {
+        recognizers.retain(|n| *n != "ner_engine");
+    }
     Ok(serde_json::json!({
         "rule_count": engine.rule_count(),
-        "recognizers": engine.registry().recognizer_names(),
+        "recognizers": recognizers,
         "ai_status": engine.ai_status(),
     }))
 }

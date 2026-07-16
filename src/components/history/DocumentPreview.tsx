@@ -343,7 +343,7 @@ export default function DocumentPreview({ item, onClose }: DocumentPreviewProps)
             Audit-ID: {item.id.split("-")[0]}
           </span>
           <span className="text-[10px] font-mono text-zinc-700">
-            SafeMask v1.2.4
+            SafeMask v{__APP_VERSION__}
           </span>
         </div>
       </div>

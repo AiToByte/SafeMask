@@ -64,7 +64,7 @@ export const useModelDownloader = create<ModelDownloaderState>((set, get) => {
       const staticFallbacks = [
         "https://obs.behource.com:9004/gxzh/2026/07/06/privacy-filter.zip",
         "https://950544b1401caf10f82ba1e82b03f89a.r2.cloudflarestorage.com/safemask-ai-model/privacy-filter/privacy-filter.zip",
-        "https://github.com/AiToByte/SafeMask/releases/download/v1.2.4/privacy-filter.zip"
+        `https://github.com/AiToByte/SafeMask/releases/download/v${__APP_VERSION__}/privacy-filter.zip`
       ];
 
       const actualUrls = urls && urls.length > 0 ? urls : staticFallbacks;
