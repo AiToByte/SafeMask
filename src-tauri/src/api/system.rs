@@ -8,8 +8,9 @@ use tauri::{AppHandle, State, Emitter};
 use std::sync::Arc;
 use crate::core::config::AppSettings;
 use crate::core::download_auth;
-use log::{info};
-use std::sync::atomic::Ordering; 
+use crate::infra::record_writer::{RecordWriter, MarkdownRecordWriter};
+use log::{info, error};
+use std::sync::atomic::Ordering;
 
 /// 获取规则统计信息 (仪表盘使用)
 #[tauri::command]
@@ -159,11 +160,15 @@ pub async fn update_app_settings(
     app: AppHandle,
     state: State<'_, AppState>,
     mut new_settings: AppSettings,
-) -> AppResult<String> {
+) -> AppResult<serde_json::Value> {
+    info!("[update_app_settings] INVOKED: record_writer_enabled={}", new_settings.record_writer_enabled);
     // 剥离前端可能回传的 Worker 代理 URL，防止污染持久化存储
     new_settings.model_download_urls.retain(|u| !u.contains(download_auth::WORKER_BASE_URL));
     let old_shortcut = state.settings.read().magic_paste_shortcut.clone();
     let shortcut_changed = old_shortcut != new_settings.magic_paste_shortcut;
+
+    // 缓存旧值，在写入 state 前记录（用于后续 dirty check）
+    let old_writer_enabled = state.settings.read().record_writer_enabled;
 
     {
         let mut guard = state.settings.write();
@@ -176,10 +181,80 @@ pub async fn update_app_settings(
         crate::infra::config::shortcut_manager::ShortcutManager::reload_magic_shortcut(
             &app, 
             &new_settings.magic_paste_shortcut
-        ).map_err(|e| crate::common::errors::AppError::Internal(e))?;
+        ).map_err(crate::common::errors::AppError::Internal)?;
     }
 
-    Ok("设置更新成功".into())
+    // 无条件重建记录写入器（无论配置是否变化，确保 writer 与 state 一致）
+    info!("[RecordWriter] 保存触发重建 (old={}, new={})",
+        old_writer_enabled, new_settings.record_writer_enabled);
+    rebuild_record_writer(&state).await?;
+
+    // 返回记录目录路径用于前端诊断显示
+    let records_dir = crate::infra::record_writer::default_records_dir();
+    Ok(serde_json::json!({
+        "message": "设置更新成功",
+        "records_dir": records_dir.to_string_lossy(),
+        "writer_enabled": new_settings.record_writer_enabled,
+        "records_dir_exists": records_dir.exists()
+    }))
+}
+
+/// 重建记录写入器：flush 旧的 → 根据新配置创建或移除
+/// 返回 Err 表示输出目录不可写（前端会弹出错误提示）
+pub async fn rebuild_record_writer(state: &State<'_, AppState>) -> AppResult<()> {
+    // flush old (clone Arc out of lock first to avoid parking_lot guard across await)
+    let old_writer = state.record_writer.read().clone();
+    if let Some(writer) = old_writer {
+        writer.flush().await;
+    }
+
+    // build new
+    let enabled = {
+        let s = state.settings.read();
+        s.record_writer_enabled
+    };
+    let writer: Option<Arc<dyn RecordWriter>> = if enabled {
+        let output_dir = crate::infra::record_writer::default_records_dir();
+        info!("[RecordWriter] 重建记录写入器, 输出目录: {}", output_dir.display());
+        // 立即创建目录并验证可写性，失败则向前端返回错误
+        std::fs::create_dir_all(&output_dir).map_err(|e| {
+            let msg = format!("无法创建记录目录 {}: {}", output_dir.display(), e);
+            error!("[RecordWriter] {}", msg);
+            crate::common::errors::AppError::Internal(msg)
+        })?;
+        // 写入测试文件验证可写性（写入后立即删除）
+        let test_file = output_dir.join(".write_test");
+        match std::fs::write(&test_file, b"test") {
+            Ok(_) => { let _ = std::fs::remove_file(&test_file); },
+            Err(e) => {
+                let msg = format!("记录目录不可写 {}: {}", output_dir.display(), e);
+                error!("[RecordWriter] {}", msg);
+                return Err(crate::common::errors::AppError::Internal(msg));
+            }
+        }
+        let (writer, task) = MarkdownRecordWriter::new(output_dir);
+        tokio::spawn(task);
+        Some(Arc::new(writer))
+    } else {
+        None
+    };
+    *state.record_writer.write() = writer;
+    info!("[RecordWriter] 记录写入器状态已更新 (enabled={})", enabled);
+    Ok(())
+}
+
+/// 获取记录目录诊断信息（用于前端调试）
+#[tauri::command]
+pub async fn get_records_dir_info(state: State<'_, AppState>) -> AppResult<serde_json::Value> {
+    let records_dir = crate::infra::record_writer::default_records_dir();
+    let writer_enabled = state.settings.read().record_writer_enabled;
+    let has_writer = state.record_writer.read().is_some();
+    Ok(serde_json::json!({
+        "dir": records_dir.to_string_lossy(),
+        "exists": records_dir.exists(),
+        "writer_enabled": writer_enabled,
+        "has_writer": has_writer,
+    }))
 }
 
 /// 实时测试单条规则的有效性

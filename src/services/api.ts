@@ -46,6 +46,7 @@ export interface AppSettings {
   enable_visual_feedback: boolean;
   enable_audio_feedback: boolean;
   model_download_urls: string[];
+  record_writer_enabled: boolean;
 }
 
 /** 规则库统计 */
@@ -74,6 +75,22 @@ export interface EngineInfo {
   ai_status: AiEngineStatus;
 }
 
+/** 更新设置结果（含诊断信息） */
+export interface UpdateSettingsResult {
+  message: string;
+  records_dir: string;
+  writer_enabled: boolean;
+  records_dir_exists: boolean;
+}
+
+/** 记录目录诊断信息 */
+export interface RecordsDirInfo {
+  dir: string;
+  exists: boolean;
+  writer_enabled: boolean;
+  has_writer: boolean;
+}
+
 /** 文件处理响应 */
 export interface ProcessResponse {
   message: string;
@@ -97,8 +114,13 @@ export const MaskAPI = {
   },
 
   /** 更新并持久化设置 (触发快捷键热重载) */
-  async updateSettings(settings: AppSettings): Promise<string> {
+  async updateSettings(settings: AppSettings): Promise<UpdateSettingsResult> {
     return await invoke("update_app_settings", { newSettings: settings });
+  },
+
+  /** 获取记录目录诊断信息 */
+  async getRecordsDirInfo(): Promise<RecordsDirInfo> {
+    return await invoke("get_records_dir_info");
   },
 
   /** 切换宇宙模式 (Alt+M 逻辑) */

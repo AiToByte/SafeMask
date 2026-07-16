@@ -38,6 +38,7 @@ once_cell = "1.21.3"  # 单例初始化
 anyhow = "1.0"   # 应用级别错误处理
 arboard = "3.6.1"  # 跨平台剪贴板读写
 crossbeam-channel = "0.5" # 高性能通道 (用于背压控制)
+async-trait = "0.1"
 clipboard-master = "4.0.0" # 系统级剪贴板事件监听
 rand = "0.8.5"   # 用于 jitter 随机抖动，防止雷鸣群效应
 hmac = "0.12"

@@ -117,8 +117,16 @@ impl GlobalClipboard {
         };
 
         state.add_history(history_item.clone());
-        let _ = self.app.emit("new-history", history_item);
+        let _ = self.app.emit("new-history", history_item.clone());
         info!("[Handler] 审计记录已入库");
+
+        // 如果启用了记录写入器，异步持久化到磁盘
+        let writer_opt = state.record_writer.read().clone();
+        if let Some(writer) = writer_opt {
+            writer.write(history_item).await;
+        } else {
+            warn!("[Handler] 记录写入器未启用或未创建，跳过持久化");
+        }
     }
 
     /// 哨兵拦截执行器 (保持精简，不再负责历史记录)

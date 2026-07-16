@@ -3,7 +3,7 @@ import {
   Monitor, Cpu, Volume2, Eye, AlertTriangle,
   User, Mail, Github, Globe, Info, ExternalLink, Copyright,
   Copy, Check, Brain, Zap, Loader2, Lock,
-  SwitchCamera, Save, Trash2, RotateCcw, Timer, Keyboard
+  SwitchCamera, Trash2, RotateCcw, Timer, Keyboard, FileText
 } from "lucide-react";
 import { useAppStore } from "@/hooks/useAppStore";
 import { useAudioFeedback } from "@/hooks/useAudioFeedback";
@@ -67,6 +67,9 @@ export default function SettingsPage() {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [modelUnselectLock, setModelUnselectLock] = useState(false);
   const [aiToggling, setAiToggling] = useState(false);
+  const [recordsDir, setRecordsDir] = useState("");
+  const [dirExists, setDirExists] = useState(false);
+  const [dirLoading, setDirLoading] = useState(false);
   const { play } = useAudioFeedback(store.settings.enable_audio_feedback);
 
   // Auto-select first model when available models change
@@ -95,6 +98,21 @@ export default function SettingsPage() {
     setElapsed(0);
   }, [store.aiEngineStatus?.state]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setDirLoading(true);
+    MaskAPI.getRecordsDirInfo().then((info) => {
+      if (cancelled) return;
+      setRecordsDir(info.dir);
+      setDirExists(info.exists);
+      setDirLoading(false);
+    }).catch(() => {
+      if (cancelled) return;
+      setDirLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [store.settings.record_writer_enabled]);
+
   // ── Handlers ──
 
   const handleAiToggle = async (enabled: boolean) => {
@@ -122,13 +140,7 @@ export default function SettingsPage() {
     setTimeout(() => setEmail(false), 2000);
   };
 
-  const handleSave = async () => {
-    await MaskAPI.updateSettings(store.settings);
-    play("ASCEND");
-    await message("系统配置已实时同步至脱敏内核", { title: "同步成功", kind: "info" });
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!isRecording) return;
     e.preventDefault();
     e.stopPropagation();
@@ -147,9 +159,12 @@ export default function SettingsPage() {
         setTimeout(() => setShowWarn(false), 2500);
         return;
       }
-      store.updateSettings({ ...store.settings, magic_paste_shortcut: fs });
+      const s = { ...store.settings, magic_paste_shortcut: fs };
+      store.updateSettings(s);
       setRecording(false);
       play("RECORD");
+      try { await MaskAPI.updateSettings(s); }
+      catch (err) { await message(`快捷键同步失败: ${err}`, { title: "错误", kind: "error" }); }
     }
   };
 
@@ -256,8 +271,55 @@ export default function SettingsPage() {
                 title="启用影子宇宙模式"
                 description="数据流在内存中脱敏，物理剪贴板保留原文"
                 checked={store.settings.shadow_mode_enabled}
-                onChange={(checked) => store.updateSettings({ ...store.settings, shadow_mode_enabled: checked })}
+                onChange={async (checked) => {
+                  const s = { ...store.settings, shadow_mode_enabled: checked };
+                  store.updateSettings(s);
+                  try { await MaskAPI.updateSettings(s); }
+                  catch (err) { await message(`同步失败: ${err}`, { title: "错误", kind: "error" }); }
+                }}
               />
+
+              <SettingToggle
+                icon={FileText}
+                iconColor="emerald"
+                title="历史记录持久化"
+                description="将脱敏映射记录写入 .md 文件，用于 AI 训练分析"
+                checked={store.settings.record_writer_enabled}
+                onChange={async (checked) => {
+                  const newSettings = { ...store.settings, record_writer_enabled: checked };
+                  store.updateSettings(newSettings);
+                  try {
+                    const result = await MaskAPI.updateSettings(newSettings);
+                    if (checked) {
+                      setRecordsDir(result.records_dir);
+                      setDirExists(result.records_dir_exists);
+                    }
+                    await message(`记录持久化${checked ? "已启用" : "已关闭"}`, { title: "同步成功", kind: "info" });
+                  } catch (err) {
+                    await message(`同步失败: ${err}`, { title: "错误", kind: "error" });
+                  }
+                }}
+              />
+
+              {store.settings.record_writer_enabled && (
+                <div className="p-4 bg-black/40 rounded-2xl border border-white/[0.04]">
+                  <div className="text-[11px] font-black text-zinc-600 uppercase tracking-widest mb-2">
+                    记录目录
+                  </div>
+                  <div className="font-mono text-[13px] text-zinc-300 break-all leading-relaxed">
+                    {dirLoading ? (
+                      <span className="text-zinc-600">加载中...</span>
+                    ) : (
+                      <>
+                        <span className="text-amber-400/80">{recordsDir}</span>
+                        <span className={dirExists ? "text-emerald-500 ml-2" : "text-zinc-600 ml-2"}>
+                          {dirExists ? "✓ 已创建" : "尚未创建"}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="p-7 bg-black/40 rounded-[2rem] border border-white/[0.03] shadow-inner">
                 <div className="text-xs font-black text-zinc-600 uppercase tracking-widest mb-5">Paste Shortcut</div>
@@ -352,7 +414,12 @@ export default function SettingsPage() {
                 title="蓝盾视觉气泡"
                 description="桌面叠加层实时反馈"
                 checked={store.settings.enable_visual_feedback}
-                onChange={(checked) => store.updateSettings({ ...store.settings, enable_visual_feedback: checked })}
+                onChange={async (checked) => {
+                  const s = { ...store.settings, enable_visual_feedback: checked };
+                  store.updateSettings(s);
+                  try { await MaskAPI.updateSettings(s); }
+                  catch (err) { await message(`同步失败: ${err}`, { title: "错误", kind: "error" }); }
+                }}
               />
 
               <SettingToggle
@@ -361,7 +428,12 @@ export default function SettingsPage() {
                 title="物理机械音效"
                 description="系统声音反馈"
                 checked={store.settings.enable_audio_feedback}
-                onChange={(checked) => store.updateSettings({ ...store.settings, enable_audio_feedback: checked })}
+                onChange={async (checked) => {
+                  const s = { ...store.settings, enable_audio_feedback: checked };
+                  store.updateSettings(s);
+                  try { await MaskAPI.updateSettings(s); }
+                  catch (err) { await message(`同步失败: ${err}`, { title: "错误", kind: "error" }); }
+                }}
               />
 
               <div className="pt-8 border-t border-white/[0.03] space-y-5">
@@ -387,6 +459,11 @@ export default function SettingsPage() {
                     step="50"
                     value={store.settings.paste_delay_ms}
                     onChange={(e) => store.updateSettings({ ...store.settings, paste_delay_ms: parseInt(e.target.value) })}
+                    onMouseUp={async (e) => {
+                      const s = { ...store.settings, paste_delay_ms: parseInt(e.currentTarget.value) };
+                      try { await MaskAPI.updateSettings(s); }
+                      catch (err) { await message(`同步失败: ${err}`, { title: "错误", kind: "error" }); }
+                    }}
                     className="w-full h-3.5 bg-zinc-900 rounded-full appearance-none cursor-pointer outline-none border border-white/[0.05] shadow-inner slider-amber-glow"
                     style={{
                       backgroundImage: "linear-gradient(#f59e0b,#f59e0b)",
@@ -735,18 +812,7 @@ export default function SettingsPage() {
 
       </div>
 
-      {/* ════════════════ BOTTOM BAR ════════════════ */}
-      <div className="flex justify-end items-center pt-10 border-t border-white/[0.03]">
-        <button
-          type="button"
-          onClick={handleSave}
-          className="group relative flex items-center gap-4 px-16 py-5 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 hover:bg-amber-500 hover:text-black hover:shadow-[0_0_40px_rgba(245,158,11,0.25)] active:scale-95 overflow-hidden"
-        >
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-          <Save size={20} className="relative z-10" />
-          <span className="relative z-10">保存配置并重载内核</span>
-        </button>
-      </div>
+
     </div>
   );
 }

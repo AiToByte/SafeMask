@@ -12,6 +12,7 @@ fn default_model_urls() -> Vec<String> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct AppSettings {
     // --- 快捷键配置 ---
     /// 影子模式安全粘贴快捷键 (例如: "Alt+V")
@@ -34,6 +35,10 @@ pub struct AppSettings {
     /// 仅跳过序列化（不写入 YAML）；反序列化时若字段不存在则使用 `default_model_urls`
     #[serde(skip_serializing, default = "default_model_urls")]
     pub model_download_urls: Vec<String>,
+
+    // --- 记录写入器 ---
+    /// 是否启用脱敏记录持久化（写入 .md 文件）
+    pub record_writer_enabled: bool,
 }
 
 impl Default for AppSettings {
@@ -52,6 +57,7 @@ impl Default for AppSettings {
                 "https://github.com/AiToByte/SafeMask/releases/download/v1.2.4/privacy-filter.zip"
                     .to_string(),
             ],
+            record_writer_enabled: false,
         }
     }
 }

@@ -1,8 +1,14 @@
-use crate::common::state::AppState;
+use crate::common::state::{AppState, MaskHistoryItem};
 use crate::common::errors::AppResult;
 use crate::infra::fs::processor;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, State, Manager};
 use serde::Serialize;
+use log::info;
+use uuid::Uuid;
+use chrono::Local;
+
+/// 用于文件记录的最大内容长度（截取前 N 字符）
+const MAX_RECORD_CONTENT_LEN: usize = 2000;
 
 #[derive(Serialize)]
 pub struct ProcessResponse {
@@ -57,7 +63,43 @@ pub async fn process_file_gui(
     // 处理第一层错误：JoinError (线程池或运行时错误)
     .map_err(|e| AppError::Internal(format!("Runtime Error: {}", e)))?
     // 处理第二层错误：anyhow::Error (文件处理业务错误)
-    .map_err(|e| AppError::Internal(format!("Processing Error: {}", e)))?; 
+    .map_err(|e| AppError::Internal(format!("Processing Error: {}", e)))?;
+
+    // 3. 如果启用了记录写入器，异步写入文件处理记录
+    {
+        let app_state = app.state::<AppState>();
+        let writer_opt = app_state.record_writer.read().clone();
+        if let Some(writer) = writer_opt {
+            // 读取原文和脱敏结果（截取前 MAX_RECORD_CONTENT_LEN 字符）
+            let original = tokio::fs::read_to_string(&input_path).await
+                .unwrap_or_default();
+            let masked = tokio::fs::read_to_string(&output_path_str).await
+                .unwrap_or_default();
+            let original = if original.len() > MAX_RECORD_CONTENT_LEN {
+                format!("{}...\n[已截断，共 {} 字节]", 
+                    &original[..MAX_RECORD_CONTENT_LEN], original.len())
+            } else {
+                original
+            };
+            let masked = if masked.len() > MAX_RECORD_CONTENT_LEN {
+                format!("{}...\n[已截断，共 {} 字节]", 
+                    &masked[..MAX_RECORD_CONTENT_LEN], masked.len())
+            } else {
+                masked
+            };
+
+            let file_item = MaskHistoryItem {
+                id: Uuid::new_v4().to_string(),
+                timestamp: Local::now().format("%H:%M:%S").to_string(),
+                original,
+                masked,
+                mode: "FILE".to_string(),
+                entities: stats.entities.clone(),
+            };
+            writer.write(file_item).await;
+            info!("[FileRecord] 文件处理记录已写入");
+        }
+    }
 
      // 🚀 返回结构化数据
      Ok(ProcessResponse {

@@ -57,6 +57,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     enable_visual_feedback: true,
     enable_audio_feedback: true,
     model_download_urls: [],
+    record_writer_enabled: false,
   },
   isMonitorOn: true,
   ruleCount: 0,

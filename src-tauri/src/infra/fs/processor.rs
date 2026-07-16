@@ -1,4 +1,5 @@
 use crate::core::hybrid_engine::HybridEngine;
+use crate::common::state::EntitySpanBrief;
 use anyhow::{Context, Result};
 use crossbeam_channel::{bounded};
 use memmap2::MmapOptions;
@@ -8,7 +9,7 @@ use std::fs::File;
 use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use calamine::{Reader, Xlsx, open_workbook, Data}; // 🚀 修正：calamine 使用 Data 而非 DataType
 use rust_xlsxwriter::{Workbook};
@@ -28,6 +29,8 @@ pub struct ProcessStats {
     pub total_lines: u64,
     pub processed_bytes: u64,
     pub duration_secs: f64,
+    /// 处理过程中检测到的实体（用于记录写入器）
+    pub entities: Vec<EntitySpanBrief>,
 }
 
 /// 统筹分发函数：根据后缀名决定处理策略
@@ -68,6 +71,7 @@ fn process_docx(input: &Path, output: &Path, engine: &Arc<HybridEngine>, cb: imp
     let mut zip_writer = zip::ZipWriter::new(writer_file);
 
     let total = archive.len();
+    let mut all_entities: Vec<EntitySpanBrief> = Vec::new();
 
     for i in 0..total {
         let mut entry = archive.by_index(i)?;
@@ -85,7 +89,8 @@ fn process_docx(input: &Path, output: &Path, engine: &Arc<HybridEngine>, cb: imp
             
             // 🚀 核心改进：XML 标签感知脱敏
             // 我们不能直接 mask 整个 XML 字节流，否则会破坏标签（如 <w:t> 变成 <MASK>）
-            let processed_xml = mask_xml_content(&buffer, engine)?;
+            let (processed_xml, xml_entities) = mask_xml_content(&buffer, engine)?;
+            all_entities.extend(xml_entities);
             
             zip_writer.start_file(name, options)?;
             zip_writer.write_all(&processed_xml)?;
@@ -101,9 +106,10 @@ fn process_docx(input: &Path, output: &Path, engine: &Arc<HybridEngine>, cb: imp
     cb(1.0);
 
     Ok(ProcessStats {
-        total_lines: 0, 
+        total_lines: 0,
         processed_bytes: std::fs::metadata(input)?.len(),
-        duration_secs: start.elapsed().as_secs_f64()
+        duration_secs: start.elapsed().as_secs_f64(),
+        entities: all_entities,
     })
 }
 
@@ -113,6 +119,7 @@ fn process_xlsx(input: &Path, output: &Path, engine: &Arc<HybridEngine>, cb: imp
     let mut new_workbook = Workbook::new();
 
     let sheet_names = workflow.sheet_names().to_vec();
+    let mut all_entities: Vec<EntitySpanBrief> = Vec::new();
     for (idx, name) in sheet_names.iter().enumerate() {
         if let Ok(range) = workflow.worksheet_range(name) {
             let sheet = new_workbook.add_worksheet();
@@ -123,7 +130,8 @@ fn process_xlsx(input: &Path, output: &Path, engine: &Arc<HybridEngine>, cb: imp
                     match cell {
                         // 🚀 修正：使用 Data::String 而非 DataType::String
                         Data::String(s) => {
-                            let masked = engine.mask_line(s.as_bytes());
+                            let (masked, entities) = engine.mask_line_with_entities(s.as_bytes());
+                            all_entities.extend(entities);
                             // 🚀 修正：into_owned() 将 Cow<str> 转为 String，满足 write_string 要求
                             sheet.write_string(r as u32, c as u16, String::from_utf8_lossy(&masked).into_owned())?;
                         },
@@ -140,10 +148,11 @@ fn process_xlsx(input: &Path, output: &Path, engine: &Arc<HybridEngine>, cb: imp
 
     new_workbook.save(output.to_string_lossy().as_ref())?;
     cb(1.0);
-    Ok(ProcessStats { 
-        total_lines: 0, 
-        processed_bytes: std::fs::metadata(input)?.len(), 
-        duration_secs: start.elapsed().as_secs_f64() 
+    Ok(ProcessStats {
+        total_lines: 0,
+        processed_bytes: std::fs::metadata(input)?.len(),
+        duration_secs: start.elapsed().as_secs_f64(),
+        entities: all_entities,
     })
 }
 
@@ -159,15 +168,16 @@ fn process_pdf(input: &Path, output: &Path, engine: &Arc<HybridEngine>, cb: impl
         "目前 .doc 仅支持另存为 .docx 后进行格式保留脱敏".to_string()
     };
     cb(0.5);
-    
-    let masked = engine.mask_line(content.as_bytes());
+
+    let (masked, entities) = engine.mask_line_with_entities(content.as_bytes());
     std::fs::write(output, &masked)?;
-    
+
     cb(1.0);
     Ok(ProcessStats {
         total_lines: 0,
         processed_bytes: content.len() as u64,
-        duration_secs: start.elapsed().as_secs_f64()
+        duration_secs: start.elapsed().as_secs_f64(),
+        entities,
     })
 }
 
@@ -185,7 +195,7 @@ pub fn process_text_file_mmap<P: AsRef<Path>>(
     if file_len == 0 {
         File::create(&output_path)?;
         progress_callback(1.0);
-        return Ok(ProcessStats { total_lines: 0, processed_bytes: 0, duration_secs: 0.0 });
+        return Ok(ProcessStats { total_lines: 0, processed_bytes: 0, duration_secs: 0.0, entities: vec![] });
     }
 
     let mmap = unsafe { MmapOptions::new().map(&file)? };
@@ -200,6 +210,8 @@ pub fn process_text_file_mmap<P: AsRef<Path>>(
     let total_lines = Arc::new(AtomicU64::new(0));
     let p_bytes_clone = processed_bytes.clone();
     let p_total_lines = total_lines.clone();
+    let all_entities = Arc::new(Mutex::new(Vec::new()));
+    let all_entities_clone = all_entities.clone();
     
     let progress_arc = Arc::new(progress_callback);
     let progress_for_writer = progress_arc.clone();
@@ -240,8 +252,13 @@ pub fn process_text_file_mmap<P: AsRef<Path>>(
         // 等待背压许可
         if backpressure_tx.send(()).is_err() { return; }
 
-        let result = engine.mask_line(chunk);
+        let (result, entities) = engine.mask_line_with_entities(chunk);
         let lines = bytecount::count(result.as_ref(), b'\n') as u64;
+
+        // 收集实体（仅统计类型，位置为 chunk 内偏移，不适用于全文件）
+        if let Ok(mut guard) = all_entities_clone.lock() {
+            guard.extend(entities);
+        }
 
         if result_tx.send((idx, result.into_owned(), lines)).is_err() { return; }
     });
@@ -256,22 +273,25 @@ pub fn process_text_file_mmap<P: AsRef<Path>>(
         total_lines: total_lines.load(Ordering::SeqCst),
         processed_bytes: processed_bytes.load(Ordering::SeqCst) as u64,
         duration_secs: start_time.elapsed().as_secs_f64(),
+        entities: Arc::try_unwrap(all_entities).ok().map(|m| m.into_inner().unwrap()).unwrap_or_default(),
     })
 }
 
 /// 🚀 XML 深度脱敏：只针对文本节点进行脱敏，保护 XML 标签
-fn mask_xml_content(xml_data: &[u8], engine: &Arc<HybridEngine>) -> Result<Vec<u8>> {
+fn mask_xml_content(xml_data: &[u8], engine: &Arc<HybridEngine>) -> Result<(Vec<u8>, Vec<EntitySpanBrief>)> {
     let mut reader = XmlReader::from_reader(xml_data);
     let mut writer = XmlWriter::new(Cursor::new(Vec::new()));
     let mut buf = Vec::new();
+    let mut all_entities = Vec::new();
 
     loop {
         match reader.read_event_into(&mut buf) {
             Ok(Event::Text(e)) => {
                 // 仅对文本内容执行脱敏引擎
                 let raw_text = e.unescape()?;
-                let masked_bytes = engine.mask_line(raw_text.as_bytes());
-                
+                let (masked_bytes, entities) = engine.mask_line_with_entities(raw_text.as_bytes());
+                all_entities.extend(entities);
+
                 // 将脱敏后的文本写回
                 let masked_text = String::from_utf8_lossy(&masked_bytes);
                 let escaped = escape(&masked_text);
@@ -287,7 +307,7 @@ fn mask_xml_content(xml_data: &[u8], engine: &Arc<HybridEngine>) -> Result<Vec<u
         buf.clear();
     }
 
-    Ok(writer.into_inner().into_inner())
+    Ok((writer.into_inner().into_inner(), all_entities))
 }
 
 struct SplitLinesIterator<'a> {

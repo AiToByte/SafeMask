@@ -121,6 +121,16 @@ React 19 + TypeScript + Zustand + Tailwind CSS v3 + Vite 6. No routing library �
 - **Skeleton cleanup**: Removed `animate-pulse` CSS class from skeleton page, deleted `src/lib/animations.ts` (was only used by framer-motion wrappers)
 - **Build verified**: `npm run build` (tsc + vite) clean at 4.12s; `cargo check -p SafeMask` clean
 
+### Record Writer — AI Training Record Persistence (session 3)
+- **Design**: Approved `.md` + YAML front matter format; append mode; 150-record per-file cap with seq numbering; auto-detect output dir from `{app_data}/records/YYYY/YYYY-MM-DD-{seq:03}.md`
+- **Trait**: `trait RecordWriter: Send + Sync` via `#[async_trait]` in `infra/record_writer/mod.rs`
+- **Implementation**: `MarkdownRecordWriter` uses `tokio::sync::mpsc` channel + background `tokio::spawn` task. Flushes every 5s OR 10 items. Each record includes fenced original/masked code blocks + entity table + stats summary.
+- **Hooks**: Clipboard (`handler.rs:record_privacy_history()`) and file processing (`api/files.rs` after `process_file`) both write records via `Arc<dyn RecordWriter>` cloned from parking_lot guard before `.await`
+- **Entity plumbing**: `ProcessStats.entities: Vec<EntitySpanBrief>` — all format handlers use `mask_line_with_entities`. mmap parallel path collects via `Arc<Mutex<Vec>>`
+- **Lifecycle**: `rebuild_record_writer()` in `system.rs` called on settings update; `init_record_writer()` at startup
+- **Settings toggle**: `AppSettings.record_writer_enabled: bool` (default `false`) — frontend `SettingToggle` with `FileText` icon in Kernel section
+- **Verified**: `cargo check` clean; `cargo clippy` — zero new warnings (only 19 pre-existing); `cargo test` — 91/91 pass (88 existing + 3 new); `npm run build` clean
+
 ### Next Up
 - Refactor SettingsPage inline toggles → shared Toggle component
 - React.lazy 懒加载非首屏页面 (History/Rules/Settings)

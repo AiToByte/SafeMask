@@ -13,6 +13,7 @@ use crate::core::hybrid_engine::HybridEngine;
 use crate::infra::ai::model_manager::validate_model_dir;
 use crate::infra::config::loader::ConfigLoader;
 use crate::infra::config::shortcut_manager::ShortcutManager;
+use crate::infra::record_writer::MarkdownRecordWriter;
 use std::path::Path;
 use std::sync::{Arc, atomic::AtomicBool};
 // 统一使用 parking_lot
@@ -90,6 +91,7 @@ fn main() {
             api::system::get_engine_info,        // 完整引擎信息
             api::system::toggle_ai_engine,       // AI 启用/停用
             api::system::get_registered_recognizers, // 已注册识别器
+            api::system::get_records_dir_info,      // 记录目录诊断
             ai_downloader::check_model_file,
             ai_downloader::start_model_download,
             ai_downloader::cancel_model_download,
@@ -110,6 +112,16 @@ fn init_logger() {
         .filter_level(LevelFilter::Info)
         .filter_module("SafeMask", LevelFilter::Trace)
         .target(env_logger::Target::Stdout)
+        .format(|buf, record| {
+            use std::io::Write;
+            let ts = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3f%:z");
+            writeln!(buf, "[{} {} {}] {}",
+                ts,
+                record.level(),
+                record.target(),
+                record.args()
+            )
+        })
         .init();
 
     info!("🚀 env_logger 已初始化，级别: info+ (SafeMask 模块为 trace)");
@@ -132,6 +144,9 @@ fn setup_application(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
     // 5. 初始化窗口与托盘
     setup_window_handlers(handle)?;
     setup_system_tray(app)?;
+
+    // 6. 初始化记录写入器（根据当前配置）
+    init_record_writer(handle)?;
 
     Ok(())
 }
@@ -254,6 +269,7 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
         last_content: Arc::new(Mutex::new(String::new())),
         is_recording_mode: Arc::new(AtomicBool::new(false)),
         models_dir: models_dir.clone(),
+        record_writer: Arc::new(RwLock::new(None)),
     };
 
     // 托管状态
@@ -392,6 +408,22 @@ fn init_shortcut_service(handle: &AppHandle) -> Result<(), Box<dyn std::error::E
 fn init_background_services(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     info!("🎧 [Init] 正在启动后台哨兵服务...");
     crate::infra::clipboard::monitor::start_listener(handle.clone());
+    Ok(())
+}
+
+/// 根据当前配置初始化记录写入器
+fn init_record_writer(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    let state = handle.state::<AppState>();
+    let settings = state.settings.read();
+    if settings.record_writer_enabled {
+        let output_dir = crate::infra::record_writer::default_records_dir();
+        let (writer, task) = MarkdownRecordWriter::new(output_dir);
+        tauri::async_runtime::spawn(task);
+        *state.record_writer.write() = Some(Arc::new(writer));
+        info!("[Init] 记录写入器已启用");
+    } else {
+        info!("[Init] 记录写入器未启用");
+    }
     Ok(())
 }
 

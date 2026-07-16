@@ -5,6 +5,7 @@ use crate::core::hybrid_engine::HybridEngine;
 use serde::{Serialize, Deserialize};
 use parking_lot::{Mutex, RwLock};
 use crate::core::config::AppSettings;
+use crate::infra::record_writer::RecordWriter;
 
 /// 共享混合引擎类型
 pub type SharedEngine = Arc<RwLock<Arc<HybridEngine>>>;
@@ -39,6 +40,9 @@ pub struct AppState {
 
     /// 模型目录路径（用于 AI 引擎热加载 / reload_engine 重建）
     pub models_dir: PathBuf,
+
+    /// 可插拔的记录写入器（持久化脱敏映射到 .md 文件）
+    pub record_writer: Arc<RwLock<Option<Arc<dyn RecordWriter>>>>,
 }
 
 /// 影子剪贴板：存储当前的“影子宇宙”状态

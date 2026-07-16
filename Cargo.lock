@@ -9,6 +9,7 @@ dependencies = [
  "aho-corasick",
  "anyhow",
  "arboard",
+ "async-trait",
  "base64 0.22.1",
  "bytecount",
  "calamine",
