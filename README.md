@@ -164,6 +164,12 @@ SafeMask utilizes a quantized token-classification model for Named Entity Recogn
 
 ---
 
+> 模型下载地址
+[privacy-filter Model Quark download link](https://pan.quark.cn/s/51647902f801?pwd=HQ1Y)
+[privacy-filter Baidu Netdisk download link for the model](https://pan.baidu.com/s/1mDBr0mdo2r-guC4LshF87w?pwd=ba7b)
+
+---
+
 ## 🔒 Privacy & Security Commitment
 
 *   **100% Offline**: All masking, rules, and AI inferences execute entirely in local sandbox environments with zero network calls [docs/使用手册.md]. The codebase contains no telemetry or remote reporting.
