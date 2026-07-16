@@ -89,7 +89,7 @@ We believe productivity tools should be as elegant as precision instruments:
 
 | Shortcut | Action | Semantics |
 | :--- | :--- | :--- |
-| `Ctrl+Shift+V` (configurable) | **Magic Paste** | Injects the masked copy from the Shadow Universe into the focused window. |
+| `Alt+V` (configurable) | **Magic Paste** | Injects the masked copy from the Shadow Universe into the focused window. |
 | `Alt + M` | **Universe Switch** | Instantly toggles between "Silent Monitoring" and "Active Interception." |
 | Pin Button | **Always on Top** | Pins the console to the front of all apps for real-time monitoring. |
 
