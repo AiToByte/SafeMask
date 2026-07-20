@@ -17,14 +17,13 @@ fn get_hmac_key() -> &'static str {
 /// 读取或创建设备指纹（UUID v4），持久化到 `storage_dir/device_id`
 pub fn get_or_create_device_id(storage_dir: &Path) -> String {
     let path = storage_dir.join("device_id");
-    if path.exists() {
-        if let Ok(id) = fs::read_to_string(&path) {
+    if path.exists()
+        && let Ok(id) = fs::read_to_string(&path) {
             let trimmed = id.trim().to_string();
             if !trimmed.is_empty() {
                 return trimmed;
             }
         }
-    }
     let id = Uuid::new_v4().to_string();
     let _ = fs::write(&path, &id);
     id

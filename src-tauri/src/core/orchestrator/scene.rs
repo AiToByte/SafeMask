@@ -56,7 +56,11 @@ impl SceneMode {
         }
     }
 
-    /// 从字符串解析
+    /// 从字符串解析（宽容解析，未知值默认落到 `Shadow`）
+    ///
+    /// 语义与标准 `FromStr` 不同：不返回 `Result`，未知输入使用默认值。
+    /// 因此显式抑制 `should_implement_trait` 警告。
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Self {
         match s.to_uppercase().as_str() {
             "SENTRY" => Self::Sentry,

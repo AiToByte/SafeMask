@@ -152,15 +152,14 @@ impl ConfigLoader {
     fn load_from_directory<P: AsRef<Path>>(dir: P, is_custom: bool) -> Vec<Rule> {
         let mut rules = Vec::new();
         for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
-            if entry.path().extension().map_or(false, |ext| ext == "yaml") {
-                if let Ok(mut file_rules) = Self::parse_file(entry.path()) {
+            if entry.path().extension().is_some_and(|ext| ext == "yaml")
+                && let Ok(mut file_rules) = Self::parse_file(entry.path()) {
                     // 🚀 为该目录下加载的所有规则打上标记
                     for rule in &mut file_rules {
                         rule.is_custom = is_custom;
                     }
                     rules.extend(file_rules);
                 }
-            }
         }
         rules
     }
@@ -219,7 +218,7 @@ impl ConfigLoader {
             .map_err(|e| AppError::Config(format!("配置序列化失败: {}", e)))?;
 
         fs::write(file_path, yaml)
-            .map_err(|e| AppError::Io(e))?;
+            .map_err(AppError::Io)?;
             
         info!("✅ 应用设置已成功持久化到磁盘");
         Ok(())

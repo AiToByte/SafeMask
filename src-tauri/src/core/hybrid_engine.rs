@@ -3,14 +3,12 @@
 //! `HybridEngine` 是 SafeMask 的核心引擎，组合了：
 //! - `RecognizerRegistry` — 可插拔识别器管理
 //! - `ConflictResolver` — 冲突解决
+//! - `MaskingEngine` — 脱敏策略分派
 //!
-//! 它是原有 `MaskEngine` 的升级版，保持向后兼容的同时，
-//! 提供了可扩展的识别器架构。
+//! # 核心 API
 //!
-//! # 向后兼容
-//!
-//! `HybridEngine` 提供了与原有 `MaskEngine` 相同的 `mask_line` 方法，
-//! 确保现有代码无需修改即可使用新引擎。
+//! - `mask_line(&[u8]) -> Cow<[u8]>`：零拷贝快速路径，无命中时借用返回原文
+//! - `mask_line_with_entities(&[u8]) -> (Vec<u8>, Vec<EntitySpanBrief>)`：附带实体跨度用于前端高亮
 
 use crate::core::recognizer::{AnalysisContext, EntitySpan, MaskResult, RecognizerRegistry};
 use crate::core::resolver::ConflictResolver;
@@ -164,7 +162,7 @@ impl HybridEngine {
         self.resolver.resolve(spans, text)
     }
 
-    /// 脱敏文本（向后兼容原有 `MaskEngine::mask_line` 接口）
+    /// 脱敏文本
     ///
     /// 对输入文本执行识别和脱敏，返回脱敏后的文本。
     /// 如果没有识别到任何实体，返回原始文本的借用（零拷贝）。
@@ -223,8 +221,8 @@ impl HybridEngine {
         // 雕刻算法可能将同一实体切成多个相邻片段，此处合并为一个
         let mut merged: Vec<EntitySpan> = Vec::with_capacity(spans.len());
         for span in spans {
-            if let Some(last) = merged.last_mut() {
-                if last.entity_type == span.entity_type && span.start <= last.end {
+            if let Some(last) = merged.last_mut()
+                && last.entity_type == span.entity_type && span.start <= last.end {
                     last.end = last.end.max(span.end);
                     if span.priority > last.priority {
                         last.mask.clone_from(&span.mask);
@@ -235,7 +233,6 @@ impl HybridEngine {
                     }
                     continue;
                 }
-            }
             merged.push(span.clone());
         }
 

@@ -144,21 +144,19 @@ impl NerEngine {
         let content = std::fs::read_to_string(config_path).ok()?;
         let config: serde_json::Value = serde_json::from_str(&content).ok()?;
 
-        if let Some(id2label) = config.get("id2label") {
-            if let Some(map) = id2label.as_object() {
+        if let Some(id2label) = config.get("id2label")
+            && let Some(map) = id2label.as_object() {
                 let mut labels = vec![String::new(); map.len()];
                 for (id_str, label) in map {
-                    if let (Ok(idx), Some(label_str)) = (id_str.parse::<usize>(), label.as_str()) {
-                        if idx < labels.len() {
+                    if let (Ok(idx), Some(label_str)) = (id_str.parse::<usize>(), label.as_str())
+                        && idx < labels.len() {
                             labels[idx] = label_str.to_string();
                         }
-                    }
                 }
                 if labels.iter().all(|l| !l.is_empty()) {
                     return Some(labels);
                 }
             }
-        }
 
         None
     }

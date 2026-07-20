@@ -20,7 +20,6 @@ use std::sync::{Arc, atomic::AtomicBool};
 // 🚀 显式从 parking_lot 导入
 use parking_lot::{Mutex, RwLock};
 use log::{info, error, LevelFilter};
-use {tauri_plugin_dialog, tauri_plugin_opener};  // ← 新增这一行导入 
 use tauri::{
     AppHandle,                  // ← 新增，用于闭包参数类型
     Emitter,
@@ -203,9 +202,9 @@ fn setup_system_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>>
         // 左键点击直接显示窗口（推荐！）
         .on_tray_icon_event(move |tray, event| {   // 注意：第一个参数是 &TrayIcon，不是 &AppHandle       
 
-            if let tauri::tray::TrayIconEvent::Click { button, .. } = event {
-                if button == tauri::tray::MouseButton::Left {
-                    if let Some(window) = tray.app_handle().get_webview_window("main") {
+            if let tauri::tray::TrayIconEvent::Click { button, .. } = event
+                && button == tauri::tray::MouseButton::Left
+                    && let Some(window) = tray.app_handle().get_webview_window("main") {
                         if window.is_visible().unwrap_or(false) {
                             let _ = window.hide();
                         } else {
@@ -214,8 +213,6 @@ fn setup_system_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>>
                         }
                         info!("托盘左键：切换窗口可见性");
                     }
-                }
-            }
         })
         .build(app)?;
 
@@ -281,15 +278,14 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
 /// 查找模型目录 — 优先 .exe 同级, 其次开发模式 CWD, 最后 AppData
 fn find_models_dir(app: &AppHandle) -> std::path::PathBuf {
     // 1. .exe 同级路径（便携式/安装模式）
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(exe_dir) = exe_path.parent() {
+    if let Ok(exe_path) = std::env::current_exe()
+        && let Some(exe_dir) = exe_path.parent() {
             let base = exe_dir.join("models");
             if let Some(dir) = first_valid_model_dir(&base) {
                 info!("✅ .exe 同级路径找到模型目录: {}", dir.display());
                 return dir;
             }
         }
-    }
     // 2. 开发模式路径：CWD/models/
     if let Ok(cwd) = std::env::current_dir() {
         let base = cwd.join("models");
@@ -360,18 +356,17 @@ fn init_shortcut_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
                 let settings = state.settings.read().clone();
 
                 // 校验动态快捷键 (Alt+V)
-                if let Ok(magic_v) = ShortcutManager::parse_shortcut_string(&settings.magic_paste_shortcut) {
-                    if shortcut == &magic_v {
+                if let Ok(magic_v) = ShortcutManager::parse_shortcut_string(&settings.magic_paste_shortcut)
+                    && shortcut == &magic_v {
                         tauri::async_runtime::spawn(async move {
                             crate::infra::clipboard::magic_paste::MagicPaster::execute(&h).await;
                         });
                         return;
                     }
-                }
 
                  // --- 🚀 逻辑 B: 模式一键切换 (统一使用管理器解析) ---
-                if let Ok(mode_toggle) = ShortcutManager::parse_shortcut_string("Alt+M") {
-                    if shortcut == &mode_toggle {
+                if let Ok(mode_toggle) = ShortcutManager::parse_shortcut_string("Alt+M")
+                    && shortcut == &mode_toggle {
                         let h2 = app_handle.clone();
                         tauri::async_runtime::spawn(async move {
                             if let Ok(new_mode_is_shadow) = crate::api::system::toggle_vault_mode(h2.clone(), h2.state()).await {
@@ -380,7 +375,6 @@ fn init_shortcut_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
                             }
                         });
                     }
-                }
             }
         })
         .build()

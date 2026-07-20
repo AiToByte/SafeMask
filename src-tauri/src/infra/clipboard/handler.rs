@@ -13,12 +13,14 @@ pub struct GlobalClipboard {
 }
 
 impl GlobalClipboard {
-    pub fn new(app: AppHandle) -> Self {
-        let cb = Clipboard::new().expect("无法初始化剪贴板后端");
-        Self {
+    /// 初始化剪贴板后端。失败时返回 `arboard::Error`，
+    /// 由调用侧决定是否降级（例如仅记录日志、跳过监听）。
+    pub fn new(app: AppHandle) -> Result<Self, arboard::Error> {
+        let cb = Clipboard::new()?;
+        Ok(Self {
             app,
             backend: Arc::new(parking_lot::Mutex::new(cb)),
-        }
+        })
     }
 
     // 公开方法：获取当前剪贴板文本
@@ -134,7 +136,7 @@ impl GlobalClipboard {
         let state = self.app.state::<AppState>();
         state.is_magic_pasting.store(true, Ordering::Release);
         
-        if let Ok(_) = self.set_text(masked.clone()) {
+        if self.set_text(masked.clone()).is_ok() {
             {
                 let mut last = state.last_content.lock();
                 *last = masked;

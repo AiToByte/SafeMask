@@ -26,6 +26,12 @@ pub struct ChecksumRecognizer {
     priority: i32,
 }
 
+impl Default for ChecksumRecognizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ChecksumRecognizer {
     /// 创建校验位识别器
     pub fn new() -> Self {
@@ -53,10 +59,8 @@ impl ChecksumRecognizer {
         let bytes = id.as_bytes();
 
         // 前 17 位必须是数字
-        for i in 0..17 {
-            if !bytes[i].is_ascii_digit() {
-                return false;
-            }
+        if bytes.iter().take(17).any(|b| !b.is_ascii_digit()) {
+            return false;
         }
 
         // 第 18 位必须是数字或 X/x
@@ -69,11 +73,12 @@ impl ChecksumRecognizer {
         let weights = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
         let check_codes = ['1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2'];
 
-        let mut sum = 0i32;
-        for i in 0..17 {
-            let digit = (bytes[i] - b'0') as i32;
-            sum += digit * weights[i];
-        }
+        let sum: i32 = bytes
+            .iter()
+            .take(17)
+            .zip(weights.iter())
+            .map(|(b, w)| ((b - b'0') as i32) * w)
+            .sum();
 
         let expected = check_codes[(sum % 11) as usize];
         let actual = id.chars().nth(17).unwrap();

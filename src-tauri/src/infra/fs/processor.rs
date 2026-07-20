@@ -161,7 +161,7 @@ fn process_pdf(input: &Path, output: &Path, engine: &Arc<HybridEngine>, cb: impl
     let start = std::time::Instant::now();
     // 使用 pdf_extract 或类似工具提取文本
     // 注意：对于 .doc，pdf_extract 可能不支持，这里主要针对 PDF
-    let content = if input.extension().map_or(false, |e| e == "pdf") {
+    let content = if input.extension().is_some_and(|e| e == "pdf") {
         pdf_extract::extract_text(input).unwrap_or_default()
     } else {
         // 如果是 .doc，目前做简单读取或提示
@@ -260,7 +260,7 @@ pub fn process_text_file_mmap<P: AsRef<Path>>(
             guard.extend(entities);
         }
 
-        if result_tx.send((idx, result.into_owned(), lines)).is_err() { return; }
+        if result_tx.send((idx, result.into_owned(), lines)).is_err() {}
     });
 
     drop(result_tx);

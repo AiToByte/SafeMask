@@ -44,11 +44,10 @@ impl MaskingEngine {
         let entity_key = entity_type.en_label();
 
         // 查找实体类型的特定策略
-        if let Some(strategy_type) = self.config.entity_strategies.get(entity_key) {
-            if let Some(strategy) = self.strategies.get(strategy_type) {
+        if let Some(strategy_type) = self.config.entity_strategies.get(entity_key)
+            && let Some(strategy) = self.strategies.get(strategy_type) {
                 return strategy.as_ref();
             }
-        }
 
         // 使用默认策略
         self.strategies

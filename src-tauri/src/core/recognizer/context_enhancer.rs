@@ -43,6 +43,12 @@ pub struct ContextEnhancer {
     window_size: usize,
 }
 
+impl Default for ContextEnhancer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ContextEnhancer {
     /// 创建上下文增强识别器
     pub fn new() -> Self {

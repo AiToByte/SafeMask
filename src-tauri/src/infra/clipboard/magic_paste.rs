@@ -1,14 +1,23 @@
 use crate::common::state::AppState;
-use arboard::Clipboard;
+use arboard::{Clipboard, ImageData};
 use enigo::{Enigo, Key, KeyboardControllable};
+use log::{info, warn};
 use std::cell::RefCell;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
-use tauri::{AppHandle, Manager, Emitter};
-use log::{info};
+use tauri::{AppHandle, Emitter, Manager};
 
 thread_local! {
     static ENIGO: RefCell<Enigo> = RefCell::new(Enigo::new());
+}
+
+/// 剪贴板备份内容：文本 / 图片 / 无法恢复
+enum ClipboardBackup {
+    Text(String),
+    Image(ImageData<'static>),
+    /// 剪贴板既不是文本也不是图片（如文件列表、私有格式），无法安全备份。
+    /// 还原阶段将跳过写入，避免用空字符串覆盖用户原有内容。
+    Unrecoverable,
 }
 
 pub struct MagicPaster;
@@ -17,8 +26,7 @@ impl MagicPaster {
     pub async fn execute(app: &AppHandle) {
         let state = app.state::<AppState>();
 
-        // 🚀 核心修复：如果前端正在录制快捷键，后端闭嘴，不准模拟按键
-        if state.is_recording_mode.load(Ordering::SeqCst) { 
+        if state.is_recording_mode.load(Ordering::SeqCst) {
             info!("[MagicPaste] 检测到录制模式，取消模拟执行");
             return;
         }
@@ -27,60 +35,93 @@ impl MagicPaster {
         let shadow = state.shadow_store.read().clone();
 
         let (target_text, feedback_type) = if settings.shadow_mode_enabled {
-            if shadow.has_privacy { (shadow.masked.clone(), "PASTE_MASKED") }
-            else { (shadow.original.clone(), "NORMAL") }
+            if shadow.has_privacy {
+                (shadow.masked.clone(), "PASTE_MASKED")
+            } else {
+                (shadow.original.clone(), "NORMAL")
+            }
+        } else if shadow.has_privacy {
+            (shadow.original.clone(), "PASTE_ORIGINAL")
         } else {
-            if shadow.has_privacy { (shadow.original.clone(), "PASTE_ORIGINAL") } 
-            else { (shadow.original.clone(), "NORMAL") }
+            (shadow.original.clone(), "NORMAL")
         };
 
-        if target_text.is_empty() { return; }
+        if target_text.is_empty() {
+            return;
+        }
 
         state.is_magic_pasting.store(true, Ordering::SeqCst);
 
-        // 🚀 核心改动：增加执行序列的健壮性
-        if let Ok(_) = Self::perform_swap_sequence(target_text, settings.paste_delay_ms).await {
-             let _ = app.emit("magic-feedback", serde_json::json!({ "type": feedback_type }));
+        if Self::perform_swap_sequence(target_text, settings.paste_delay_ms)
+            .await
+            .is_ok()
+        {
+            let _ = app.emit("magic-feedback", serde_json::json!({ "type": feedback_type }));
         }
 
         tokio::time::sleep(Duration::from_millis(50)).await;
         state.is_magic_pasting.store(false, Ordering::SeqCst);
     }
 
-    async fn perform_swap_sequence(target_text: String, delay: u64) -> Result<(), Box<dyn std::error::Error>> {
+    async fn perform_swap_sequence(
+        target_text: String,
+        delay: u64,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut cb = Clipboard::new()?;
-        let backup = cb.get_text().unwrap_or_default();
 
-        // 1. 覆盖剪贴板
+        // 1. 备份原剪贴板（探测文本/图片，都失败则标记不可恢复而非覆盖成空字符串）
+        let backup = Self::snapshot_clipboard(&mut cb);
+
+        // 2. 写入脱敏/原文文本
         cb.set_text(target_text)?;
 
-        // 2. 模拟按键（优化版）
+        // 3. 模拟按键触发目标应用粘贴
         Self::simulate_paste_keys();
 
-        // 3. 🚀 关键：给目标应用留出足够的读取时间
-        // 如果 150ms 还是不行，建议在 UI 设置中调大到 300ms
+        // 4. 留出目标应用读取时间
         tokio::time::sleep(Duration::from_millis(delay)).await;
 
-        // 4. 还原剪贴板
-        cb.set_text(backup)?;
-        
+        // 5. 按备份类型还原
+        match backup {
+            ClipboardBackup::Text(text) => {
+                cb.set_text(text)?;
+            }
+            ClipboardBackup::Image(image) => {
+                if let Err(e) = cb.set_image(image) {
+                    warn!("[MagicPaste] 还原图片剪贴板失败: {}", e);
+                }
+            }
+            ClipboardBackup::Unrecoverable => {
+                // 原剪贴板不是文本也不是图片（可能是文件/HTML/自定义格式）。
+                // 不做还原：脱敏文本会作为剪贴板残留，但不会用空字符串销毁用户原始内容。
+                warn!("[MagicPaste] 原剪贴板内容格式不支持备份，跳过还原");
+            }
+        }
+
         Ok(())
     }
 
+    /// 探测并快照当前剪贴板：优先文本，其次图片
+    fn snapshot_clipboard(cb: &mut Clipboard) -> ClipboardBackup {
+        match cb.get_text() {
+            Ok(text) => ClipboardBackup::Text(text),
+            Err(_) => match cb.get_image() {
+                Ok(image) => ClipboardBackup::Image(image),
+                Err(_) => ClipboardBackup::Unrecoverable,
+            },
+        }
+    }
+
     fn simulate_paste_keys() {
-        // 🚀 使用 thread_local! 缓存 Enigo 句柄，避免频繁申请系统底层句柄
         ENIGO.with(|cell| {
             let mut enigo = cell.borrow_mut();
 
-            // 🚀 核心修复逻辑：
-            // 因为用户触发快捷键时按住了物理 ALT 键，
-            // 我们必须先在软件层面发送一个 ALT 松开的信号，
-            // 否则系统会认为用户在按 Ctrl + Alt + V。
-
             #[cfg(target_os = "windows")]
             {
-                enigo.key_up(Key::Alt); // 强制松开物理 Alt
-                std::thread::sleep(Duration::from_millis(20)); // 微小停顿
+                // 用户触发快捷键时物理 Alt 仍按下；先在软件层松开
+                // 避免系统识别为 Ctrl+Alt+V。
+                enigo.key_up(Key::Alt);
+                std::thread::sleep(Duration::from_millis(20));
             }
 
             #[cfg(target_os = "macos")]
@@ -88,9 +129,8 @@ impl MagicPaster {
             #[cfg(not(target_os = "macos"))]
             let modifier = Key::Control;
 
-            // 执行粘贴组合键
             enigo.key_down(modifier);
-            std::thread::sleep(Duration::from_millis(20)); // 模拟真人按下的间隔
+            std::thread::sleep(Duration::from_millis(20));
             enigo.key_click(Key::Layout('v'));
             std::thread::sleep(Duration::from_millis(20));
             enigo.key_up(modifier);

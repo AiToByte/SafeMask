@@ -10,6 +10,7 @@ import { useAudioFeedback } from "@/hooks/useAudioFeedback";
 import { MaskAPI } from "@/services/api";
 import { Toggle } from "@/components/ui/Toggle";
 import { SettingToggle } from "@/components/ui/SettingToggle";
+import { Card, CardHeader } from "@/components/ui/Card";
 import ModelDownloadCard from "@/components/settings/ModelDownloadCard";
 import { cn } from "@/lib/utils";
 import { message, confirm } from "@tauri-apps/plugin-dialog";
@@ -261,11 +262,11 @@ export default function SettingsPage() {
         
         {/* ── Left Column: Kernel Behavior & shortcuts (Tall) ── */}
         <div className="space-y-8">
-          <div className="bg-[#0d0d0f]/80 border border-white/[0.04] rounded-4xl p-10 shadow-2xl space-y-8">
-            <div className="flex items-center gap-3 text-xs font-black text-amber-50/50 uppercase tracking-[0.3em]">
+          <Card className="space-y-8">
+            <CardHeader>
               <Cpu size={18} className="text-blue-500/70" />
               <span>内核脱敏行为 (Kernel)</span>
-            </div>
+            </CardHeader>
 
             <div className="space-y-8">
               <SettingToggle
@@ -348,14 +349,14 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Shortcut Guide */}
-          <div className="bg-[#0d0d0f]/80 border border-white/[0.04] rounded-4xl p-8 space-y-6">
-            <div className="flex items-center gap-3 text-xs font-black text-amber-50/50 uppercase tracking-[0.3em]">
+          <Card className="p-8 space-y-6">
+            <CardHeader>
               <Keyboard size={16} className="text-amber-500/70" />
               <span>键盘快捷键 (Keyboard Shortcuts)</span>
-            </div>
+            </CardHeader>
             <div className="space-y-3">
               <div className="p-5 bg-white/[0.02] rounded-2xl border border-white/[0.03] hover:border-amber-500/20 transition-colors">
                 <div className="flex items-start gap-4">
@@ -396,17 +397,17 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* ── Right Column: Feedback & Diagnostics (Stacked to Symmetrize Heights!) ── */}
         <div className="space-y-8">
           {/* Feedback section */}
-          <div className="bg-[#0d0d0f]/80 border border-white/[0.04] rounded-4xl p-10 shadow-2xl space-y-8">
-            <div className="flex items-center gap-3 text-xs font-black text-amber-50/50 uppercase tracking-[0.3em]">
+          <Card className="space-y-8">
+            <CardHeader>
               <Volume2 size={18} className="text-amber-500/70" />
               <span>实时感官反馈 (Feedback)</span>
-            </div>
+            </CardHeader>
             
             <div className="space-y-6">
               <SettingToggle
@@ -488,14 +489,14 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Engine running diagnostics card — Fills the previous empty gap with symmetric height! */}
-          <div className="bg-[#0d0d0f]/80 border border-white/[0.04] rounded-4xl p-10 shadow-2xl space-y-6">
-            <div className="flex items-center gap-3 text-xs font-black text-amber-50/50 uppercase tracking-[0.3em]">
+          <Card className="space-y-6">
+            <CardHeader>
               <Zap size={18} className="text-emerald-400" />
               <span>引擎运行特征监视器 (Diagnostics &amp; Metrics)</span>
-            </div>
+            </CardHeader>
 
             <div className="space-y-5">
               {/* Defensive State Row */}
@@ -553,15 +554,15 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* ── AI Engine (span-2) ── */}
-        <div className="lg:col-span-2 bg-[#0d0d0f]/80 border border-white/[0.04] rounded-4xl p-10 shadow-2xl space-y-6">
-          <div className="flex items-center gap-3 text-xs font-black text-amber-50/50 uppercase tracking-[0.3em] mb-4">
+        <Card className="lg:col-span-2 space-y-6">
+          <CardHeader className="mb-4">
             <Brain size={18} className="text-purple-500/70" />
             <span>AI Engine</span>
-          </div>
+          </CardHeader>
 
           <div className="flex items-center justify-between p-5 bg-black/30 rounded-2xl border border-white/[0.03]">
             <div className="flex items-center gap-4">
@@ -723,14 +724,14 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* ── About ── */}
-        <div className="lg:col-span-2 bg-[#0d0d0f]/80 border border-white/[0.04] rounded-4xl p-10 shadow-2xl space-y-6">
-          <div className="flex items-center gap-3 text-xs font-black text-amber-50/50 uppercase tracking-[0.3em] mb-8">
+        <Card className="lg:col-span-2 space-y-6">
+          <CardHeader className="mb-8">
             <Info size={18} className="text-emerald-500/70" />
             <span>About</span>
-          </div>
+          </CardHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-4">
@@ -809,7 +810,7 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
-        </div>
+        </Card>
 
       </div>
 

@@ -4,6 +4,7 @@
 
 use super::{MaskConfig, MaskStrategyType, MaskingStrategy};
 use crate::core::recognizer::{EntitySpan, EntityType};
+use sha2::{Digest, Sha256};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
@@ -143,17 +144,33 @@ impl MaskingStrategy for PartialMaskStrategy {
 
 /// 哈希策略
 ///
-/// 将实体替换为其哈希值的前 8 位。
+/// 将实体替换为其哈希值的前 8 位十六进制。
 /// 适用于需要不可逆脱敏的场景。
+///
+/// - `config.use_sha256 = true`：使用 SHA-256（抗碰撞，加密安全）
+/// - `config.use_sha256 = false`：使用 Rust 内置 `DefaultHasher`（快但非加密安全）
 pub struct HashStrategy;
 
 impl HashStrategy {
-    /// 计算简单哈希
+    /// 使用 Rust 标准库 `DefaultHasher` 计算哈希，取低 32 位。
+    ///
+    /// 注意：`DefaultHasher` 实现可能随编译器版本变化，仅用于对抗碰撞要求不高的场景。
     fn simple_hash(text: &str) -> String {
         let mut hasher = DefaultHasher::new();
         text.hash(&mut hasher);
         let hash = hasher.finish();
         format!("{:08x}", hash as u32)
+    }
+
+    /// 使用 SHA-256 计算哈希，取十六进制前 8 位。
+    ///
+    /// 抗碰撞、加密安全；输出保持与 `simple_hash` 相同的宽度以便 UI 展示一致。
+    fn sha256_hash(text: &str) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(text.as_bytes());
+        let digest = hasher.finalize();
+        // 32 字节摘要转 hex 后取前 8 字符（即前 4 字节 = 32 bit）
+        format!("{:02x}{:02x}{:02x}{:02x}", digest[0], digest[1], digest[2], digest[3])
     }
 }
 
@@ -168,8 +185,7 @@ impl MaskingStrategy for HashStrategy {
 
     fn mask(&self, original: &str, _span: &EntitySpan, config: &MaskConfig) -> String {
         if config.use_sha256 {
-            // 使用 SHA256 (需要额外依赖，这里用简单哈希替代)
-            Self::simple_hash(original)
+            Self::sha256_hash(original)
         } else {
             Self::simple_hash(original)
         }
@@ -320,11 +336,51 @@ mod tests {
     }
 
     #[test]
-    fn test_hash_strategy() {
+    fn test_hash_strategy_default_uses_simple_hash() {
         let strategy = HashStrategy;
         let span = make_span(EntityType::Person);
-        let result = strategy.mask("张三", &span, &default_config());
-        assert_eq!(result.len(), 8); // 8 位十六进制
+        let config = default_config();
+        assert!(!config.use_sha256, "默认不启用 SHA-256");
+        let result = strategy.mask("张三", &span, &config);
+        assert_eq!(result.len(), 8);
+        assert!(result.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn test_hash_strategy_sha256_enabled() {
+        let strategy = HashStrategy;
+        let span = make_span(EntityType::Person);
+        let mut config = default_config();
+        config.use_sha256 = true;
+        let result = strategy.mask("张三", &span, &config);
+        assert_eq!(result.len(), 8);
+        assert!(result.chars().all(|c| c.is_ascii_hexdigit()));
+        // 已知向量: SHA-256("张三" UTF-8) 十六进制前 8 位
+        // 独立复算: `printf '张三' | shasum -a 256` → 1d841bc0...
+        assert_eq!(result, "1d841bc0");
+    }
+
+    #[test]
+    fn test_hash_strategy_sha256_deterministic() {
+        let strategy = HashStrategy;
+        let span = make_span(EntityType::Email);
+        let mut config = default_config();
+        config.use_sha256 = true;
+        let a = strategy.mask("user@example.com", &span, &config);
+        let b = strategy.mask("user@example.com", &span, &config);
+        assert_eq!(a, b, "同一输入必须产出同一摘要");
+    }
+
+    #[test]
+    fn test_hash_strategy_sha256_differs_from_simple() {
+        let strategy = HashStrategy;
+        let span = make_span(EntityType::Person);
+        let mut sha_cfg = default_config();
+        sha_cfg.use_sha256 = true;
+        let sha = strategy.mask("张三", &span, &sha_cfg);
+        let simple = strategy.mask("张三", &span, &default_config());
+        // 两条哈希路径的算法不同，前 8 位极小概率相同；此测保证分支未走串
+        assert_ne!(sha, simple);
     }
 
     #[test]

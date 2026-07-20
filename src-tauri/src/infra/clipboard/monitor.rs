@@ -31,7 +31,16 @@ impl ClipboardHandler for ClipboardHandlerImpl {
 }
 
 pub fn start_listener(app: AppHandle) {
-    let handler_logic = Arc::new(GlobalClipboard::new(app.clone()));
+    let handler_logic = match GlobalClipboard::new(app.clone()) {
+        Ok(cb) => Arc::new(cb),
+        Err(e) => {
+            error!(
+                "❌ [Clipboard] 剪贴板后端初始化失败，监听服务已终止: {}",
+                e
+            );
+            return;
+        }
+    };
     let app_clone = app.clone();
 
     tauri::async_runtime::spawn(async move {
