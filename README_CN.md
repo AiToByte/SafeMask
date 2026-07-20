@@ -1,4 +1,4 @@
-# 🛡️ SafeMask (v2.0.0)
+# 🛡️ SafeMask (v2.0.x)
 
 <div align="center">
   <p align="center">
@@ -14,7 +14,7 @@
   <a href="https://v2.tauri.app/"><img src="https://img.shields.io/badge/Framework-Tauri_v2-blue.svg?style=for-the-badge" alt="Tauri v2"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/Frontend-React_19-61dafb.svg?style=for-the-badge&logo=react" alt="React 19"></a>
   <br>
-  <a href="https://github.com/AiToByte/SafeMask/releases"><img src="https://img.shields.io/badge/Download-Latest_v2.0.0-emerald.svg?style=for-the-badge" alt="Latest version"></a>
+  <a href="https://github.com/AiToByte/SafeMask/releases"><img src="https://img.shields.io/badge/Download-Latest_v2.0.2-emerald.svg?style=for-the-badge" alt="Latest version"></a>
   <a href="#-性能指标-benchmarks"><img src="https://img.shields.io/badge/Throughput-340MB%2Fs+-brightgreen.svg?style=for-the-badge" alt="Throughput"></a>
   <a href="#-隐私与安全承诺"><img src="https://img.shields.io/badge/Security-100%25_Offline-teal.svg?style=for-the-badge" alt="100% Offline"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-gray.svg?style=for-the-badge" alt="MIT License"></a>
