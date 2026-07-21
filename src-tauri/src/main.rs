@@ -247,6 +247,8 @@ fn init_app_state(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
     let models_dir = find_models_dir(handle);
     info!("🔍 模型目录: {}", models_dir.display());
     engine.enable_ai_engine(&models_dir);
+    // 同步脱敏标签包裹样式
+    engine.set_wrapper_style(&settings.mask_wrapper_style);
     info!("🤖 AI 引擎初始化完成，状态: {:?}", engine.ai_status());
 
     // 注意：AI 模型加载是异步的，不会阻塞启动

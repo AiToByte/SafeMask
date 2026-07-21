@@ -15,11 +15,12 @@ use crate::core::resolver::ConflictResolver;
 use crate::core::rules::Rule;
 use crate::core::masking::{MaskingEngine, MaskConfig};
 use crate::common::state::EntitySpanBrief;
+use crate::core::config::MaskWrapperStyle;
 use crate::infra::ai::ModelManager;
 use log::info;
 use std::borrow::Cow;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
 /// 混合识别引擎
 ///
@@ -35,6 +36,8 @@ pub struct HybridEngine {
     model_manager: Option<Arc<ModelManager>>,
     /// AI 引擎是否启用（原子标志，支持跨线程修改）
     ai_enabled: Arc<AtomicBool>,
+    /// 脱敏标签包裹样式: 0=Angle(<>) 1=Square([])
+    mask_wrapper_style: AtomicU8,
 }
 
 impl HybridEngine {
@@ -76,6 +79,7 @@ impl HybridEngine {
             masking_engine: MaskingEngine::default_config(),
             model_manager: None,
             ai_enabled: Arc::new(AtomicBool::new(false)),
+            mask_wrapper_style: AtomicU8::new(0),
         }
     }
 
@@ -134,6 +138,42 @@ impl HybridEngine {
     /// 获取 AI 启用状态的 Arc 引用（用于跨线程共享）
     pub fn ai_enabled_arc(&self) -> Arc<AtomicBool> {
         self.ai_enabled.clone()
+    }
+
+    /// 设置脱敏标签包裹样式
+    pub fn set_wrapper_style(&self, style: &str) {
+        let v = match style {
+            "square" => 1,
+            _ => 0,
+        };
+        self.mask_wrapper_style.store(v, Ordering::Relaxed);
+    }
+
+    /// 读取当前包裹样式
+    fn wrapper_style(&self) -> MaskWrapperStyle {
+        match self.mask_wrapper_style.load(Ordering::Relaxed) {
+            1 => MaskWrapperStyle::Square,
+            _ => MaskWrapperStyle::Angle,
+        }
+    }
+
+    /// 用当前包裹样式包装裸标签
+    fn default_mask(&self, label: &str) -> String {
+        self.wrapper_style().wrap(label)
+    }
+
+    /// 解析实体最终的脱敏标签
+    ///
+    /// 优先使用实体的显式 mask；若 mask 是 <LABEL> 或 [LABEL] 格式则剥离并
+    /// 用当前样式重包裹；否则原样保留。无显式 mask 时回退到实体类型的默认标签。
+    fn resolve_mask(&self, span: &EntitySpan) -> String {
+        match &span.mask {
+            Some(m) => match MaskWrapperStyle::try_unwrap(m) {
+                Some(bare) => self.default_mask(bare),
+                None => m.clone(),
+            },
+            None => self.default_mask(span.entity_type.display_label()),
+        }
     }
 
     /// 获取 AI 引擎状态信息
@@ -206,9 +246,7 @@ impl HybridEngine {
                 start: s.start,
                 end: s.end,
                 entity_type: s.entity_type.display_label().to_string(),
-                mask_label: s.mask.clone().unwrap_or_else(|| {
-                    format!("[{}]", s.entity_type.display_label())
-                }),
+                mask_label: self.resolve_mask(s),
             })
             .collect();
 
@@ -248,8 +286,7 @@ impl HybridEngine {
             output.extend_from_slice(&input[last_pos..span.start]);
 
             // 使用规则定义的掩码，或使用实体类型的默认标签
-            let mask = span.mask.clone()
-                .unwrap_or_else(|| format!("[{}]", span.entity_type.display_label()));
+            let mask = self.resolve_mask(span);
             output.extend_from_slice(mask.as_bytes());
 
             last_pos = span.end;
@@ -450,5 +487,19 @@ mod tests {
 
         assert!(result.has_changes);
         assert_eq!(result.masked, "联系 <URL> 我们");
+    }
+
+    #[test]
+    fn test_square_wrapper_rewraps_existing_rules() {
+        let rules = vec![make_rule("email", r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", "<EMAIL>", true)];
+        let engine = HybridEngine::from_rules(rules);
+        engine.set_wrapper_style("square");
+        let text = "联系 test@example.com";
+        let (masked, entities) = engine.mask_line_with_entities(text.as_bytes());
+        assert_ne!(masked.as_ref(), text.as_bytes());
+        assert!(String::from_utf8_lossy(&masked).contains("[EMAIL]"));
+        assert!(!String::from_utf8_lossy(&masked).contains("<EMAIL>"));
+        // EntitySpanBrief mask_label 也应反映平方括号
+        assert!(entities.iter().any(|e| e.mask_label == "[EMAIL]"));
     }
 }

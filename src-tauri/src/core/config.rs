@@ -1,5 +1,48 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum MaskWrapperStyle {
+    Angle = 0,
+    Square = 1,
+}
+
+impl MaskWrapperStyle {
+    pub fn wrap(&self, content: &str) -> String {
+        match self {
+            Self::Angle => format!("<{}>", content),
+            Self::Square => format!("[{}]", content),
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Angle => "angle",
+            Self::Square => "square",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "square" => Self::Square,
+            _ => Self::Angle,
+        }
+    }
+
+    /// 解包：如果字符串是 <...> 或 [...]，返回 Some(裸内容)
+    pub fn try_unwrap(s: &str) -> Option<&str> {
+        if s.len() > 2 {
+            let b = s.as_bytes();
+            match (b[0], b[b.len() - 1]) {
+                (b'<', b'>') | (b'[', b']') => Some(&s[1..s.len() - 1]),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    }
+}
+
 fn default_model_urls() -> Vec<String> {
     vec![
         "https://obs.behource.com:9004/gxzh/2026/07/06/privacy-filter.zip"
@@ -38,6 +81,10 @@ pub struct AppSettings {
     // --- 记录写入器 ---
     /// 是否启用脱敏记录持久化（写入 .md 文件）
     pub record_writer_enabled: bool,
+
+    // --- 脱敏标签格式 ---
+    /// 全局脱敏标签包裹样式: "angle" (尖括号) 或 "square" (方括号)
+    pub mask_wrapper_style: String,
 }
 
 impl Default for AppSettings {
@@ -56,6 +103,7 @@ impl Default for AppSettings {
                 format!("https://github.com/AiToByte/SafeMask/releases/download/v{}/privacy-filter.zip", env!("CARGO_PKG_VERSION")),
             ],
             record_writer_enabled: false,
+            mask_wrapper_style: "angle".to_string(),
         }
     }
 }

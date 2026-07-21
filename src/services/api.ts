@@ -47,6 +47,8 @@ export interface AppSettings {
   enable_audio_feedback: boolean;
   model_download_urls: string[];
   record_writer_enabled: boolean;
+  /** 脱敏标签包裹样式: "angle" | "square" */
+  mask_wrapper_style: string;
 }
 
 /** 规则库统计 */

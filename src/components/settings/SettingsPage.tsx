@@ -323,6 +323,53 @@ export default function SettingsPage() {
                 </div>
               )}
 
+              <div className="p-5 bg-black/40 rounded-[2rem] border border-white/[0.03]">
+                <div className="text-xs font-black text-zinc-600 uppercase tracking-widest mb-4">
+                  脱敏标签包裹样式
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const s = { ...store.settings, mask_wrapper_style: "angle" };
+                      store.updateSettings(s);
+                      try { await MaskAPI.updateSettings(s); }
+                      catch (err) { await message(`同步失败: ${err}`, { title: "错误", kind: "error" }); }
+                    }}
+                    className={cn(
+                      "flex-1 py-4 px-5 rounded-2xl border transition-all text-center",
+                      store.settings.mask_wrapper_style === "angle"
+                        ? "bg-amber-500/10 border-amber-500/30"
+                        : "bg-white/[0.02] border-white/[0.04] hover:bg-white/[0.04]",
+                    )}
+                  >
+                    <span className="text-lg font-bold font-mono">{"<EMAIL>"}</span>
+                    <p className="text-[10px] text-zinc-600 mt-2">尖括号</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const s = { ...store.settings, mask_wrapper_style: "square" };
+                      store.updateSettings(s);
+                      try { await MaskAPI.updateSettings(s); }
+                      catch (err) { await message(`同步失败: ${err}`, { title: "错误", kind: "error" }); }
+                    }}
+                    className={cn(
+                      "flex-1 py-4 px-5 rounded-2xl border transition-all text-center",
+                      store.settings.mask_wrapper_style === "square"
+                        ? "bg-amber-500/10 border-amber-500/30"
+                        : "bg-white/[0.02] border-white/[0.04] hover:bg-white/[0.04]",
+                    )}
+                  >
+                    <span className="text-lg font-bold font-mono">{"[EMAIL]"}</span>
+                    <p className="text-[10px] text-zinc-600 mt-2">方括号</p>
+                  </button>
+                </div>
+                <p className="text-[10px] text-zinc-700 mt-3 leading-relaxed">
+                  此设置影响所有新建规则的默认标签格式，已有规则不受影响。
+                </p>
+              </div>
+
               <div className="p-7 bg-black/40 rounded-[2rem] border border-white/[0.03] shadow-inner">
                 <div className="text-xs font-black text-zinc-600 uppercase tracking-widest mb-5">Paste Shortcut</div>
                 <div className="relative">

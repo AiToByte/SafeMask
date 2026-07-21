@@ -32,18 +32,18 @@ interface ValidationErrors {
 const EMPTY_FORM: FormState = {
   name: "",
   pattern: "",
-  mask: "<LABEL>",
+  mask: "",
   priority: 10,
   is_custom: true,
   enabled: true,
 };
 
-/** Convert a Rule into the form state shape. */
+/** Convert a Rule into the form state shape (strip bracket wrappers for editing). */
 function ruleToForm(r: Rule): FormState {
   return {
     name: r.name,
     pattern: r.pattern,
-    mask: r.mask,
+    mask: r.mask.replace(/[<>\[\]]/g, ""),
     priority: r.priority,
     is_custom: r.is_custom,
     enabled: r.enabled,
@@ -62,6 +62,11 @@ function formToRule(form: FormState, isCustom: boolean): Rule {
   };
 }
 
+/** Wrap bare mask label with configured brackets */
+const wrapMask = (bare: string, style: string) => {
+  return style === "square" ? `[${bare}]` : `<${bare}>`;
+};
+
 // ───────────────────────────────────────────────────────────────────────────────
 // Component
 // ───────────────────────────────────────────────────────────────────────────────
@@ -71,6 +76,7 @@ export default function RuleManager() {
   const allRules = useAppStore((s) => s.allRulesList);
   const fetchAllRules = useAppStore((s) => s.fetchAllRules);
   const fetchStats = useAppStore((s) => s.fetchStats);
+  const settings = useAppStore((s) => s.settings);
 
   // --- Local state ---
   const [searchQuery, setSearchQuery] = useState("");
@@ -192,7 +198,9 @@ export default function RuleManager() {
       try {
         // When saving as new or editing a system rule, override is_custom = true
         const isCustom = Boolean(asNew || isSystemRule);
-        await MaskAPI.saveRule(formToRule(form, isCustom));
+        const ruleToSave = formToRule(form, isCustom);
+        ruleToSave.mask = wrapMask(ruleToSave.mask, settings.mask_wrapper_style);
+        await MaskAPI.saveRule(ruleToSave);
         await Promise.all([fetchAllRules(), fetchStats()]);
 
         if (asNew || isSystemRule) {
@@ -228,7 +236,7 @@ export default function RuleManager() {
     setForm({
       name: "",
       pattern: selectedRule.pattern,
-      mask: selectedRule.mask,
+      mask: selectedRule.mask.replace(/[<>\[\]]/g, ""),
       priority: selectedRule.priority,
       is_custom: true,
       enabled: true,
@@ -255,9 +263,10 @@ export default function RuleManager() {
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
+        const testMask = wrapMask(form.mask, settings.mask_wrapper_style);
         const result = await MaskAPI.testRule(
           form.pattern,
-          form.mask,
+          testMask,
           testInput,
         );
         if (!cancelled) {
@@ -385,6 +394,7 @@ export default function RuleManager() {
     type: "input" | "textarea" | "number" = "input",
     extraClass = "",
     readOnly = false,
+    labelSuffix?: React.ReactNode,
   ) => {
     const value = form[field];
     const rows = type === "textarea" ? 28 : undefined;
@@ -404,7 +414,7 @@ export default function RuleManager() {
             field === "pattern"
               ? "正则表达式..."
               : field === "mask"
-                ? "<LABEL>"
+                ? settings.mask_wrapper_style === "square" ? "[LABEL]" : "<LABEL>"
                 : ""
           }
         />
@@ -449,14 +459,25 @@ export default function RuleManager() {
             type === "number" && "text-center",
             readOnly ? "text-zinc-500 cursor-not-allowed" : "text-amber-50/90 placeholder:text-zinc-800",
           )}
-          placeholder={field === "name" ? "脱敏规则名称" : ""}
+          placeholder={
+            field === "name"
+              ? "脱敏规则名称"
+              : field === "mask"
+                ? settings.mask_wrapper_style === "square" ? "[LABEL]" : "<LABEL>"
+                : ""
+          }
         />
       );
 
     return (
       <div className="flex flex-col gap-2">
-        <label className="text-xs font-bold text-amber-100/80 uppercase tracking-[0.12em]">
+        <label className="text-xs font-bold text-amber-100/80 uppercase tracking-[0.12em] flex items-center gap-2">
           {label}
+          {labelSuffix && (
+            <span className="text-[10px] font-mono text-zinc-600 bg-white/[0.04] px-2 py-0.5 rounded-full">
+              {labelSuffix}
+            </span>
+          )}
         </label>
         <div
           className={cn(
@@ -634,7 +655,9 @@ export default function RuleManager() {
           {/* Form fields */}
           {renderFormField("NAME", "name", "input", "", isSystemRule ?? false)}
           {renderFormField("PATTERN", "pattern", "textarea", "", isSystemRule ?? false)}
-          {renderFormField("MASK", "mask", "input", "", isSystemRule ?? false)}
+          {renderFormField("MASK", "mask", "input", "", isSystemRule ?? false,
+            settings.mask_wrapper_style === "square" ? "[  ]" : "<  >",
+          )}
           {renderFormField("PRIORITY", "priority", "number", "", isSystemRule ?? false)}
 
           {/* System rule warning */}

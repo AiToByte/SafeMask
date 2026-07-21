@@ -48,6 +48,8 @@ async fn reload_engine_internal(app: AppHandle, state: State<'_, AppState>) -> A
     let rules = ConfigLoader::load_all_rules(&app);
     let models_dir = state.models_dir.clone();
     let mut new_engine = HybridEngine::from_rules(rules);
+    // 同步脱敏标签包裹样式
+    new_engine.set_wrapper_style(&state.settings.read().mask_wrapper_style);
     // 🚀 重新启用 AI 引擎，确保 reload 后 AI 识别器不丢失
     new_engine.enable_ai_engine(&models_dir);
     let new_engine = Arc::new(new_engine);
@@ -183,6 +185,9 @@ pub async fn update_app_settings(
             &new_settings.magic_paste_shortcut
         ).map_err(crate::common::errors::AppError::Internal)?;
     }
+
+    // 同步脱敏标签包裹样式到引擎
+    state.engine.read().set_wrapper_style(&new_settings.mask_wrapper_style);
 
     // 无条件重建记录写入器（无论配置是否变化，确保 writer 与 state 一致）
     info!("[RecordWriter] 保存触发重建 (old={}, new={})",
