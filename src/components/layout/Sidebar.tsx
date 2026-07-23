@@ -19,7 +19,10 @@ export default function Sidebar() {
   const setActiveTab = useAppStore((s) => s.setActiveTab);
 
   return (
-    <nav className="w-24 flex flex-col items-center py-8 bg-[#0c0c0e] border-r border-zinc-800/50 z-50">
+    <nav
+      className="w-24 flex flex-col items-center py-8 border-r border-zinc-800/50 z-50"
+      style={{ backgroundColor: 'var(--bg-sidebar)' }}
+    >
       <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center shadow-lg shadow-blue-500/20 mb-12 cursor-pointer transition-transform duration-200 hover:scale-105 active:scale-95 hover:shadow-[0_0_30px_rgba(59,130,246,0.4)]">
         <ShieldCheck className="text-white w-8 h-8" />
       </div>

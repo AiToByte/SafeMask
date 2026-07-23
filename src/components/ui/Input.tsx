@@ -10,11 +10,15 @@ export function Input({ className, ...props }: InputProps) {
   return (
     <div
       className={cn(
-        "relative rounded-2xl bg-[#08080a] border border-white/[0.12] transition-all duration-300 shadow-inner",
+        "relative rounded-2xl border transition-all duration-300 shadow-inner",
         "hover:border-white/[0.2]",
-        "focus-within:border-amber-500/40 focus-within:bg-[#0a0a0c]",
+        "focus-within:border-amber-500/40",
         "focus-within:shadow-input-glow",
       )}
+      style={{
+        backgroundColor: "var(--bg-input)",
+        borderColor: "var(--border-default)",
+      }}
     >
       <input
         className={cn(
@@ -38,11 +42,15 @@ export function Textarea({ className, ...props }: TextareaProps) {
   return (
     <div
       className={cn(
-        "relative rounded-2xl bg-[#08080a] border border-white/[0.12] transition-all duration-300 shadow-inner",
+        "relative rounded-2xl border transition-all duration-300 shadow-inner",
         "hover:border-white/[0.2]",
-        "focus-within:border-amber-500/40 focus-within:bg-[#0a0a0c]",
+        "focus-within:border-amber-500/40",
         "focus-within:shadow-input-glow",
       )}
+      style={{
+        backgroundColor: "var(--bg-input)",
+        borderColor: "var(--border-default)",
+      }}
     >
       <textarea
         className={cn(

@@ -49,6 +49,12 @@ export interface AppSettings {
   record_writer_enabled: boolean;
   /** 脱敏标签包裹样式: "angle" | "square" */
   mask_wrapper_style: string;
+  /**
+   * UI 主题标识符。IPC 边界保持宽泛的 `string` 类型以兼容旧版配置文件；
+   * 应用层通过 `normalizeThemeId()` 规范化为合法的 `ThemeId`。
+   * @see src/lib/themes.ts
+   */
+  theme: string;
 }
 
 /** 规则库统计 */

@@ -121,7 +121,7 @@ export default function FileProcessor({ className }: FileProcessorProps) {
             </span>
           </div>
 
-          <div className="w-full bg-zinc-900 h-4 rounded-full overflow-hidden border border-zinc-800 p-[2px]">
+          <div className="w-full h-4 rounded-full overflow-hidden border p-[2px]" style={{ backgroundColor: "var(--bg-input)", borderColor: "var(--border-default)" }}>
             <div
               className="relative bg-gradient-to-r from-blue-600 to-indigo-500 h-full rounded-full transition-[width] duration-300 ease-out"
               style={{ width: `${progress}%` }}

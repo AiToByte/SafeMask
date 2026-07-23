@@ -13,7 +13,7 @@ const variantClasses: Record<BadgeVariant, string> = {
   custom:
     "bg-blue-500/10 text-blue-400 border-blue-500/20",
   system:
-    "bg-zinc-800 text-zinc-500 border-white/5",
+    "bg-zinc-800 text-zinc-500 border-white/5 bg-[color:var(--bg-elevated)]",
   "mode-shadow":
     "bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-blue-glow",
   "mode-sentry":

@@ -85,6 +85,19 @@ pub struct AppSettings {
     // --- 脱敏标签格式 ---
     /// 全局脱敏标签包裹样式: "angle" (尖括号) 或 "square" (方括号)
     pub mask_wrapper_style: String,
+
+    // --- 外观主题 ---
+    /// UI 主题标识符，例如 "default" | "claude"。
+    ///
+    /// 后端不校验合法性 —— 前端 `normalizeThemeId` 会将非法值统一回退到 "default"。
+    /// 保持宽松是为了向前兼容：如果未来新增了主题但用户降级到旧版，
+    /// 配置文件里的新主题字符串会被前端安全忽略，而不会导致启动失败。
+    #[serde(default = "default_theme")]
+    pub theme: String,
+}
+
+fn default_theme() -> String {
+    "default".to_string()
 }
 
 impl Default for AppSettings {
@@ -104,6 +117,66 @@ impl Default for AppSettings {
             ],
             record_writer_enabled: false,
             mask_wrapper_style: "angle".to_string(),
+            theme: default_theme(),
         }
+    }
+}
+
+// ── Tests ────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 默认 AppSettings 的 theme 字段应为 "default"，与前端 DEFAULT_THEME_ID 保持一致。
+    #[test]
+    fn default_settings_use_default_theme() {
+        let settings = AppSettings::default();
+        assert_eq!(settings.theme, "default");
+    }
+
+    /// YAML 中缺失 `theme` 字段时，反序列化应回退到默认值 "default"。
+    /// 保证从旧版本升级的用户不会因为字段缺失而启动失败。
+    #[test]
+    fn missing_theme_field_falls_back_to_default() {
+        let yaml = r#"
+magic_paste_shortcut: "Alt+V"
+shadow_mode_enabled: true
+paste_delay_ms: 150
+enable_visual_feedback: true
+enable_audio_feedback: true
+record_writer_enabled: false
+mask_wrapper_style: "angle"
+"#;
+        let settings: AppSettings = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(settings.theme, "default");
+    }
+
+    /// YAML 中显式设置的 theme 值应无损保留（不做后端合法性校验）。
+    /// 前端 normalizeThemeId 负责在渲染前把非法值收敛到默认主题。
+    #[test]
+    fn explicit_theme_field_is_preserved() {
+        let yaml = r#"
+magic_paste_shortcut: "Alt+V"
+shadow_mode_enabled: true
+paste_delay_ms: 150
+enable_visual_feedback: true
+enable_audio_feedback: true
+record_writer_enabled: false
+mask_wrapper_style: "angle"
+theme: "claude"
+"#;
+        let settings: AppSettings = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(settings.theme, "claude");
+    }
+
+    /// 序列化 → 反序列化应保持 theme 字段无损往返。
+    #[test]
+    fn theme_field_survives_serde_roundtrip() {
+        let mut settings = AppSettings::default();
+        settings.theme = "claude".to_string();
+        let yaml = serde_yaml::to_string(&settings).unwrap();
+        let restored: AppSettings = serde_yaml::from_str(&yaml).unwrap();
+        assert_eq!(restored.theme, "claude");
     }
 }

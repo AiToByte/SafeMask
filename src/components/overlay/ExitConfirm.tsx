@@ -53,16 +53,33 @@ export default function ExitConfirm() {
 
   return (
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-md modal-backdrop"
+      className="fixed inset-0 z-[1000] flex items-center justify-center backdrop-blur-md modal-backdrop"
+      style={{ backgroundColor: "color-mix(in srgb, var(--bg-root) 55%, rgba(0,0,0,0.45))" }}
       onClick={() => setVisible(false)}
     >
       <div
-        className="p-12 rounded-4xl border border-white/10 w-full max-w-md shadow-2xl text-center space-y-8 bg-[#0f0f14]/95 modal-panel"
+        className="p-12 rounded-4xl w-full max-w-md shadow-2xl text-center space-y-8 modal-panel border"
+        style={{
+          backgroundColor: "color-mix(in srgb, var(--bg-card) 97%, transparent)",
+          borderColor: "var(--border-default)",
+          boxShadow: "0 24px 64px rgba(61, 57, 41, 0.18)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-white">确认退出程序？</h2>
-          <p className="text-base text-zinc-400 leading-relaxed">
+          <h2
+            className="text-2xl font-bold tracking-tight"
+            style={{
+              color: "var(--text-primary)",
+              textShadow: "0 0 18px rgba(var(--accent-rgb), 0.22)",
+            }}
+          >
+            确认退出程序？
+          </h2>
+          <p
+            className="text-base leading-relaxed"
+            style={{ color: "var(--text-muted)" }}
+          >
             建议最小化到系统托盘
             <br />
             程序将在后台持续守护您的隐私数据
@@ -70,31 +87,69 @@ export default function ExitConfirm() {
         </div>
 
         <div className="space-y-3">
+          {/* 主操作：最小化到托盘 */}
           <button
             type="button"
             onClick={() => handleExit("minimize")}
-            className="w-full py-5 bg-amber-500 text-black rounded-2xl font-bold text-sm hover:bg-amber-400 active:scale-95 transition-all shadow-lg shadow-amber-500/10"
+            className={cn(
+              "w-full py-5 rounded-2xl font-bold text-sm active:scale-95 transition-all duration-300",
+              "border border-transparent",
+              "hover:brightness-105 hover:shadow-[0_8px_28px_rgba(var(--accent-rgb),0.28)]",
+            )}
+            style={{
+              backgroundColor: "var(--accent)",
+              color: "#FFFCF5",
+              boxShadow: "0 8px 24px rgba(var(--accent-rgb), 0.18)",
+            }}
           >
             最小化到系统托盘
           </button>
 
+          {/* 次操作：彻底关闭 */}
           <button
             type="button"
             onClick={() => handleExit("quit")}
-            className="w-full py-5 bg-white/5 border border-white/10 text-zinc-400 rounded-2xl font-bold text-sm hover:bg-white/10 hover:text-white transition-all"
+            className={cn(
+              "w-full py-5 rounded-2xl font-bold text-sm transition-all duration-300 active:scale-95 border",
+              "hover:border-[color:var(--accent-border)]",
+            )}
+            style={{
+              backgroundColor: "color-mix(in srgb, var(--bg-elevated) 90%, transparent)",
+              borderColor: "var(--border-default)",
+              color: "var(--text-secondary)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "color-mix(in srgb, var(--accent) 10%, var(--bg-elevated))";
+              e.currentTarget.style.color = "var(--text-primary)";
+              e.currentTarget.style.boxShadow = "0 0 16px rgba(var(--accent-rgb), 0.14)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "color-mix(in srgb, var(--bg-elevated) 90%, transparent)";
+              e.currentTarget.style.color = "var(--text-secondary)";
+              e.currentTarget.style.boxShadow = "none";
+            }}
           >
             彻底关闭程序
           </button>
         </div>
 
-        <label className="flex items-center justify-center gap-2 cursor-pointer select-none">
+        <label className="flex items-center justify-center gap-2.5 cursor-pointer select-none group">
           <input
             type="checkbox"
             checked={rememberChoice}
             onChange={(e) => setRememberChoice(e.target.checked)}
-            className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-amber-500 focus:ring-amber-500/30 focus:ring-offset-0 cursor-pointer"
+            className="w-4 h-4 rounded cursor-pointer accent-[var(--accent)]"
+            style={{
+              borderColor: "var(--border-strong)",
+              backgroundColor: "var(--bg-input)",
+            }}
           />
-          <span className="text-sm text-zinc-500">记住我的选择</span>
+          <span
+            className="text-sm transition-colors duration-300 group-hover:opacity-100"
+            style={{ color: "var(--text-muted)" }}
+          >
+            记住我的选择
+          </span>
         </label>
       </div>
     </div>

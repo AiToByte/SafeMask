@@ -3,122 +3,453 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── System Font Stack (no external font loading) ── */
+/* ═══════════════════════════════════════════════════════════════════════
+   主题系统 (CSS 变量 + [data-theme] 切换 + 语义化 token 层)
+
+   变量分组：
+     --bg-*         结构背景 (root/card/sidebar/input/elevated/glass)
+     --accent-*     主题强调色 (base/bright/dim/border + RGB 分量)
+     --text-*       文本色阶 (primary/secondary/muted/faint)
+     --border-*     边框色阶 (subtle/default/strong)
+     --ring-*       焦点环
+     --scrollbar-*  滚动条
+
+   扩展新主题：
+     1. 复制一个 [data-theme="<id>"] 块，改颜色
+     2. 在 src/lib/themes.ts 的 THEMES 数组追加同名 id 元数据
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── 默认主题（深黑琥珀 · 工业级暗黑） ─────────────────────────────── */
+:root,
+[data-theme="default"] {
+  --bg-root:     #0c0b0a;
+  --bg-card:     #0d0d0f;
+  --bg-sidebar:  #0c0c0e;
+  --bg-input:    #08080a;
+  --bg-elevated: #141210;
+  --bg-glass:    rgba(18, 18, 23, 0.75);
+
+  --accent:         #f59e0b;
+  --accent-rgb:     245, 158, 11;
+  --accent-bright:  #fbbf24;
+  --accent-dim:     rgba(245, 158, 11, 0.15);
+  --accent-border:  rgba(245, 158, 11, 0.30);
+
+  --text-primary:   rgba(254, 243, 199, 0.90);  /* amber-50/90 */
+  --text-secondary: rgba(228, 228, 231, 0.85);
+  --text-muted:     rgba(161, 161, 170, 0.70);
+  --text-faint:     rgba(113, 113, 122, 0.60);
+
+  --border-subtle:  rgba(255, 255, 255, 0.03);
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-strong:  rgba(255, 255, 255, 0.15);
+
+  --ring-offset-bg: #0c0b0a;
+  --ring-color:     rgba(245, 158, 11, 0.6);
+
+  --scrollbar-thumb:       rgba(245, 158, 11, 0.15);
+  --scrollbar-thumb-hover: rgba(245, 158, 11, 0.25);
+
+  --logo-gradient-from: #3b82f6;
+  --logo-gradient-to:   #6366f1;
+  --logo-glow:          rgba(59, 130, 246, 0.4);
+}
+
+/* ── Claude 主题（Anthropic 官方视觉规范 · 浅色暖米调） ────────────────
+   参考自 claude.ai 官网真实视觉：
+     · 主色 Coral / Book Cloth #C96442
+     · 温暖米色底 #F5F1E8 + 纸感卡片 #FAF7EF + 深棕文字 #3D3929
+     · 象牙暖色调 · 无冷灰 · 阅读舒适
+   ─────────────────────────────────────────────────────────────────── */
+[data-theme="claude"] {
+  color-scheme: light;                 /* 通知浏览器采用浅色配色（表单控件等原生元素） */
+
+  --bg-root:     #F5F1E8;              /* 主背景：温暖米色（Book Cloth） */
+  --bg-card:     #FAF7EF;              /* 卡片：更亮的纸感米白 */
+  --bg-sidebar:  #EFEADD;              /* 侧栏：略深暖米 */
+  --bg-input:    #FFFCF5;              /* 输入框：接近白色的纸感 */
+  --bg-elevated: #FDFAF3;              /* 悬浮元素：最亮的纸感 */
+  --bg-glass:    rgba(250, 247, 239, 0.82);
+
+  --accent:         #C96442;           /* Claude 官方珊瑚橙（Book Cloth Coral） */
+  --accent-rgb:     201, 100, 66;
+  --accent-bright:  #D9755A;           /* hover 稍亮 */
+  --accent-dim:     rgba(201, 100, 66, 0.10);
+  --accent-border:  rgba(201, 100, 66, 0.30);
+
+  --text-primary:   #3D3929;           /* Claude 深棕主文字 */
+  --text-secondary: rgba(61, 57, 41, 0.85);
+  --text-muted:     rgba(107, 99, 76, 0.70);
+  --text-faint:     rgba(147, 137, 108, 0.55);
+
+  --border-subtle:  rgba(61, 57, 41, 0.06);
+  --border-default: rgba(61, 57, 41, 0.12);
+  --border-strong:  rgba(61, 57, 41, 0.22);
+
+  --ring-offset-bg: #F5F1E8;
+  --ring-color:     rgba(201, 100, 66, 0.55);
+
+  --scrollbar-thumb:       rgba(201, 100, 66, 0.25);
+  --scrollbar-thumb-hover: rgba(201, 100, 66, 0.45);
+
+  --logo-gradient-from: #C96442;       /* Logo 采用 Claude 珊瑚渐变 */
+  --logo-gradient-to:   #A64A2E;
+  --logo-glow:          rgba(201, 100, 66, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Claude 主题 · Tailwind amber 类颜色覆盖层
+
+   项目中大量业务组件已经硬编码了 text-amber-* / bg-amber-* / border-amber-*
+   等 Tailwind 类。为了实现「零业务代码改动、全局焕新」，此处用
+   高特异性选择器覆盖 Tailwind 生成的 amber 调色板，使其对齐 Claude 珊瑚橙。
+
+   这些覆盖仅在 [data-theme="claude"] 下生效，默认主题保持原样。
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* --- 文字色 · 浅色背景下改用 Claude 深棕文字系统 ---
+   官网使用 #3D3929 (深棕主) / #6B634C (次) / #93896C (弱)。
+   原 Tailwind amber 明度阶（50→500 从浅到深）在浅色主题下需反向映射：
+     amber-50/100/200  → 弱化文字色（本来是浅金标题在深底 → 现在改为柔化棕）
+     amber-300/400     → 中等文字色
+     amber-500         → 保持珊瑚强调色（accent 本身）
+*/
+[data-theme="claude"] .text-amber-50\/90     { color: rgba(61, 57, 41, 0.90); }
+[data-theme="claude"] .text-amber-50         { color: #3D3929; }
+[data-theme="claude"] .text-amber-100        { color: #4A4432; }
+[data-theme="claude"] .text-amber-200        { color: #5A5238; }
+[data-theme="claude"] .text-amber-200\/80    { color: rgba(90, 82, 56, 0.80); }
+[data-theme="claude"] .text-amber-300        { color: #6B634C; }
+[data-theme="claude"] .text-amber-300\/70    { color: rgba(107, 99, 76, 0.70); }
+[data-theme="claude"] .text-amber-400        { color: var(--accent); }
+[data-theme="claude"] .text-amber-400\/80    { color: rgba(201, 100, 66, 0.80); }
+[data-theme="claude"] .text-amber-500        { color: var(--accent); }
+[data-theme="claude"] .text-amber-500\/60    { color: rgba(201, 100, 66, 0.60); }
+[data-theme="claude"] .text-amber-500\/70    { color: rgba(201, 100, 66, 0.70); }
+
+/* --- 背景色 --- */
+[data-theme="claude"] .bg-amber-500          { background-color: var(--accent); }
+[data-theme="claude"] .bg-amber-500\/10      { background-color: rgba(201, 100, 66, 0.10); }
+[data-theme="claude"] .bg-amber-500\/15      { background-color: rgba(201, 100, 66, 0.15); }
+[data-theme="claude"] .bg-amber-500\/20      { background-color: rgba(201, 100, 66, 0.20); }
+[data-theme="claude"] .bg-amber-500\/\[0\.03\]  { background-color: rgba(201, 100, 66, 0.03); }
+[data-theme="claude"] .bg-amber-500\/\[0\.06\]  { background-color: rgba(201, 100, 66, 0.06); }
+[data-theme="claude"] .hover\:bg-amber-500\/10:hover  { background-color: rgba(201, 100, 66, 0.10); }
+[data-theme="claude"] .hover\:bg-amber-500\/20:hover  { background-color: rgba(201, 100, 66, 0.20); }
+[data-theme="claude"] .hover\:bg-amber-500\/30:hover  { background-color: rgba(201, 100, 66, 0.30); }
+
+/* --- 边框色 --- */
+[data-theme="claude"] .border-amber-500\/10  { border-color: rgba(201, 100, 66, 0.10); }
+[data-theme="claude"] .border-amber-500\/20  { border-color: rgba(201, 100, 66, 0.20); }
+[data-theme="claude"] .border-amber-500\/30  { border-color: rgba(201, 100, 66, 0.30); }
+[data-theme="claude"] .border-amber-500\/40  { border-color: rgba(201, 100, 66, 0.40); }
+[data-theme="claude"] .border-amber-500\/50  { border-color: rgba(201, 100, 66, 0.50); }
+[data-theme="claude"] .hover\:border-amber-500\/20:hover  { border-color: rgba(201, 100, 66, 0.20); }
+[data-theme="claude"] .hover\:border-amber-500\/30:hover  { border-color: rgba(201, 100, 66, 0.30); }
+
+/* --- 装饰性发光 & 阴影 --- */
+[data-theme="claude"] .shadow-amber-glow {
+  box-shadow: 0 0 15px rgba(201, 100, 66, 0.30);
+}
+[data-theme="claude"] .shadow-btn-glow {
+  box-shadow: 0 0 40px rgba(201, 100, 66, 0.35);
+}
+
+/* --- Ring 环 --- */
+[data-theme="claude"] .ring-amber-500        { --tw-ring-color: rgba(201, 100, 66, 1); }
+[data-theme="claude"] .ring-amber-500\/60    { --tw-ring-color: rgba(201, 100, 66, 0.60); }
+[data-theme="claude"] .ring-amber-500\/30    { --tw-ring-color: rgba(201, 100, 66, 0.30); }
+
+/* --- 补齐：500 色阶剩余透明度 --- */
+[data-theme="claude"] .bg-amber-500\/5       { background-color: rgba(201, 100, 66, 0.05); }
+[data-theme="claude"] .bg-amber-500\/8       { background-color: rgba(201, 100, 66, 0.08); }
+[data-theme="claude"] .bg-amber-500\/25      { background-color: rgba(201, 100, 66, 0.25); }
+[data-theme="claude"] .border-amber-500      { border-color: var(--accent); }
+[data-theme="claude"] .border-amber-500\/25  { border-color: rgba(201, 100, 66, 0.25); }
+[data-theme="claude"] .border-amber-500\/60  { border-color: rgba(201, 100, 66, 0.60); }
+[data-theme="claude"] .text-amber-500\/80    { color: rgba(201, 100, 66, 0.80); }
+[data-theme="claude"] .shadow-amber-500\/10  { --tw-shadow-color: rgba(201, 100, 66, 0.10); box-shadow: 0 0 20px rgba(201, 100, 66, 0.10); }
+
+/* --- 补齐：其它色阶（400, 600, 900） --- */
+[data-theme="claude"] .bg-amber-400          { background-color: #E88E6E; }
+[data-theme="claude"] .bg-amber-600          { background-color: #C15F3E; }
+[data-theme="claude"] .bg-amber-900\/10      { background-color: rgba(115, 52, 30, 0.15); }
+[data-theme="claude"] .shadow-amber-900\/10  { box-shadow: 0 4px 12px rgba(115, 52, 30, 0.15); }
+
+/* --- 补齐：文字色 amber-50 透明度（深棕系统） --- */
+[data-theme="claude"] .text-amber-50\/50     { color: rgba(61, 57, 41, 0.50); }
+[data-theme="claude"] .text-amber-50\/60     { color: rgba(61, 57, 41, 0.60); }
+[data-theme="claude"] .text-amber-50\/70     { color: rgba(61, 57, 41, 0.70); }
+[data-theme="claude"] .text-amber-50\/80     { color: rgba(61, 57, 41, 0.80); }
+
+/* --- 补齐：文字色 amber-100/200/400 剩余变体（深棕系统） --- */
+[data-theme="claude"] .text-amber-100\/60    { color: rgba(74, 68, 50, 0.60); }
+[data-theme="claude"] .text-amber-100\/80    { color: rgba(74, 68, 50, 0.80); }
+[data-theme="claude"] .text-amber-200\/70    { color: rgba(90, 82, 56, 0.70); }
+[data-theme="claude"] .text-amber-400\/60    { color: rgba(201, 100, 66, 0.60); }
+[data-theme="claude"] .text-amber-400\/70    { color: rgba(201, 100, 66, 0.70); }
+
+/* --- 补齐：渐变（from / via / to） --- */
+[data-theme="claude"] .from-amber-500        { --tw-gradient-from: var(--accent) var(--tw-gradient-from-position); --tw-gradient-to: rgba(217,119,87,0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+[data-theme="claude"] .from-amber-500\/0     { --tw-gradient-from: rgba(201, 100, 66, 0) var(--tw-gradient-from-position); --tw-gradient-to: rgba(217,119,87,0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+[data-theme="claude"] .via-amber-400\/60     { --tw-gradient-to: rgba(232, 142, 110, 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), rgba(232, 142, 110, 0.60) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+[data-theme="claude"] .to-amber-400          { --tw-gradient-to: #D9755A var(--tw-gradient-to-position); }
+[data-theme="claude"] .to-amber-500\/0       { --tw-gradient-to: rgba(201, 100, 66, 0) var(--tw-gradient-to-position); }
+
+/* --- 输入框（Claude 主题下的 accent 高亮） --- */
+[data-theme="claude"] .text-amber-200,
+[data-theme="claude"] input.text-amber-200 { color: #5A5238; }
+
+/* --- 浅色背景下的 white/black 透明度替换 ---
+   业务代码中大量使用 bg-white/[0.02] / border-white/[0.03] 等假设为深色底的类。
+   浅色主题下这些"高亮加白"变成了不可见，需改为"叠加暗色"营造对比。
+*/
+[data-theme="claude"] .bg-white\/\[0\.01\]  { background-color: rgba(61, 57, 41, 0.03); }
+[data-theme="claude"] .bg-white\/\[0\.02\]  { background-color: rgba(61, 57, 41, 0.04); }
+[data-theme="claude"] .bg-white\/\[0\.03\]  { background-color: rgba(61, 57, 41, 0.06); }
+[data-theme="claude"] .bg-white\/\[0\.04\]  { background-color: rgba(61, 57, 41, 0.08); }
+[data-theme="claude"] .bg-white\/\[0\.05\]  { background-color: rgba(61, 57, 41, 0.10); }
+[data-theme="claude"] .bg-white\/5          { background-color: rgba(61, 57, 41, 0.06); }
+[data-theme="claude"] .hover\:bg-white\/5:hover      { background-color: rgba(61, 57, 41, 0.06); }
+[data-theme="claude"] .hover\:bg-white\/\[0\.02\]:hover  { background-color: rgba(61, 57, 41, 0.04); }
+[data-theme="claude"] .hover\:bg-white\/\[0\.03\]:hover  { background-color: rgba(61, 57, 41, 0.06); }
+[data-theme="claude"] .hover\:bg-white\/\[0\.04\]:hover  { background-color: rgba(61, 57, 41, 0.08); }
+[data-theme="claude"] .hover\:bg-white\/\[0\.05\]:hover  { background-color: rgba(61, 57, 41, 0.10); }
+
+/* --- 浅色背景下 border-white 替换为柔化棕边框 --- */
+[data-theme="claude"] .border-white\/5           { border-color: rgba(61, 57, 41, 0.08); }
+[data-theme="claude"] .border-white\/10          { border-color: rgba(61, 57, 41, 0.14); }
+[data-theme="claude"] .border-white\/\[0\.02\]   { border-color: rgba(61, 57, 41, 0.04); }
+[data-theme="claude"] .border-white\/\[0\.03\]   { border-color: rgba(61, 57, 41, 0.06); }
+[data-theme="claude"] .border-white\/\[0\.04\]   { border-color: rgba(61, 57, 41, 0.08); }
+[data-theme="claude"] .border-white\/\[0\.05\]   { border-color: rgba(61, 57, 41, 0.10); }
+[data-theme="claude"] .border-white\/\[0\.06\]   { border-color: rgba(61, 57, 41, 0.12); }
+[data-theme="claude"] .border-white\/\[0\.08\]   { border-color: rgba(61, 57, 41, 0.14); }
+[data-theme="claude"] .hover\:border-white\/10:hover  { border-color: rgba(61, 57, 41, 0.16); }
+
+/* --- 浅色背景下 zinc 深灰文字替换为暖棕系 --- */
+[data-theme="claude"] .text-zinc-200  { color: #3D3929; }
+[data-theme="claude"] .text-zinc-300  { color: #4A4432; }
+[data-theme="claude"] .text-zinc-400  { color: #6B634C; }
+[data-theme="claude"] .text-zinc-500  { color: #7D7359; }
+[data-theme="claude"] .text-zinc-600  { color: #93896C; }
+[data-theme="claude"] .text-zinc-700  { color: #A89E80; }
+[data-theme="claude"] .text-zinc-800  { color: #BDB499; }
+[data-theme="claude"] .text-zinc-900  { color: #3D3929; }
+
+/* --- 浅色背景下 bg-black 透明层替换为暖棕透明 --- */
+[data-theme="claude"] .bg-black\/20      { background-color: rgba(61, 57, 41, 0.05); }
+[data-theme="claude"] .bg-black\/30      { background-color: color-mix(in srgb, var(--bg-input) 88%, transparent); }
+[data-theme="claude"] .bg-black\/40      { background-color: color-mix(in srgb, var(--bg-card) 92%, transparent); }
+[data-theme="claude"] .bg-black\/50      { background-color: color-mix(in srgb, var(--bg-card) 94%, transparent); }
+[data-theme="claude"] .bg-black\/60      { background-color: color-mix(in srgb, var(--bg-elevated) 90%, transparent); }
+
+/* --- 浅色主题下的全局滚动条：改用暖棕半透明 --- */
+[data-theme="claude"] ::-webkit-scrollbar-thumb {
+  background: rgba(61, 57, 41, 0.15);
+}
+[data-theme="claude"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(61, 57, 41, 0.28);
+}
+
+/* --- 卡片/输入等硬编码深色底 → Claude 纸感色 --- */
+[data-theme="claude"] .bg-\[\#0d0d0f\] { background-color: var(--bg-card); }
+[data-theme="claude"] .bg-\[\#0d0d0f\]\/60 { background-color: color-mix(in srgb, var(--bg-card) 92%, transparent); }
+[data-theme="claude"] .bg-\[\#0d0d0f\]\/80 { background-color: color-mix(in srgb, var(--bg-card) 96%, transparent); }
+[data-theme="claude"] .bg-\[\#0c0b0a\] { background-color: var(--bg-root); }
+[data-theme="claude"] .bg-\[\#0c0b0a\]\/40 { background-color: color-mix(in srgb, var(--bg-card) 88%, transparent); }
+[data-theme="claude"] .bg-\[\#0c0b0a\]\/60 { background-color: color-mix(in srgb, var(--bg-root) 90%, transparent); }
+[data-theme="claude"] .bg-\[\#141210\] { background-color: var(--bg-elevated); }
+[data-theme="claude"] .bg-\[\#141210\]\/40 { background-color: color-mix(in srgb, var(--bg-elevated) 90%, transparent); }
+[data-theme="claude"] .bg-\[\#141210\]\/90 { background-color: color-mix(in srgb, var(--bg-elevated) 96%, transparent); }
+[data-theme="claude"] .bg-\[\#1d1b18\] { background-color: var(--bg-elevated); }
+[data-theme="claude"] .bg-\[\#0c0c0e\] { background-color: var(--bg-sidebar); }
+[data-theme="claude"] .bg-\[\#08080a\] { background-color: var(--bg-input); }
+[data-theme="claude"] .bg-\[\#08080a\]\/40 { background-color: color-mix(in srgb, var(--bg-input) 88%, transparent); }
+[data-theme="claude"] .bg-\[\#0a0a0c\] { background-color: var(--bg-input); }
+[data-theme="claude"] .bg-\[\#0f0f14\] { background-color: var(--bg-card); }
+[data-theme="claude"] .bg-\[\#110f0e\]\/50 { background-color: color-mix(in srgb, var(--bg-elevated) 90%, transparent); }
+[data-theme="claude"] .bg-\[\#110f0e\]\/60 { background-color: color-mix(in srgb, var(--bg-elevated) 92%, transparent); }
+[data-theme="claude"] .hover\:bg-\[\#110f0e\]\/60:hover { background-color: color-mix(in srgb, var(--bg-elevated) 94%, transparent); }
+[data-theme="claude"] .focus-within\:bg-\[\#0a0a0c\]:focus-within { background-color: var(--bg-elevated); }
+[data-theme="claude"] .focus-within\:bg-black:focus-within { background-color: var(--bg-elevated); }
+
+/* --- zinc-800/900 按钮/徽章底色 → 暖米 --- */
+[data-theme="claude"] .bg-zinc-800 { background-color: color-mix(in srgb, var(--bg-elevated) 88%, var(--accent) 4%); }
+[data-theme="claude"] .bg-zinc-900 { background-color: var(--bg-elevated); }
+[data-theme="claude"] .bg-zinc-900\/40 { background-color: color-mix(in srgb, var(--bg-elevated) 90%, transparent); }
+
+/* --- 焦点/hover 态阴影 --- */
+[data-theme="claude"] .shadow-\[0_0_30px_rgba\(245\,158\,11\,0\.1\)\] {
+  box-shadow: 0 8px 28px rgba(201, 100, 66, 0.14);
+}
+[data-theme="claude"] .shadow-\[0_0_10px_rgba\(245\,158\,11\,0\.08\)\] {
+  box-shadow: 0 4px 14px rgba(201, 100, 66, 0.10);
+}
+[data-theme="claude"] .shadow-\[0_0_25px_rgba\(245\,158\,11\,0\.08\)\] {
+  box-shadow: 0 8px 24px rgba(201, 100, 66, 0.12);
+}
+[data-theme="claude"] .shadow-\[0_4px_20px_-2px_rgba\(0\,0\,0\,0\.5\)\] {
+  box-shadow: 0 8px 24px -6px rgba(61, 57, 41, 0.14);
+}
+[data-theme="claude"] .shadow-\[0_10px_30px_rgba\(0\,0\,0\,0\.4\)\] {
+  box-shadow: 0 12px 28px -8px rgba(61, 57, 41, 0.12);
+}
+[data-theme="claude"] .shadow-input-glow {
+  box-shadow: 0 0 0 3px rgba(201, 100, 66, 0.12), 0 8px 24px rgba(61, 57, 41, 0.06);
+}
+
+/* --- 浅色主题 placeholder / 输入文字对比度 --- */
+[data-theme="claude"] input,
+[data-theme="claude"] textarea {
+  color: var(--text-primary);
+}
+[data-theme="claude"] input::placeholder,
+[data-theme="claude"] textarea::placeholder {
+  color: var(--text-faint);
+}
+
+/* --- 浅色主题下黑色实底兜底 --- */
+[data-theme="claude"] .bg-black {
+  background-color: var(--bg-elevated);
+}
+
+/* ── 主题切换过渡动画 ─────────────────────────────────────────────────
+   html/body 上 220ms 平滑过渡；子组件通过 CSS 变量级联自动继承。
+   ─────────────────────────────────────────────────────────────────── */
+html,
+body {
+  transition:
+    background-color 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 尊重"减少动画"偏好 —— 主题切换立即完成 */
+@media (prefers-reduced-motion: reduce) {
+  html, body { transition: none; }
+}
+
+/* ── Base ──────────────────────────────────────────────────────────── */
 
 @layer base {
   :root {
     font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background-color: #0c0b0a;
+    background-color: var(--bg-root);
+    color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
   }
 
-  html {
-    scroll-behavior: smooth;
+  /* Claude 主题采用衬线优先字体，营造 Anthropic 的纸感排版气质 */
+  [data-theme="claude"] {
+    font-family:
+      'ui-serif',
+      'Georgia',
+      'Cambria',
+      'Times New Roman',
+      Times,
+      system-ui,
+      serif;
   }
 
-  ::-webkit-scrollbar {
-    width: 3px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
+  html { scroll-behavior: smooth; }
+
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.06);
     border-radius: 10px;
     transition: background 0.3s;
   }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.12);
-  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.12); }
 
   *:focus-visible {
-    @apply outline-none ring-2 ring-amber-500/60 ring-offset-2 ring-offset-[#0c0b0a];
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--ring-offset-bg),
+      0 0 0 4px var(--ring-color);
   }
 }
 
-/* ── Page Transition (replaces framer-motion AnimatePresence) ── */
+/* ── 全局动画 ─────────────────────────────────────────────────────── */
+
 .page-active {
   animation: page-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes page-in {
   from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Toast Enter / Exit (replaces toastVariants) ── */
-.toast-enter {
-  animation: toast-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-.toast-exit {
-  animation: toast-out 0.2s ease both;
-}
+.toast-enter { animation: toast-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.toast-exit  { animation: toast-out 0.2s ease both; }
 
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(-24px) scale(0.92); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-
 @keyframes toast-out {
   from { opacity: 1; transform: translateY(0) scale(1); }
-  to { opacity: 0; transform: translateY(-12px) scale(0.92); }
+  to   { opacity: 0; transform: translateY(-12px) scale(0.92); }
 }
 
-/* ── Modal Enter / Exit (replaces modalBackdrop + modalContent) ── */
-.modal-backdrop {
-  animation: modal-bg-in 0.25s ease both;
-}
-.modal-panel {
-  animation: modal-panel-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
+.modal-backdrop { animation: modal-bg-in 0.25s ease both; }
+.modal-panel    { animation: modal-panel-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 
 @keyframes modal-bg-in {
   from { opacity: 0; }
-  to { opacity: 1; }
+  to   { opacity: 1; }
 }
-
 @keyframes modal-panel-in {
   from { opacity: 0; transform: scale(0.92) translateY(20px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* ── Pulse Opacity (replaces framer-motion animate.pulse) ── */
 @keyframes pulse-opacity {
   0%, 100% { opacity: 0.15; }
-  50% { opacity: 0.3; }
+  50%      { opacity: 0.3;  }
 }
 
-/* ── Fade In (used by RuleManager badge) ── */
 @keyframes fadeIn {
   from { opacity: 0; scale: 0.8; }
-  to { opacity: 1; scale: 1; }
+  to   { opacity: 1; scale: 1;   }
 }
-
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0);    }
 }
 
-/* ── Glass Morphism ── */
+/* Claude 主题专属动画 —— 珊瑚色柔和呼吸光晕 */
+@keyframes coral-breathe {
+  0%, 100% { box-shadow: 0 0 20px rgba(201, 100, 66, 0.20), 0 0 40px rgba(201, 100, 66, 0.08); }
+  50%      { box-shadow: 0 0 30px rgba(201, 100, 66, 0.35), 0 0 60px rgba(201, 100, 66, 0.15); }
+}
+
+/* Claude 主题下的主要交互元素采用呼吸光晕替代常规发光 */
+[data-theme="claude"] .shadow-btn-glow {
+  animation: coral-breathe 4s ease-in-out infinite;
+}
+
+/* ── Glass Morphism ─────────────────────────────────────────────────── */
 .glass-morphism {
-  background: rgba(18, 18, 23, 0.75);
+  background: var(--bg-glass);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
   box-shadow:
     0 4px 24px -1px rgba(0, 0, 0, 0.3),
     inset 0 1px 1px 0 rgba(255, 255, 255, 0.03);
 }
 
+/* ── Components ─────────────────────────────────────────────────────── */
+
 @layer components {
-  /* ── Sidebar ── */
   .sidebar-item {
     @apply w-14 h-14 flex items-center justify-center rounded-2xl transition-all duration-300;
   }
 
-  /* Flow animation for active sidebar bg */
   @keyframes flow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
   }
   .animate-flow {
@@ -126,63 +457,228 @@
     animation: flow 3s ease-in-out infinite;
   }
 
-  /* Shimmer for progress bar */
   @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(200%); }
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(200%);  }
   }
-  .animate-shimmer {
-    animation: shimmer 1.5s ease-in-out infinite;
-  }
+  .animate-shimmer { animation: shimmer 1.5s ease-in-out infinite; }
 
-  /* Custom scrollbar with amber tint */
+  /* 主题化滚动条 */
   .custom-scroll {
     scrollbar-width: thin;
-    scrollbar-color: rgba(245, 158, 11, 0.2) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
-  .custom-scroll::-webkit-scrollbar {
-    width: 3px;
-  }
+  .custom-scroll::-webkit-scrollbar { width: 3px; }
   .custom-scroll::-webkit-scrollbar-thumb {
-    background: rgba(245, 158, 11, 0.15);
+    background: var(--scrollbar-thumb);
     border-radius: 9999px;
   }
   .custom-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(245, 158, 11, 0.25);
+    background: var(--scrollbar-thumb-hover);
   }
 
-  /* ── Slider Thumb Amber Glow ── */
+  /* 滑块 - 主题化 accent 渐变 */
   .slider-amber-glow::-webkit-slider-thumb {
     appearance: none;
     width: 20px;
     height: 20px;
     border-radius: 9999px;
-    background: radial-gradient(circle at 35% 35%, #fbbf24, #f59e0b);
+    background: radial-gradient(circle at 35% 35%, var(--accent-bright), var(--accent));
     cursor: pointer;
-    border: 2px solid rgba(245, 158, 11, 0.3);
+    border: 2px solid var(--accent-border);
     box-shadow:
-      0 0 12px rgba(245, 158, 11, 0.35),
-      0 0 24px rgba(245, 158, 11, 0.12),
+      0 0 12px rgba(var(--accent-rgb), 0.35),
+      0 0 24px rgba(var(--accent-rgb), 0.12),
       inset 0 1px 1px rgba(255, 255, 255, 0.25);
     transition: box-shadow 0.2s;
   }
   .slider-amber-glow::-webkit-slider-thumb:hover {
     box-shadow:
-      0 0 16px rgba(245, 158, 11, 0.5),
-      0 0 32px rgba(245, 158, 11, 0.2),
+      0 0 16px rgba(var(--accent-rgb), 0.5),
+      0 0 32px rgba(var(--accent-rgb), 0.2),
       inset 0 1px 1px rgba(255, 255, 255, 0.3);
   }
   .slider-amber-glow::-moz-range-thumb {
     width: 20px;
     height: 20px;
     border-radius: 9999px;
-    background: radial-gradient(circle at 35% 35%, #fbbf24, #f59e0b);
+    background: radial-gradient(circle at 35% 35%, var(--accent-bright), var(--accent));
     cursor: pointer;
-    border: 2px solid rgba(245, 158, 11, 0.3);
+    border: 2px solid var(--accent-border);
     box-shadow:
-      0 0 12px rgba(245, 158, 11, 0.35),
-      0 0 24px rgba(245, 158, 11, 0.12);
+      0 0 12px rgba(var(--accent-rgb), 0.35),
+      0 0 24px rgba(var(--accent-rgb), 0.12);
   }
 
+  /* 滑块底色（Tailwind bg-zinc-900 硬编码）—— Claude 主题下改为暖褐 */
+  [data-theme="claude"] .slider-amber-glow {
+    background-color: #16151486 !important;
+    border-color: var(--border-default) !important;
+  }
 
+  /* Claude 主题下的滑块进度渐变覆盖 */
+  [data-theme="claude"] .slider-amber-glow {
+    /* 覆盖 SettingsPage 内联样式的 background-image 主色 */
+    background-image: linear-gradient(var(--accent), var(--accent)) !important;
+    background-repeat: no-repeat;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ThemePicker 组件的可视化预览卡样式
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.theme-card {
+  position: relative;
+  padding: 0;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  cursor: pointer;
+  transition:
+    transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 200ms ease,
+    border-color 200ms ease;
+}
+
+.theme-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.4);
+}
+
+.theme-card:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--ring-offset-bg),
+    0 0 0 4px var(--ring-color);
+}
+
+.theme-card[aria-checked="true"] {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 12px 32px -8px rgba(var(--accent-rgb), 0.35);
+  transform: translateY(-2px);
+}
+
+/* 缩略图 (mini UI mockup) —— 每个主题独立设色 */
+.theme-mockup {
+  height: 116px;
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-mockup__sidebar {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 6px;
+}
+
+.theme-mockup__sidebar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: currentColor;
+  opacity: 0.35;
+}
+
+.theme-mockup__sidebar-dot--active {
+  opacity: 1;
+  height: 12px;
+  border-radius: 4px;
+}
+
+.theme-mockup__content {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.theme-mockup__bar {
+  height: 6px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.30;
+}
+
+.theme-mockup__bar--full { width: 100%; opacity: 0.55; }
+.theme-mockup__bar--md   { width: 70%; }
+.theme-mockup__bar--sm   { width: 45%; }
+
+.theme-mockup__pill {
+  height: 14px;
+  width: 42px;
+  border-radius: 999px;
+  background: currentColor;
+  margin-top: 4px;
+}
+
+/* 徽章：当前 · 已选 */
+.theme-card__badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.4);
+  transform: translateY(-4px);
+  opacity: 0;
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms ease;
+}
+
+.theme-card[aria-checked="true"] .theme-card__badge {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* 元数据区 */
+.theme-card__meta {
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.theme-card__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+}
+
+.theme-card__desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.theme-card__swatches {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.theme-card__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
 }

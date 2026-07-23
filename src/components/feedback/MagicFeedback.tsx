@@ -3,7 +3,8 @@ import { useAppStore, type FeedbackPayload } from "@/hooks/useAppStore";
 import { useEffect, useState } from "react";
 
 const containerClass = "relative w-full h-full flex items-center justify-center pointer-events-none";
-const toastClass = "bg-[#141210] border border-amber-500/10 rounded-2xl px-6 py-2.5 shadow-xl shadow-black/40 flex items-center gap-3 text-sm font-bold text-white/90 toast-animate pointer-events-none";
+const toastClass = "border border-amber-500/10 rounded-2xl px-6 py-2.5 shadow-xl flex items-center gap-3 text-sm font-bold toast-animate pointer-events-none";
+const toastStyle = { backgroundColor: "var(--bg-elevated)", color: "var(--text-primary)", boxShadow: "0 12px 32px rgba(61,57,41,0.12)" } as const;
 
 export default function MagicFeedback() {
   const activeFeedback = useAppStore((s) => s.activeFeedback);
@@ -31,7 +32,7 @@ export default function MagicFeedback() {
   return (
     <div className={containerClass}>
       <div
-        className={`${toastClass} ${exiting ? "toast-exit" : "toast-enter"}`}
+        className={`${toastClass} ${exiting ? "toast-exit" : "toast-enter"}`} style={toastStyle}
       >
         <ToastContent feedback={show!} />
       </div>

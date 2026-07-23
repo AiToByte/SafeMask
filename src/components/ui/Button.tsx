@@ -13,7 +13,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   primary:
     "bg-amber-500/10 border border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-black hover:shadow-btn-glow",
   secondary:
-    "bg-zinc-900 border border-white/5 text-zinc-500 hover:text-amber-200 hover:border-amber-500/20",
+    "border border-white/5 text-zinc-500 hover:text-amber-200 hover:border-amber-500/20 bg-[color:var(--bg-elevated)]",
   danger:
     "text-zinc-700 hover:text-red-400 hover:bg-red-500/5 border border-white/5",
   ghost:

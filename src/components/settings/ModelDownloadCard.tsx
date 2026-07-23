@@ -28,7 +28,13 @@ export default function ModelDownloadCard() {
   };
 
   return (
-    <div className="bg-[#141210]/40 border border-white/[0.03] rounded-3xl p-6 relative overflow-hidden transition-all duration-500">
+    <div
+      className="border rounded-3xl p-6 relative overflow-hidden transition-all duration-500"
+      style={{
+        backgroundColor: "color-mix(in srgb, var(--bg-elevated) 90%, transparent)",
+        borderColor: "var(--border-subtle)",
+      }}
+    >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
@@ -102,7 +108,10 @@ export default function ModelDownloadCard() {
                 </span>
                 <span className="text-amber-400 font-extrabold">{progress.percentage.toFixed(1)}%</span>
               </div>
-              <div className="relative w-full h-2 bg-black/60 rounded-full border border-white/[0.03] shadow-inner overflow-hidden">
+              <div
+                className="relative w-full h-2 rounded-full border border-white/[0.03] shadow-inner overflow-hidden"
+                style={{ backgroundColor: "var(--bg-input)" }}
+              >
                 <div
                   className="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full shadow-[0_0_12px_#f59e0b] transition-all duration-150"
                   style={{ width: `${progress.percentage}%` }}
@@ -150,7 +159,8 @@ export default function ModelDownloadCard() {
               type="button"
               disabled={status !== "ERROR"}
               onClick={() => { startDownload(settings.model_download_urls); play("CLICK"); }}
-              className="w-full py-4 bg-zinc-900 border border-white/5 text-zinc-400 hover:text-amber-200 hover:border-amber-500/20 font-bold rounded-2xl text-xs uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-zinc-400 disabled:hover:border-white/5"
+              className="w-full py-4 border border-white/5 text-zinc-400 hover:text-amber-200 hover:border-amber-500/20 font-bold rounded-2xl text-xs uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-zinc-400 disabled:hover:border-white/5"
+              style={{ backgroundColor: "var(--bg-elevated)" }}
             >
               <RefreshCw size={12} className="inline mr-2" /> 重新尝试连接
             </button>

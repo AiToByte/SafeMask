@@ -12,6 +12,7 @@ import { Toggle } from "@/components/ui/Toggle";
 import { SettingToggle } from "@/components/ui/SettingToggle";
 import { Card, CardHeader } from "@/components/ui/Card";
 import ModelDownloadCard from "@/components/settings/ModelDownloadCard";
+import ThemePicker from "@/components/settings/ThemePicker";
 import { cn } from "@/lib/utils";
 import { message, confirm } from "@tauri-apps/plugin-dialog";
 
@@ -244,7 +245,10 @@ export default function SettingsPage() {
     <div className="max-w-5xl mx-auto space-y-10 pb-16 page-active">
       {/* ════════════════ HEADER ════════════════ */}
       <div className="flex items-center gap-6 mb-10 px-2">
-        <div className="w-14 h-14 rounded-2xl bg-[#141210] border border-amber-500/10 flex items-center justify-center shadow-2xl">
+        <div
+          className="w-14 h-14 rounded-2xl border border-amber-500/10 flex items-center justify-center shadow-2xl"
+          style={{ backgroundColor: "var(--bg-elevated)" }}
+        >
           <Monitor className="text-amber-400/80 w-6 h-6" />
         </div>
         <div>
@@ -256,6 +260,9 @@ export default function SettingsPage() {
           </p>
         </div>
       </div>
+
+      {/* ════════════════ THEME PICKER ════════════════ */}
+      <ThemePicker />
 
       {/* ════════════════ GRID ════════════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -304,7 +311,10 @@ export default function SettingsPage() {
               />
 
               {store.settings.record_writer_enabled && (
-                <div className="p-4 bg-black/40 rounded-2xl border border-white/[0.04]">
+                <div
+                  className="p-4 rounded-2xl border border-white/[0.04]"
+                  style={{ backgroundColor: "color-mix(in srgb, var(--bg-input) 92%, transparent)" }}
+                >
                   <div className="text-[11px] font-black text-zinc-600 uppercase tracking-widest mb-2">
                     记录目录
                   </div>
@@ -323,7 +333,10 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              <div className="p-5 bg-black/40 rounded-[2rem] border border-white/[0.03]">
+              <div
+                className="p-5 rounded-[2rem] border border-white/[0.03]"
+                style={{ backgroundColor: "color-mix(in srgb, var(--bg-input) 92%, transparent)" }}
+              >
                 <div className="text-xs font-black text-zinc-600 uppercase tracking-widest mb-4">
                   脱敏标签包裹样式
                 </div>
@@ -370,7 +383,10 @@ export default function SettingsPage() {
                 </p>
               </div>
 
-              <div className="p-7 bg-black/40 rounded-[2rem] border border-white/[0.03] shadow-inner">
+              <div
+                className="p-7 rounded-[2rem] border border-white/[0.03] shadow-inner"
+                style={{ backgroundColor: "color-mix(in srgb, var(--bg-input) 92%, transparent)" }}
+              >
                 <div className="text-xs font-black text-zinc-600 uppercase tracking-widest mb-5">Paste Shortcut</div>
                 <div className="relative">
                   <input
@@ -380,15 +396,19 @@ export default function SettingsPage() {
                     onFocus={() => { recordingRef.current = true; setRecording(true); MaskAPI.setRecordingMode(true); }}
                     onBlur={() => { recordingRef.current = false; setRecording(false); MaskAPI.setRecordingMode(false); }}
                     className={cn(
-                      "w-full bg-[#08080a] border rounded-2xl py-5 text-base font-mono text-amber-200 text-center outline-none transition-all cursor-pointer shadow-inner",
+                      "w-full border rounded-2xl py-5 text-base font-mono text-amber-200 text-center outline-none transition-all cursor-pointer shadow-inner",
                       isRecording
                         ? "border-amber-500/50 bg-amber-500/[0.03] text-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.1)]"
                         : "border-white/[0.08]"
                     )}
+                    style={isRecording ? undefined : { backgroundColor: "var(--bg-input)" }}
                   />
                   {showKeyWarn && (
                     <div className="absolute -bottom-7 left-0 right-0 flex justify-center">
-                      <span className="text-[10px] text-red-500 font-bold uppercase bg-[#0c0b0a] px-3 py-1 rounded-full border border-red-500/20">
+                      <span
+                        className="text-[10px] text-red-500 font-bold uppercase px-3 py-1 rounded-full border border-red-500/20"
+                        style={{ backgroundColor: "var(--bg-root)" }}
+                      >
                         Alt+M is reserved
                       </span>
                     </div>
@@ -513,9 +533,10 @@ export default function SettingsPage() {
                       try { await MaskAPI.updateSettings(s); }
                       catch (err) { await message(`同步失败: ${err}`, { title: "错误", kind: "error" }); }
                     }}
-                    className="w-full h-3.5 bg-zinc-900 rounded-full appearance-none cursor-pointer outline-none border border-white/[0.05] shadow-inner slider-amber-glow"
+                    className="w-full h-3.5 rounded-full appearance-none cursor-pointer outline-none border border-white/[0.05] shadow-inner slider-amber-glow"
                     style={{
-                      backgroundImage: "linear-gradient(#f59e0b,#f59e0b)",
+                      backgroundColor: "var(--bg-input)",
+                      backgroundImage: "linear-gradient(var(--accent), var(--accent))",
                       backgroundSize: sliderProgress + "% 100%",
                       backgroundRepeat: "no-repeat"
                     }}
@@ -547,7 +568,7 @@ export default function SettingsPage() {
 
             <div className="space-y-5">
               {/* Defensive State Row */}
-              <div className="flex justify-between items-center py-3.5 px-5 rounded-2xl bg-black/20 border border-white/[0.02]">
+              <div className="flex justify-between items-center py-3.5 px-5 rounded-2xl border border-white/[0.02]" style={{ backgroundColor: "color-mix(in srgb, var(--bg-input) 90%, transparent)" }}>
                 <div>
                   <div className="text-sm font-bold text-zinc-300">主动防御监控守护</div>
                   <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mt-0.5">Core Active Sentry</div>
@@ -559,7 +580,7 @@ export default function SettingsPage() {
               </div>
 
               {/* Internal Engines load */}
-              <div className="p-5 bg-black/40 rounded-[2rem] border border-white/[0.03] space-y-4">
+              <div className="p-5 rounded-[2rem] border border-white/[0.03] space-y-4" style={{ backgroundColor: "color-mix(in srgb, var(--bg-input) 92%, transparent)" }}>
                 <div className="text-xs font-black text-zinc-600 uppercase tracking-widest">内置识别器集群 (Registered Recognizers)</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="flex items-center gap-2.5 py-2.5 px-3.5 rounded-xl bg-white/[0.02] border border-white/[0.03]">
@@ -582,7 +603,7 @@ export default function SettingsPage() {
               </div>
 
               {/* Core limits / telemetry */}
-              <div className="p-5 bg-black/40 rounded-[2rem] border border-white/[0.03] space-y-3.5 text-xs">
+              <div className="p-5 rounded-[2rem] border border-white/[0.03] space-y-3.5 text-xs" style={{ backgroundColor: "color-mix(in srgb, var(--bg-input) 92%, transparent)" }}>
                 <div className="flex justify-between">
                   <span className="text-zinc-500 font-bold">线程调度策略</span>
                   <span className="text-zinc-400 font-mono font-medium">Rayon 限制 2 线程</span>
@@ -611,7 +632,7 @@ export default function SettingsPage() {
             <span>AI Engine</span>
           </CardHeader>
 
-          <div className="flex items-center justify-between p-5 bg-black/30 rounded-2xl border border-white/[0.03]">
+          <div className="flex items-center justify-between p-5 rounded-2xl border border-white/[0.03]" style={{ backgroundColor: "color-mix(in srgb, var(--bg-input) 90%, transparent)" }}>
             <div className="flex items-center gap-4">
               <div className={cn("w-3.5 h-3.5 rounded-full transition-colors", aiDot)} />
               <div>
@@ -674,7 +695,7 @@ export default function SettingsPage() {
           )}
 
           {store.aiEngineStatus?.state === "ready" && store.aiEngineStatus?.model && (
-            <div className="p-5 bg-black/30 rounded-xl border border-white/[0.03] space-y-4">
+            <div className="p-5 rounded-xl border border-white/[0.03] space-y-4" style={{ backgroundColor: "color-mix(in srgb, var(--bg-input) 90%, transparent)" }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Brain size={14} className="text-purple-400" />
@@ -697,7 +718,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          <div className="p-5 bg-black/30 rounded-xl border border-white/[0.03]">
+          <div className="p-5 rounded-xl border border-white/[0.03]" style={{ backgroundColor: "color-mix(in srgb, var(--bg-input) 90%, transparent)" }}>
             <p className="text-xs font-black text-zinc-600 uppercase tracking-widest mb-4">
               已载入模型 ({store.aiEngineStatus?.available_count || 0})
             </p>
@@ -759,7 +780,7 @@ export default function SettingsPage() {
           </div>
 
           {store.engineInfo?.recognizers && store.engineInfo.recognizers.length > 0 && (
-            <div className="p-5 bg-black/30 rounded-xl border border-white/[0.03]">
+            <div className="p-5 rounded-xl border border-white/[0.03]" style={{ backgroundColor: "color-mix(in srgb, var(--bg-input) 90%, transparent)" }}>
               <p className="text-xs font-black text-zinc-600 uppercase tracking-widest mb-4">已注册识别器</p>
               <div className="grid grid-cols-2 gap-2">
                 {store.engineInfo.recognizers.map((rec) => (

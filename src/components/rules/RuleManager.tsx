@@ -299,7 +299,10 @@ export default function RuleManager() {
     return (
       <div className="relative w-full max-w-[320px] focus-within:max-w-[400px] transition-all duration-500 group/search">
         <div className="absolute -inset-1 bg-amber-500/5 rounded-2xl blur-lg opacity-0 group-focus-within/search:opacity-100 transition-opacity duration-300 pointer-events-none" />
-        <div className="relative flex items-center bg-[#08080a] border border-amber-500/10 rounded-2xl transition-all duration-300 shadow-inner group-hover/search:border-white/20 group-focus-within/search:border-amber-500/40 group-focus-within/search:shadow-input-glow">
+        <div
+          className="relative flex items-center border border-amber-500/10 rounded-2xl transition-all duration-300 shadow-inner group-hover/search:border-white/20 group-focus-within/search:border-amber-500/40 group-focus-within/search:shadow-input-glow"
+          style={{ backgroundColor: "var(--bg-input)" }}
+        >
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-400/40 pointer-events-none" />
           <input
             value={searchQuery}
@@ -354,7 +357,7 @@ export default function RuleManager() {
                 "text-[10px] border px-1.5 py-0.5 rounded font-black uppercase",
                 rule.is_custom
                   ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
-                  : "bg-zinc-800 text-zinc-500 border-white/5",
+                  : "bg-zinc-800 text-zinc-500 border-white/5 bg-[color:var(--bg-elevated)]",
               )}
             >
               {rule.is_custom ? "CUSTOM" : "SYSTEM"}
@@ -481,12 +484,13 @@ export default function RuleManager() {
         </label>
         <div
           className={cn(
-            "relative rounded-2xl bg-[#08080a] border transition-all duration-300 shadow-inner",
+            "relative rounded-2xl border transition-all duration-300 shadow-inner",
             readOnly
-              ? "border-white/[0.05] bg-[#08080a]/40"
-              : "border-white/[0.12] hover:border-white/[0.2] focus-within:border-amber-500/40 focus-within:bg-[#0a0a0c] focus-within:shadow-[0_0_20px_rgba(245,158,11,0.05),inset_0_2px_10px_rgba(0,0,0,0.6)]",
+              ? "border-white/[0.05]"
+              : "border-white/[0.12] hover:border-white/[0.2] focus-within:border-amber-500/40 focus-within:shadow-input-glow",
             extraClass,
           )}
+          style={{ backgroundColor: "var(--bg-input)" }}
         >
           {inputElement}
         </div>
@@ -517,32 +521,50 @@ export default function RuleManager() {
     return (
     <div className="relative w-full min-w-0">
         {/* Label */}
-        <span className="text-xs font-bold uppercase tracking-widest absolute -top-2.5 left-5 px-2 bg-[#0c0b0a] z-10 text-amber-100/60">
+        <span
+          className="text-xs font-bold uppercase tracking-widest absolute -top-2.5 left-5 px-2 z-10 text-amber-100/60"
+          style={{ backgroundColor: "var(--bg-root)" }}
+        >
           <div className="flex items-center gap-1.5">
             <Beaker size={10} className="text-amber-400/60" />
             调试沙盒实验室
           </div>
         </span>
 
-        <div className="bg-[#0d0d0f]/60 border border-white/[0.08] rounded-4xl p-5 pt-8 space-y-4">
+        <div
+          className="border rounded-4xl p-5 pt-8 space-y-4"
+          style={{
+            backgroundColor: "color-mix(in srgb, var(--bg-card) 94%, transparent)",
+            borderColor: "var(--border-default)",
+          }}
+        >
           {/* Input */}
           <textarea
             value={testInput}
             onChange={(e) => setTestInput(e.target.value)}
             placeholder="输入测试文本..."
-            className="w-full bg-black/40 border border-white/[0.08] rounded-2xl p-5 text-sm font-mono leading-relaxed outline-none transition-all resize-none focus:border-amber-500/30 min-h-[80px] text-amber-50/70 placeholder:text-zinc-700"
+            className="w-full border rounded-2xl p-5 text-sm font-mono leading-relaxed outline-none transition-all resize-none focus:border-amber-500/30 min-h-[80px] text-amber-50/70 placeholder:text-zinc-700"
+            style={{
+              backgroundColor: "var(--bg-input)",
+              borderColor: "var(--border-default)",
+            }}
           />
 
           {/* Output area */}
           <div
             className={cn(
-              "w-full bg-black/40 border rounded-2xl p-5 text-sm font-mono leading-relaxed outline-none transition-all resize-none min-h-[100px]",
+              "w-full border rounded-2xl p-5 text-sm font-mono leading-relaxed outline-none transition-all resize-none min-h-[100px]",
               showOutput &&
                 "bg-emerald-500/[0.01] border-emerald-500/10 text-emerald-300/80",
               showStandby &&
-                "border-dashed border-white/[0.06] bg-black/20 text-zinc-700",
+                "border-dashed border-white/[0.06] text-zinc-700",
               testError && "border-red-500/20 bg-red-500/[0.02] text-red-400",
             )}
+            style={
+              showOutput || testError
+                ? undefined
+                : { backgroundColor: "color-mix(in srgb, var(--bg-input) 90%, transparent)" }
+            }
           >
             {testError && (
               <div className="flex items-start gap-2">
@@ -585,9 +607,18 @@ export default function RuleManager() {
   return (
     <div className="flex items-stretch gap-8 h-full overflow-hidden">
       {/* ── Left panel: Rule list ── */}
-      <div className="flex-1 min-w-0 flex flex-col bg-[#0d0d0f]/60 border border-white/[0.04] rounded-4xl overflow-hidden">
+      <div
+        className="flex-1 min-w-0 flex flex-col border rounded-4xl overflow-hidden"
+        style={{
+          backgroundColor: "color-mix(in srgb, var(--bg-card) 94%, transparent)",
+          borderColor: "var(--border-subtle)",
+        }}
+      >
         {/* Header */}
-        <div className="px-8 py-6 border-b border-white/[0.04] flex items-center gap-6 ">
+        <div
+          className="px-8 py-6 border-b flex items-center gap-6"
+          style={{ borderColor: "var(--border-subtle)" }}
+        >
           <Layers size={18} className="text-indigo-400/60" />
           <h3 className="sr-only">Pattern Repository</h3>
           <div className="flex-1">{renderSearchBar()}</div>
@@ -627,7 +658,13 @@ export default function RuleManager() {
       {/* ── Right panel: Editor + Sandbox ── */}
       <div className="w-[480px] flex flex-col gap-5 overflow-y-auto custom-scroll pr-1">
         {/* Form container */}
-        <div className="bg-[#0d0d0f]/80 border border-white/[0.04] rounded-4xl p-10 space-y-6 shadow-2xl">
+        <div
+          className="border rounded-4xl p-10 space-y-6 shadow-2xl"
+          style={{
+            backgroundColor: "color-mix(in srgb, var(--bg-card) 96%, transparent)",
+            borderColor: "var(--border-subtle)",
+          }}
+        >
           {/* Title */}
           <div className="flex items-center gap-3">
             <ShieldCheck
@@ -696,7 +733,8 @@ export default function RuleManager() {
                     </button>
                     <button
                       onClick={() => handleSave(true)}
-                      className="w-full py-4 bg-zinc-900 border border-white/5 text-zinc-500 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:text-amber-200 hover:border-amber-500/20 transition-all"
+                      className="w-full py-4 border border-white/5 text-zinc-500 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:text-amber-200 hover:border-amber-500/20 transition-all"
+                      style={{ backgroundColor: "var(--bg-elevated)" }}
                     >
                       <CopyPlus size={13} />
                       另存为自定义规则

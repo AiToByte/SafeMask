@@ -69,7 +69,10 @@ export default function HistoryList() {
         {/* Search bar */}
         <div className="relative w-full max-w-2xl mx-auto group/search">
           <div className="absolute -inset-2 bg-amber-500/[0.03] rounded-[2rem] blur-2xl opacity-0 group-focus-within/search:opacity-100 transition-opacity duration-700" />
-          <div className="relative flex items-center h-16 px-5 rounded-3xl transition-all duration-500 border border-amber-500/25 bg-[#141210]/90 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)] focus-within:border-amber-500/60 focus-within:bg-black focus-within:shadow-[0_0_25px_rgba(245,158,11,0.08)]">
+          <div
+            className="relative flex items-center h-16 px-5 rounded-3xl transition-all duration-500 border border-amber-500/25 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)] focus-within:border-amber-500/60 focus-within:shadow-[0_0_25px_rgba(245,158,11,0.08)]"
+            style={{ backgroundColor: "color-mix(in srgb, var(--bg-elevated) 96%, transparent)" }}
+          >
             <Search size={18} className="text-amber-500/60 group-focus-within/search:text-amber-400 transition-colors" />
             <input
               value={searchQuery}
@@ -131,11 +134,15 @@ function HistoryCard({
   return (
     <div
       className={cn(
-        "group/card p-10 rounded-4xl border border-white/[0.03] bg-[#0c0b0a]/40 hover:bg-[#110f0e]/60 transition-all duration-700 mb-6 relative overflow-hidden",
+        "group/card p-10 rounded-4xl border border-white/[0.03] transition-all duration-700 mb-6 relative overflow-hidden",
         item.mode === "SHADOW"
           ? "before:content-[''] before:absolute before:top-0 before:left-8 before:right-8 before:h-[2px] before:bg-gradient-to-r before:from-amber-500/0 before:via-amber-400/60 before:to-amber-500/0"
           : "before:content-[''] before:absolute before:top-0 before:left-8 before:right-8 before:h-[2px] before:bg-gradient-to-r before:from-blue-500/0 before:via-blue-400/60 before:to-blue-500/0",
       )}
+      style={{
+        backgroundColor: "color-mix(in srgb, var(--bg-card) 90%, transparent)",
+        borderColor: "var(--border-subtle)",
+      }}
     >
       {/* Meta row */}
       <div className="flex justify-between items-center mb-6">

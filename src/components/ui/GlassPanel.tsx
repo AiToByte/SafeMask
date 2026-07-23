@@ -11,9 +11,13 @@ export function GlassPanel({ children, className }: GlassPanelProps) {
   return (
     <div
       className={cn(
-        "bg-[#0d0d0f]/80 border border-white/[0.04] rounded-4xl shadow-2xl",
+        "border rounded-4xl shadow-2xl",
         className,
       )}
+      style={{
+        backgroundColor: "color-mix(in srgb, var(--bg-card) 96%, transparent)",
+        borderColor: "var(--border-subtle)",
+      }}
     >
       {children}
     </div>

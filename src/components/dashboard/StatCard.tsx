@@ -63,26 +63,34 @@ export default function StatCard({
 
       <div className="relative z-10 flex flex-col justify-between h-full">
         <div className="flex justify-between items-start">
-          <p className="text-xs font-bold text-zinc-500 group-hover:text-amber-100/60 transition-colors tracking-[0.25em] uppercase">
+          <p
+            className={cn(
+              "text-xs font-bold tracking-[0.25em] uppercase transition-all duration-500",
+              "text-zinc-500 group-hover:text-[color:var(--text-primary)]",
+              "group-hover:[text-shadow:0_0_12px_rgba(var(--accent-rgb),0.35),0_1px_0_rgba(255,255,255,0.35)]",
+            )}
+          >
             {title}
           </p>
           {clickable && (
             <div className="opacity-20 group-hover:opacity-100 transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
-              <ArrowUpRight size={16} className="text-zinc-400" />
+              <ArrowUpRight
+                size={16}
+                className="text-zinc-400 group-hover:text-[color:var(--accent)] transition-colors duration-500"
+              />
             </div>
           )}
         </div>
 
         <div className="flex items-baseline gap-3">
           <p
-            className="text-4xl font-mono font-bold tracking-tighter tabular-nums leading-none"
-            style={{ color: undefined }}
+            className="text-4xl font-mono font-bold tracking-tighter tabular-nums leading-none transition-all duration-500 group-hover:[text-shadow:0_0_18px_rgba(var(--accent-rgb),0.28)]"
             key={String(value)}
           >
             <span className={color}>{value}</span>
           </p>
           {unit && (
-            <span className="text-[11px] font-black text-zinc-600 uppercase tracking-widest mb-1">
+            <span className="text-[11px] font-black text-zinc-600 uppercase tracking-widest mb-1 transition-colors duration-500 group-hover:text-[color:var(--text-muted)]">
               {unit}
             </span>
           )}

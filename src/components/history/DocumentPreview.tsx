@@ -245,7 +245,7 @@ export default function DocumentPreview({ item, onClose }: DocumentPreviewProps)
       onClick={onClose}
     >
       <div
-        className="relative w-[95vw] max-w-6xl max-h-[90vh] flex flex-col rounded-4xl border border-white/10 shadow-2xl bg-[#0c0b0a]/95 modal-panel"
+        className="relative w-[95vw] max-w-6xl max-h-[90vh] flex flex-col rounded-4xl border border-white/10 shadow-2xl modal-panel" style={{ backgroundColor: "color-mix(in srgb, var(--bg-card) 96%, transparent)" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header ── */}

@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { MaskAPI, type AppSettings, type HistoryItem, type Rule, type AiEngineStatus, type EngineInfo } from "@/services/api";
+import { normalizeThemeId, type ThemeId } from "@/lib/themes";
+import { loadPersistedTheme } from "@/lib/themeStorage";
 
 // ── Types ──
 
@@ -46,6 +48,11 @@ interface AppState {
   setActiveFeedback: (fb: FeedbackPayload | null) => void;
   pushHistory: (item: HistoryItem) => void;
   updateSettings: (s: AppSettings) => void;
+  /**
+   * 原子切换主题：乐观更新本地 state → 后端持久化 → 失败回滚。
+   * 返回 Promise，UI 层可 await 以决定是否显示错误提示。
+   */
+  setTheme: (theme: ThemeId) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>()((set, get) => ({
@@ -59,6 +66,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
     model_download_urls: [],
     record_writer_enabled: false,
     mask_wrapper_style: "angle",
+    // 从 localStorage 同步读取，避免首帧 store 值与 DOM (由 main.tsx 预应用) 不一致；
+    // 后续 bootstrap 从 Rust 加载的 settings 会覆盖此值。
+    theme: loadPersistedTheme(),
   },
   isMonitorOn: true,
   ruleCount: 0,
@@ -160,4 +170,30 @@ export const useAppStore = create<AppState>()((set, get) => ({
       return { historyList: updated };
     }),
   updateSettings: (s) => set({ settings: s }),
+
+  setTheme: async (theme) => {
+    // 规范化输入 —— 防御任何非法值意外进入 store
+    const nextTheme = normalizeThemeId(theme);
+    const prevSettings = get().settings;
+    // 已是目标主题时短路，避免无谓的后端同步
+    if (prevSettings.theme === nextTheme) return;
+
+    // 乐观更新：立即切换 UI，让用户感觉即时响应
+    const nextSettings: AppSettings = { ...prevSettings, theme: nextTheme };
+    set({ settings: nextSettings });
+
+    try {
+      await MaskAPI.updateSettings(nextSettings);
+    } catch (err) {
+      // 竞态防护 (compare-and-swap 语义)：
+      // 只在当前 state 仍等于本次调用设置的值时才回滚。
+      // 若在此期间用户又切换过主题（新的 setTheme 已经乐观更新），
+      // 则新调用的结果优先，不再覆盖回旧值。
+      const currentSettings = get().settings;
+      if (currentSettings.theme === nextTheme) {
+        set({ settings: prevSettings });
+      }
+      throw err;
+    }
+  },
 }));

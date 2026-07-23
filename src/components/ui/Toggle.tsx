@@ -68,8 +68,9 @@ export function Toggle({
           trackClasses[size],
           checked
             ? "bg-blue-600/80 border-blue-500/20"
-            : "bg-zinc-900 border-white/[0.01]"
+            : "border-white/[0.01]"
         )}
+        style={checked ? undefined : { backgroundColor: "var(--bg-input)" }}
       >
         {/* 滑块 Thumb — 🚀 cubic-bezier 曲线赋予绝妙的阻尼微回弹感 */}
         <div

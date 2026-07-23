@@ -2,6 +2,7 @@ import { useEffect, lazy, Suspense } from "react";
 import { useAppStore } from "@/hooks/useAppStore";
 import { useAudioFeedback } from "@/hooks/useAudioFeedback";
 import { useTauriEvent } from "@/hooks/useTauriEvents";
+import { useThemeSync } from "@/hooks/useTheme";
 import type { HistoryItem } from "@/services/api";
 import type { FeedbackPayload as RawFeedback } from "@/hooks/useAppStore";
 import Sidebar from "@/components/layout/Sidebar";
@@ -40,6 +41,9 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Sync theme → <html data-theme> + localStorage (see hooks/useTheme.ts)
+  useThemeSync();
+
   // ── Tauri Event Listeners ──
 
   useTauriEvent<HistoryItem>("new-history", (item) => {
@@ -76,7 +80,7 @@ export default function App() {
   });
 
   return (
-    <div className="flex flex-col h-screen bg-[#0c0b0a] text-amber-50/90 select-none overflow-hidden font-sans relative">
+    <div className="flex flex-col h-screen text-amber-50/90 select-none overflow-hidden font-sans relative" style={{ backgroundColor: 'var(--bg-root)' }}>
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
 
@@ -187,8 +191,14 @@ function DashboardPage({
         <FileProcessor className="h-full bg-[#110f0e]/50 border border-white/[0.02] shadow-2xl" />
       </div>
 
-      <footer className="flex justify-center py-1 opacity-30 shrink-0">
-        <p className="text-[9px] font-mono uppercase tracking-[0.5em] text-white">
+      <footer className="flex justify-center py-1 shrink-0">
+        <p
+          className="text-[9px] font-mono uppercase tracking-[0.5em] opacity-70"
+          style={{
+            color: "var(--text-muted)",
+            textShadow: "0 0 10px rgba(var(--accent-rgb), 0.18)",
+          }}
+        >
           Local Processing Instance
         </p>
       </footer>

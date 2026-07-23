@@ -334,3 +334,95 @@ pub async fn get_registered_recognizers(state: State<'_, AppState>) -> AppResult
     let engine = state.engine.read();
     Ok(engine.registry().recognizer_names().iter().map(|s| s.to_string()).collect())
 }
+
+/// 同步原生窗口标题栏/背景色到当前 UI 主题。
+///
+/// - `theme_id`: `"default"` | `"claude"`
+/// - Windows 上额外设置 DWM 标题栏背景/文字色，避免系统标题栏仍是黑色
+#[tauri::command]
+pub async fn apply_window_chrome(
+    window: tauri::Window,
+    theme_id: String,
+) -> AppResult<()> {
+    let is_light = theme_id == "claude";
+
+    // 1) Tauri 系统主题（影响标题栏按钮等系统控件）
+    let theme = if is_light {
+        tauri::Theme::Light
+    } else {
+        tauri::Theme::Dark
+    };
+    let _ = window.set_theme(Some(theme));
+
+    // 2) 窗口背景色
+    let (r, g, b) = if is_light {
+        (0xF5u8, 0xF1u8, 0xE8u8) // #F5F1E8
+    } else {
+        (0x0Cu8, 0x0Bu8, 0x0Au8) // #0c0b0a
+    };
+    let _ = window.set_background_color(Some(tauri::window::Color(r, g, b, 255)));
+
+    // 3) Windows DWM 标题栏配色（Win11 22H2+ 支持 CAPTION_COLOR）
+    #[cfg(target_os = "windows")]
+    {
+        use std::mem::size_of;
+
+        #[link(name = "dwmapi")]
+        unsafe extern "system" {
+            fn DwmSetWindowAttribute(
+                hwnd: *mut std::ffi::c_void,
+                dwAttribute: u32,
+                pvAttribute: *const std::ffi::c_void,
+                cbAttribute: u32,
+            ) -> i32;
+        }
+
+        const DWMWA_USE_IMMERSIVE_DARK_MODE: u32 = 20;
+        const DWMWA_CAPTION_COLOR: u32 = 35;
+        const DWMWA_TEXT_COLOR: u32 = 36;
+
+        if let Ok(hwnd) = window.hwnd() {
+            let ptr = hwnd.0;
+            if !ptr.is_null() {
+                unsafe {
+                    // 0 = 浅色标题栏，1 = 深色标题栏
+                    let dark_mode: i32 = if is_light { 0 } else { 1 };
+                    let _ = DwmSetWindowAttribute(
+                        ptr,
+                        DWMWA_USE_IMMERSIVE_DARK_MODE,
+                        &dark_mode as *const _ as *const std::ffi::c_void,
+                        size_of::<i32>() as u32,
+                    );
+
+                    // COLORREF = 0x00BBGGRR
+                    let caption: u32 = if is_light {
+                        0x00E8_F1_F5 // #F5F1E8
+                    } else {
+                        0x000A_0B_0C // #0c0b0a
+                    };
+                    let text: u32 = if is_light {
+                        0x0029_393D // #3D3929
+                    } else {
+                        0x00FE_F3_F0 // 近白
+                    };
+
+                    let _ = DwmSetWindowAttribute(
+                        ptr,
+                        DWMWA_CAPTION_COLOR,
+                        &caption as *const _ as *const std::ffi::c_void,
+                        size_of::<u32>() as u32,
+                    );
+                    let _ = DwmSetWindowAttribute(
+                        ptr,
+                        DWMWA_TEXT_COLOR,
+                        &text as *const _ as *const std::ffi::c_void,
+                        size_of::<u32>() as u32,
+                    );
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+

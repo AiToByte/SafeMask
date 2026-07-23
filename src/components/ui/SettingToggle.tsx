@@ -35,7 +35,10 @@ export function SettingToggle({
 
   if (Icon) {
     return (
-      <div className="flex justify-between items-center py-4 px-5 rounded-2xl bg-black/20 border border-white/[0.02] hover:bg-white/[0.01] transition-colors">
+      <div
+        className="flex justify-between items-center py-4 px-5 rounded-2xl border border-white/[0.02] transition-colors"
+        style={{ backgroundColor: "color-mix(in srgb, var(--bg-input) 90%, transparent)" }}
+      >
         <div className="flex items-center gap-4">
           <div className={cn("w-9 h-9 rounded-xl border flex items-center justify-center", colors.bg)}>
             <Icon size={16} className={colors.icon} />
@@ -51,7 +54,10 @@ export function SettingToggle({
   }
 
   return (
-    <div className="flex justify-between items-center bg-black/20 p-5 rounded-2xl border border-white/[0.02]">
+    <div
+      className="flex justify-between items-center p-5 rounded-2xl border border-white/[0.02]"
+      style={{ backgroundColor: "color-mix(in srgb, var(--bg-input) 90%, transparent)" }}
+    >
       <div>
         <div className="text-base font-bold text-amber-50/80">{title}</div>
         <div className="text-xs text-zinc-600 font-bold uppercase tracking-widest mt-1">{description}</div>

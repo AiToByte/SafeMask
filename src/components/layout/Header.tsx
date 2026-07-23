@@ -25,10 +25,16 @@ export default function Header() {
   };
 
   return (
-    <header className="h-20 md:h-24 flex items-center justify-between px-6 md:px-10 z-40 border-b border-white/[0.03] bg-[#0c0b0a]/60 backdrop-blur-xl shrink-0">
+    <header
+      className="h-20 md:h-24 flex items-center justify-between px-6 md:px-10 z-40 border-b border-white/[0.03] backdrop-blur-xl shrink-0"
+      style={{ backgroundColor: 'color-mix(in srgb, var(--bg-root) 60%, transparent)' }}
+    >
       {/* 左侧：Logo 与标题（随视口流式缩放） */}
       <div className="flex items-center gap-3 md:gap-5 shrink-0">
-        <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-[#141210] border border-amber-500/10 flex items-center justify-center shadow-2xl relative overflow-hidden transition-transform duration-200 hover:scale-105">
+        <div
+          className="w-10 h-10 md:w-12 md:h-12 rounded-lg border border-amber-500/10 flex items-center justify-center shadow-2xl relative overflow-hidden transition-transform duration-200 hover:scale-105"
+          style={{ backgroundColor: 'var(--bg-elevated)' }}
+        >
           <Activity className="text-amber-500 w-4 h-4 md:w-5 md:h-5 relative z-10" />
         </div>
 
@@ -67,7 +73,10 @@ export default function Header() {
         </button>
 
         <div className="group relative">
-          <div className="absolute top-full mt-4 right-0 w-72 p-4 rounded-3xl bg-[#1d1b18] border border-amber-500/20 shadow-2xl opacity-0 pointer-events-none group-hover:opacity-100 z-[100] transition-none">
+          <div
+            className="absolute top-full mt-4 right-0 w-72 p-4 rounded-3xl border border-amber-500/20 shadow-2xl opacity-0 pointer-events-none group-hover:opacity-100 z-[100] transition-none"
+            style={{ backgroundColor: 'var(--bg-elevated)' }}
+          >
             <div className="flex items-center gap-2 mb-2">
               <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
               <span className="text-xs font-bold text-amber-200">
@@ -91,12 +100,16 @@ export default function Header() {
                 </>
               )}
             </p>
-            <div className="absolute bottom-full right-8 w-3 h-3 bg-[#1d1b18] border-r border-b border-amber-500/20 rotate-45 -translate-y-1.5" />
+            <div
+              className="absolute bottom-full right-8 w-3 h-3 border-r border-b border-amber-500/20 rotate-45 -translate-y-1.5"
+              style={{ backgroundColor: 'var(--bg-elevated)' }}
+            />
           </div>
 
           <div
             onClick={handleToggleMode}
-            className="flex items-center gap-3 md:gap-6 bg-[#141210] border border-white/[0.08] h-11 md:h-14 px-4 md:px-8 rounded-2xl md:rounded-3xl cursor-pointer hover:border-amber-500/30 transition-all duration-500 shadow-xl hover:scale-[1.02] active:scale-[0.95]"
+            className="flex items-center gap-3 md:gap-6 border border-white/[0.08] h-11 md:h-14 px-4 md:px-8 rounded-2xl md:rounded-3xl cursor-pointer hover:border-amber-500/30 transition-all duration-500 shadow-xl hover:scale-[1.02] active:scale-[0.95]"
+            style={{ backgroundColor: 'var(--bg-elevated)' }}
           >
             <div className="flex flex-col items-end leading-none">
               {/* 🚀 小视口下自动隐藏修饰快捷键和文字说明，仅保留核心模式文字 */}
