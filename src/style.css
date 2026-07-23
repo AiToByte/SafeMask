@@ -682,3 +682,13 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.10);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
 }
+
+
+/* 隐藏滚动条但保留滚动能力（审计详情左栏） */
+.scrollbar-none {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge legacy */
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}

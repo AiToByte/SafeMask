@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   X,
   Clock,
@@ -227,6 +227,10 @@ function MaskedHighlighter({
 
 export default function DocumentPreview({ item, onClose }: DocumentPreviewProps) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const leftScrollRef = useRef<HTMLDivElement>(null);
+  const rightScrollRef = useRef<HTMLDivElement>(null);
+  /** 防止左右 scroll 事件互相触发导致抖动 */
+  const isSyncingRef = useRef(false);
 
   useEffect(() => {
     if (!item) return;
@@ -237,6 +241,38 @@ export default function DocumentPreview({ item, onClose }: DocumentPreviewProps)
     return () => window.removeEventListener("keydown", handler);
   }, [item, onClose]);
 
+  // 打开新条目时重置滚动位置
+  useEffect(() => {
+    if (!item) return;
+    isSyncingRef.current = true;
+    if (leftScrollRef.current) leftScrollRef.current.scrollTop = 0;
+    if (rightScrollRef.current) rightScrollRef.current.scrollTop = 0;
+    requestAnimationFrame(() => {
+      isSyncingRef.current = false;
+    });
+  }, [item?.id]);
+
+  /**
+   * 单一滚动条联动：任一侧滚动时同步对侧 scrollTop。
+   * 左侧隐藏滚动条，右侧保留 custom-scroll 作为唯一可见滚动条。
+   * 鼠标滚轮在左侧仍可滚动，并同步到右侧。
+   */
+  const syncScroll = useCallback((source: "left" | "right") => {
+    return (e: React.UIEvent<HTMLDivElement>) => {
+      if (isSyncingRef.current) return;
+      const sourceEl = e.currentTarget;
+      const targetEl =
+        source === "left" ? rightScrollRef.current : leftScrollRef.current;
+      if (!targetEl) return;
+
+      isSyncingRef.current = true;
+      targetEl.scrollTop = sourceEl.scrollTop;
+      requestAnimationFrame(() => {
+        isSyncingRef.current = false;
+      });
+    };
+  }, []);
+
   if (!item) return null;
 
   return (
@@ -245,7 +281,8 @@ export default function DocumentPreview({ item, onClose }: DocumentPreviewProps)
       onClick={onClose}
     >
       <div
-        className="relative w-[95vw] max-w-6xl max-h-[90vh] flex flex-col rounded-4xl border border-white/10 shadow-2xl modal-panel" style={{ backgroundColor: "color-mix(in srgb, var(--bg-card) 96%, transparent)" }}
+        className="relative w-[95vw] max-w-6xl max-h-[90vh] flex flex-col rounded-4xl border border-white/10 shadow-2xl modal-panel"
+        style={{ backgroundColor: "color-mix(in srgb, var(--bg-card) 96%, transparent)" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header ── */}
@@ -281,9 +318,9 @@ export default function DocumentPreview({ item, onClose }: DocumentPreviewProps)
           </button>
         </div>
 
-        {/* ── Two-column body ── */}
+        {/* ── Two-column body：单一可见滚动条 + 左右联动 ── */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 min-h-0 overflow-hidden">
-          {/* Left: Original */}
+          {/* Left: Original — 隐藏滚动条，滚轮仍可用并同步右侧 */}
           <div className="flex flex-col min-h-0 border-r border-white/[0.03]">
             <div className="flex items-center justify-between px-8 pt-6 pb-3 shrink-0">
               <div className="flex items-center gap-3">
@@ -297,7 +334,11 @@ export default function DocumentPreview({ item, onClose }: DocumentPreviewProps)
               </div>
               <PreviewCopyButton text={item.original} isOriginal />
             </div>
-            <div className="flex-1 overflow-y-auto custom-scroll px-8 pb-8">
+            <div
+              ref={leftScrollRef}
+              onScroll={syncScroll("left")}
+              className="flex-1 overflow-y-auto scrollbar-none px-8 pb-8"
+            >
               <OriginalHighlighter
                 text={item.original}
                 entities={item.entities}
@@ -307,7 +348,7 @@ export default function DocumentPreview({ item, onClose }: DocumentPreviewProps)
             </div>
           </div>
 
-          {/* Right: Masked */}
+          {/* Right: Masked — 唯一可见滚动条 */}
           <div className="flex flex-col min-h-0">
             <div className="flex items-center justify-between px-8 pt-6 pb-3 shrink-0">
               <div className="flex items-center gap-3">
@@ -326,7 +367,11 @@ export default function DocumentPreview({ item, onClose }: DocumentPreviewProps)
               </div>
               <PreviewCopyButton text={item.masked} isOriginal={false} />
             </div>
-            <div className="flex-1 overflow-y-auto custom-scroll px-8 pb-8">
+            <div
+              ref={rightScrollRef}
+              onScroll={syncScroll("right")}
+              className="flex-1 overflow-y-auto custom-scroll px-8 pb-8"
+            >
               <MaskedHighlighter
                 text={item.masked}
                 entities={item.entities}
