@@ -244,15 +244,21 @@ export default function SettingsPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-10 pb-16 page-active">
       {/* ════════════════ HEADER ════════════════ */}
-      <div className="flex items-center gap-6 mb-10 px-2">
+      <div className="flex items-center gap-5 mb-10 px-2">
         <div
-          className="w-14 h-14 rounded-2xl border border-amber-500/10 flex items-center justify-center shadow-2xl"
-          style={{ backgroundColor: "var(--bg-elevated)" }}
+          className="w-14 h-14 rounded-2xl border flex items-center justify-center relative overflow-hidden transition-transform duration-300 hover:scale-[1.03]"
+          style={{
+            background:
+              "linear-gradient(145deg, color-mix(in srgb, var(--accent) 18%, var(--bg-elevated)), var(--bg-elevated))",
+            borderColor: "var(--border-default)",
+            boxShadow:
+              "0 1px 0 rgba(255,255,255,0.06) inset, 0 10px 24px -12px rgba(var(--accent-rgb),0.45)",
+          }}
         >
-          <Monitor className="text-amber-400/80 w-6 h-6" />
+          <Monitor className="text-[color:var(--accent)] w-6 h-6 relative z-10 drop-shadow-[0_0_8px_rgba(var(--accent-rgb),0.35)]" />
         </div>
         <div>
-          <h2 className="text-3xl font-bold text-amber-50/90 tracking-tight">
+          <h2 className="text-3xl font-bold text-[color:var(--text-primary)] tracking-tight">
             控制台偏好设置
           </h2>
            <p className="text-xs text-zinc-600 font-black uppercase tracking-[0.4em] mt-1.5">

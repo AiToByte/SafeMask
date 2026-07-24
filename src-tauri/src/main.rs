@@ -90,6 +90,10 @@ fn main() {
             api::system::get_engine_info,        // 完整引擎信息
             api::system::toggle_ai_engine,       // AI 启用/停用
             api::system::get_registered_recognizers, // 已注册识别器
+            api::system::import_custom_rules,           // 批量导入自定义规则
+            api::system::export_custom_rules_yaml,      // 导出自定义规则 YAML
+            api::system::get_rules_import_template,     // 导入模板
+            api::system::save_text_to_path,              // 导出写文件
             api::system::apply_window_chrome,         // 原生标题栏/窗口配色
             api::system::get_records_dir_info,      // 记录目录诊断
             ai_downloader::check_model_file,

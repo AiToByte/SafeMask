@@ -108,6 +108,25 @@ export interface ProcessResponse {
   throughput: string;
 }
 
+
+/** 规则导入单项结果 */
+export interface ImportRuleItemResult {
+  name: string;
+  status: "imported" | "overwritten" | "skipped_builtin" | "skipped_invalid" | "failed";
+  message: string;
+  source_file?: string | null;
+}
+
+/** 规则导入报告 */
+export interface ImportRulesReport {
+  total_parsed: number;
+  imported: number;
+  overwritten: number;
+  skipped: number;
+  failed: number;
+  items: ImportRuleItemResult[];
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 2. API 对象实现
 // ─────────────────────────────────────────────────────────────────────────────
@@ -152,6 +171,27 @@ export const MaskAPI = {
   async deleteRule(name: string): Promise<string> {
     return await invoke("delete_rule_api", { name });
   },
+
+  /** 从本地 YAML 文件批量导入自定义规则 */
+  async importCustomRules(paths: string[]): Promise<ImportRulesReport> {
+    return await invoke("import_custom_rules", { paths });
+  },
+
+  /** 导出全部自定义规则为 YAML 文本 */
+  async exportCustomRulesYaml(): Promise<string> {
+    return await invoke("export_custom_rules_yaml");
+  },
+
+  /** 获取官方规则导入模板 YAML */
+  async getRulesImportTemplate(): Promise<string> {
+    return await invoke("get_rules_import_template");
+  },
+
+  /** 将文本写入用户选择的路径 */
+  async saveTextToPath(path: string, content: string): Promise<void> {
+    await invoke("save_text_to_path", { path, content });
+  },
+
 
   /** 
    * [核心] 规则实时测试沙盒 

@@ -29,17 +29,23 @@ export default function Header() {
       className="h-20 md:h-24 flex items-center justify-between px-6 md:px-10 z-40 border-b border-white/[0.03] backdrop-blur-xl shrink-0"
       style={{ backgroundColor: 'color-mix(in srgb, var(--bg-root) 60%, transparent)' }}
     >
-      {/* 左侧：Logo 与标题（随视口流式缩放） */}
+      {/* 左侧：Logo 与标题（圆角方块图标，与规则仓库语言一致） */}
       <div className="flex items-center gap-3 md:gap-5 shrink-0">
         <div
-          className="w-10 h-10 md:w-12 md:h-12 rounded-lg border border-amber-500/10 flex items-center justify-center shadow-2xl relative overflow-hidden transition-transform duration-200 hover:scale-105"
-          style={{ backgroundColor: 'var(--bg-elevated)' }}
+          className="w-10 h-10 md:w-12 md:h-12 rounded-2xl border flex items-center justify-center relative overflow-hidden transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:scale-[1.04] active:scale-95"
+          style={{
+            background:
+              "linear-gradient(145deg, color-mix(in srgb, var(--accent) 18%, var(--bg-elevated)), var(--bg-elevated))",
+            borderColor: "var(--border-default)",
+            boxShadow:
+              "0 1px 0 rgba(255,255,255,0.06) inset, 0 8px 20px -12px rgba(var(--accent-rgb),0.45)",
+          }}
         >
-          <Activity className="text-amber-500 w-4 h-4 md:w-5 md:h-5 relative z-10" />
+          <Activity className="text-[color:var(--accent)] w-4 h-4 md:w-5 md:h-5 relative z-10 drop-shadow-[0_0_8px_rgba(var(--accent-rgb),0.35)]" />
         </div>
 
         <div>
-          <h1 className="text-base md:text-xl font-bold tracking-tight text-amber-50/90 flex items-center gap-2 md:gap-3">
+          <h1 className="text-base md:text-xl font-bold tracking-tight text-[color:var(--text-primary)] flex items-center gap-2 md:gap-3">
             SafeMask
             <div className="h-3 w-[1px] bg-white/10" />
             <span className="text-zinc-500 font-medium text-xs md:text-sm tracking-widest">
@@ -62,14 +68,38 @@ export default function Header() {
         <button
           type="button"
           onClick={toggleAlwaysOnTop}
+          title={isAlwaysOnTop ? "取消窗口置顶" : "固定窗口置顶"}
+          aria-pressed={isAlwaysOnTop}
           className={cn(
-            "w-9 h-9 md:w-10 md:h-10 rounded-lg border transition-all duration-300 flex items-center justify-center hover:scale-105 active:scale-90",
+            "w-10 h-10 md:w-11 md:h-11 rounded-2xl border flex items-center justify-center",
+            "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+            "hover:scale-[1.04] active:scale-95",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring-color)]",
             isAlwaysOnTop
-              ? "bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-amber-glow"
-              : "bg-white/[0.02] border-white/5 text-zinc-500 hover:border-amber-500/20",
+              ? "text-[color:var(--accent)]"
+              : "text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]",
           )}
+          style={
+            isAlwaysOnTop
+              ? {
+                  background:
+                    "linear-gradient(145deg, color-mix(in srgb, var(--accent) 18%, var(--bg-elevated)), var(--bg-elevated))",
+                  borderColor: "var(--border-default)",
+                  boxShadow:
+                    "0 1px 0 rgba(255,255,255,0.06) inset, 0 8px 20px -12px rgba(var(--accent-rgb),0.45)",
+                }
+              : {
+                  backgroundColor: "color-mix(in srgb, var(--bg-elevated) 90%, transparent)",
+                  borderColor: "var(--border-subtle)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
+                }
+          }
         >
-          {isAlwaysOnTop ? <PinOff size={14} /> : <Pin size={14} />}
+          {isAlwaysOnTop ? (
+            <PinOff size={15} className="drop-shadow-[0_0_8px_rgba(var(--accent-rgb),0.4)]" />
+          ) : (
+            <Pin size={15} />
+          )}
         </button>
 
         <div className="group relative">

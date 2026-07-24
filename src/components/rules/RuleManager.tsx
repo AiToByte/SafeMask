@@ -2,7 +2,9 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Plus, Layers, Trash2, ShieldCheck, Search, Edit3, X,
   Beaker, Check, Save, CopyPlus, Lock, Info, Fingerprint,
+  Upload, Download, FileDown,
 } from "lucide-react";
+import { open, save, message } from "@tauri-apps/plugin-dialog";
 import { useAppStore } from "@/hooks/useAppStore";
 import { MaskAPI, type Rule } from "@/services/api";
 import { cn } from "@/lib/utils";
@@ -297,27 +299,51 @@ export default function RuleManager() {
 
   const renderSearchBar = () => {
     return (
-      <div className="relative w-full max-w-[320px] focus-within:max-w-[400px] transition-all duration-500 group/search">
-        <div className="absolute -inset-1 bg-amber-500/5 rounded-2xl blur-lg opacity-0 group-focus-within/search:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      <div className="relative w-full min-w-0 group/search">
         <div
-          className="relative flex items-center border border-amber-500/10 rounded-2xl transition-all duration-300 shadow-inner group-hover/search:border-white/20 group-focus-within/search:border-amber-500/40 group-focus-within/search:shadow-input-glow"
-          style={{ backgroundColor: "var(--bg-input)" }}
+          className={cn(
+            "relative flex items-center gap-2.5 rounded-[14px] border px-3.5",
+            "transition-all duration-300 ease-out",
+            "shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
+            "group-hover/search:border-[color:var(--border-default)]",
+            "group-focus-within/search:border-[color:var(--accent-border)]",
+            "group-focus-within/search:shadow-[0_0_0_3px_rgba(var(--accent-rgb),0.12),inset_0_1px_0_rgba(255,255,255,0.06)]",
+          )}
+          style={{
+            backgroundColor: "var(--bg-input)",
+            borderColor: "var(--border-subtle)",
+          }}
         >
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-400/40 pointer-events-none" />
+          <Search
+            size={15}
+            className="shrink-0 text-zinc-500 transition-colors duration-300 group-focus-within/search:text-[color:var(--accent)]"
+          />
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="快速搜索..."
-            className="w-full bg-transparent border-none outline-none py-2.5 pl-10 pr-8 text-xs text-amber-50/80 placeholder:text-zinc-600 focus-visible:ring-0 focus-visible:ring-offset-0"
+            placeholder="搜索规则名称或正则 pattern…"
+            className="min-w-0 flex-1 bg-transparent border-none outline-none py-[11px] text-[13px] tracking-tight text-[color:var(--text-primary)] placeholder:text-zinc-600 focus-visible:ring-0 focus-visible:ring-offset-0"
           />
-          {searchQuery && (
+          {searchQuery ? (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg text-zinc-600 hover:text-amber-200 transition-colors"
+              className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-zinc-500 hover:text-[color:var(--text-primary)] transition-all duration-200"
+              style={{ backgroundColor: "color-mix(in srgb, var(--text-primary) 8%, transparent)" }}
+              title="清空"
             >
-              <X size={12} />
+              <X size={12} strokeWidth={2.5} />
             </button>
+          ) : (
+            <kbd
+              className="hidden md:inline-flex items-center h-5 px-1.5 rounded-md text-[10px] font-semibold text-zinc-600 border"
+              style={{
+                borderColor: "var(--border-subtle)",
+                backgroundColor: "color-mix(in srgb, var(--bg-elevated) 80%, transparent)",
+              }}
+            >
+              ⌕
+            </kbd>
           )}
         </div>
       </div>
@@ -331,46 +357,52 @@ export default function RuleManager() {
         key={rule.name}
         onClick={() => selectRule(rule)}
         className={cn(
-          "group flex items-center p-5 rounded-3xl bg-white/[0.01] border border-white/[0.03] transition-all cursor-pointer relative overflow-hidden hover:bg-white/[0.03] hover:border-white/[0.08] hover:translate-x-1",
+          "group flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all duration-200 cursor-pointer relative overflow-hidden",
+          "hover:bg-white/[0.03] hover:border-white/[0.08]",
+          active
+            ? "border-[color:var(--accent-border)] bg-[color:var(--accent-dim)] shadow-[0_8px_24px_-16px_rgba(var(--accent-rgb),0.55)]"
+            : "bg-white/[0.01] border-white/[0.03]",
           active &&
-            "border-amber-500/30 bg-amber-500/[0.04] shadow-[0_10px_30px_rgba(0,0,0,0.4)]",
-            active && "before:content-[''] before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[2px] before:bg-indigo-500 before:rounded-full",
+            "before:content-[''] before:absolute before:left-0 before:top-2.5 before:bottom-2.5 before:w-[2.5px] before:rounded-full before:bg-[color:var(--accent)]",
         )}
       >
         {/* Left icon */}
-        <div className="mr-3">
-          {rule.is_custom ? (
-            <Edit3 size={14} className="text-indigo-400/60" />
-          ) : (
-            <Lock size={14} className="text-zinc-600" />
+        <div
+          className={cn(
+            "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border",
+            rule.is_custom
+              ? "bg-indigo-500/10 border-indigo-500/15 text-indigo-400"
+              : "bg-white/[0.02] border-white/[0.04] text-zinc-600",
           )}
+        >
+          {rule.is_custom ? <Edit3 size={13} /> : <Lock size={13} />}
         </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-bold text-zinc-200 truncate">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-[13px] font-semibold text-[color:var(--text-primary)] truncate tracking-tight">
               {rule.name}
             </span>
             <span
               className={cn(
-                "text-[10px] border px-1.5 py-0.5 rounded font-black uppercase",
+                "text-[9px] border px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider shrink-0",
                 rule.is_custom
                   ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
-                  : "bg-zinc-800 text-zinc-500 border-white/5 bg-[color:var(--bg-elevated)]",
+                  : "text-zinc-500 border-white/5 bg-[color:var(--bg-elevated)]",
               )}
             >
-              {rule.is_custom ? "CUSTOM" : "SYSTEM"}
+              {rule.is_custom ? "自定义" : "系统"}
             </span>
           </div>
-          <span className="text-xs font-mono text-zinc-600 truncate block whitespace-nowrap overflow-hidden max-w-[280px]">
+          <span className="text-[11px] font-mono text-zinc-600 truncate block">
             {rule.pattern}
           </span>
         </div>
 
         {/* Mask label */}
-        <div className="mx-2 shrink-0">
-          <span className="text-[11px] font-mono font-bold text-emerald-400/70 bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/10">
+        <div className="shrink-0 max-w-[36%]">
+          <span className="inline-block max-w-full truncate text-[10px] font-mono font-semibold text-emerald-400/80 bg-emerald-500/[0.06] px-2.5 py-1 rounded-lg border border-emerald-500/10">
             {rule.mask}
           </span>
         </div>
@@ -519,88 +551,194 @@ export default function RuleManager() {
     const showStandby = !hasPattern || !hasText;
 
     return (
-    <div className="relative w-full min-w-0">
-        {/* Label */}
-        <span
-          className="text-xs font-bold uppercase tracking-widest absolute -top-2.5 left-5 px-2 z-10 text-amber-100/60"
-          style={{ backgroundColor: "var(--bg-root)" }}
-        >
-          <div className="flex items-center gap-1.5">
-            <Beaker size={10} className="text-amber-400/60" />
-            调试沙盒实验室
-          </div>
-        </span>
-
+      <div
+        className="w-full min-w-0 border rounded-3xl overflow-hidden"
+        style={{
+          backgroundColor: "color-mix(in srgb, var(--bg-card) 96%, transparent)",
+          borderColor: "var(--border-subtle)",
+          boxShadow: "0 1px 0 rgba(255,255,255,0.04) inset",
+        }}
+      >
+        {/* In-card header — no absolute label overflow */}
         <div
-          className="border rounded-4xl p-5 pt-8 space-y-4"
-          style={{
-            backgroundColor: "color-mix(in srgb, var(--bg-card) 94%, transparent)",
-            borderColor: "var(--border-default)",
-          }}
+          className="flex items-center justify-between gap-3 px-5 py-3.5 border-b"
+          style={{ borderColor: "var(--border-subtle)" }}
         >
-          {/* Input */}
-          <textarea
-            value={testInput}
-            onChange={(e) => setTestInput(e.target.value)}
-            placeholder="输入测试文本..."
-            className="w-full border rounded-2xl p-5 text-sm font-mono leading-relaxed outline-none transition-all resize-none focus:border-amber-500/30 min-h-[80px] text-amber-50/70 placeholder:text-zinc-700"
-            style={{
-              backgroundColor: "var(--bg-input)",
-              borderColor: "var(--border-default)",
-            }}
-          />
-
-          {/* Output area */}
-          <div
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className="w-8 h-8 rounded-xl border flex items-center justify-center shrink-0"
+              style={{
+                backgroundColor: "color-mix(in srgb, var(--accent) 12%, transparent)",
+                borderColor: "var(--accent-border)",
+              }}
+            >
+              <Beaker size={14} className="text-[color:var(--accent)]" />
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-[13px] font-semibold tracking-tight text-[color:var(--text-primary)] truncate">
+                调试沙盒
+              </h4>
+              <p className="text-[10px] text-zinc-600 mt-0.5 truncate">
+                实时验证正则与脱敏结果
+              </p>
+            </div>
+          </div>
+          <span
             className={cn(
-              "w-full border rounded-2xl p-5 text-sm font-mono leading-relaxed outline-none transition-all resize-none min-h-[100px]",
-              showOutput &&
-                "bg-emerald-500/[0.01] border-emerald-500/10 text-emerald-300/80",
-              showStandby &&
-                "border-dashed border-white/[0.06] text-zinc-700",
-              testError && "border-red-500/20 bg-red-500/[0.02] text-red-400",
+              "shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md border",
+              showOutput && "text-emerald-400 border-emerald-500/20 bg-emerald-500/10",
+              testError && "text-red-400 border-red-500/20 bg-red-500/10",
+              showStandby && !testError && "text-zinc-500 border-white/[0.06] bg-white/[0.02]",
             )}
-            style={
-              showOutput || testError
-                ? undefined
-                : { backgroundColor: "color-mix(in srgb, var(--bg-input) 90%, transparent)" }
-            }
           >
-            {testError && (
-              <div className="flex items-start gap-2">
-                <X size={13} className="mt-0.5 shrink-0 text-red-400" />
-                <span>{testError}</span>
-              </div>
-            )}
+            {testError ? "错误" : showOutput ? "就绪" : "待机"}
+          </span>
+        </div>
 
-            {showOutput && (
-              <div className="flex items-start gap-2">
-                <Check size={13} className="mt-0.5 shrink-0 text-emerald-400" />
-                <span className="whitespace-pre-wrap">{testOutput}</span>
-              </div>
-            )}
+        <div className="p-4 space-y-3">
+          {/* Input */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-600 px-0.5">
+              测试文本
+            </label>
+            <textarea
+              value={testInput}
+              onChange={(e) => setTestInput(e.target.value)}
+              placeholder="粘贴或输入待脱敏样例…"
+              className="w-full border rounded-2xl px-4 py-3.5 text-[13px] font-mono leading-relaxed outline-none transition-all duration-200 resize-none min-h-[88px] text-[color:var(--text-primary)] placeholder:text-zinc-600 focus:border-[color:var(--accent-border)] focus:shadow-[0_0_0_3px_rgba(var(--accent-rgb),0.10)]"
+              style={{
+                backgroundColor: "var(--bg-input)",
+                borderColor: "var(--border-default)",
+              }}
+            />
+          </div>
 
-            {showStandby && !testError && (
-              <div className="flex flex-col items-center justify-center py-6 text-center gap-3">
-                <Fingerprint
-                  size={24}
-                  className="text-zinc-700/60"
-                />
-                <div>
-                  <p className="text-zinc-600 font-bold text-xs">
-                    Engine Standby
-                  </p>
-                  <p className="text-zinc-700 text-xs mt-1">
-                    Enter a pattern and test text to see live masking results
-                  </p>
+          {/* Output */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-600 px-0.5">
+              输出预览
+            </label>
+            <div
+              className={cn(
+                "w-full border rounded-2xl px-4 py-3.5 text-[13px] font-mono leading-relaxed min-h-[104px] transition-all duration-200",
+                showOutput && "border-emerald-500/20 bg-emerald-500/[0.04] text-emerald-300/90",
+                showStandby && !testError && "border-dashed border-white/[0.06] text-zinc-600",
+                testError && "border-red-500/25 bg-red-500/[0.04] text-red-400",
+              )}
+              style={
+                showOutput || testError
+                  ? undefined
+                  : {
+                      backgroundColor: "color-mix(in srgb, var(--bg-input) 92%, transparent)",
+                      borderColor: "var(--border-subtle)",
+                    }
+              }
+            >
+              {testError && (
+                <div className="flex items-start gap-2">
+                  <X size={13} className="mt-0.5 shrink-0 text-red-400" />
+                  <span className="whitespace-pre-wrap break-words">{testError}</span>
                 </div>
-              </div>
-            )}
+              )}
+
+              {showOutput && (
+                <div className="flex items-start gap-2">
+                  <Check size={13} className="mt-0.5 shrink-0 text-emerald-400" />
+                  <span className="whitespace-pre-wrap break-words">{testOutput}</span>
+                </div>
+              )}
+
+              {showStandby && !testError && (
+                <div className="flex flex-col items-center justify-center py-5 text-center gap-2.5">
+                  <div
+                    className="w-10 h-10 rounded-xl border flex items-center justify-center"
+                    style={{
+                      backgroundColor: "color-mix(in srgb, var(--bg-elevated) 90%, transparent)",
+                      borderColor: "var(--border-subtle)",
+                    }}
+                  >
+                    <Fingerprint size={18} className="text-zinc-600" />
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-semibold text-zinc-500">等待输入</p>
+                    <p className="text-[11px] text-zinc-600 mt-1 leading-relaxed max-w-[240px]">
+                      填写规则 pattern 与测试文本后，将自动显示脱敏结果
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
     );
   };
+
+
+  // ── Import / Export ──
+
+  const handleImportRules = useCallback(async () => {
+    try {
+      const selected = await open({
+        multiple: true,
+        filters: [{ name: "YAML Rules", extensions: ["yaml", "yml"] }],
+      });
+      if (!selected) return;
+      const paths = Array.isArray(selected) ? selected : [selected];
+      if (paths.length === 0) return;
+
+      const report = await MaskAPI.importCustomRules(paths);
+      await Promise.all([fetchAllRules(), fetchStats()]);
+
+      const summary =
+        `解析 ${report.total_parsed} 条 · 新增 ${report.imported} · 覆盖 ${report.overwritten} · 跳过 ${report.skipped}` +
+        (report.failed ? ` · 失败 ${report.failed}` : "");
+
+      const details = report.items
+        .filter((i) => i.status !== "imported")
+        .slice(0, 12)
+        .map((i) => `• ${i.name}: ${i.message}`)
+        .join("\n");
+
+      await message(
+        details ? `${summary}\n\n${details}` : summary,
+        { title: "规则导入完成", kind: report.failed ? "warning" : "info" },
+      );
+    } catch (e) {
+      await message(`导入失败: ${e}`, { title: "错误", kind: "error" });
+    }
+  }, [fetchAllRules, fetchStats]);
+
+  const handleExportRules = useCallback(async () => {
+    try {
+      const yaml = await MaskAPI.exportCustomRulesYaml();
+      const path = await save({
+        defaultPath: "safemask_custom_rules.yaml",
+        filters: [{ name: "YAML", extensions: ["yaml", "yml"] }],
+      });
+      if (!path) return;
+      await MaskAPI.saveTextToPath(path, yaml);
+      await message("自定义规则已导出", { title: "导出成功", kind: "info" });
+    } catch (e) {
+      await message(`导出失败: ${e}`, { title: "错误", kind: "error" });
+    }
+  }, []);
+
+  const handleDownloadTemplate = useCallback(async () => {
+    try {
+      const yaml = await MaskAPI.getRulesImportTemplate();
+      const path = await save({
+        defaultPath: "safemask_rules_template.yaml",
+        filters: [{ name: "YAML", extensions: ["yaml", "yml"] }],
+      });
+      if (!path) return;
+      await MaskAPI.saveTextToPath(path, yaml);
+      await message("模板已保存", { title: "完成", kind: "info" });
+    } catch (e) {
+      await message(`保存模板失败: ${e}`, { title: "错误", kind: "error" });
+    }
+  }, []);
+
 
   // ── Main render ──
 
@@ -614,52 +752,145 @@ export default function RuleManager() {
           borderColor: "var(--border-subtle)",
         }}
       >
-        {/* Header */}
+        {/* Header — 精致分层：标题 / 分段操作 / 搜索 */}
         <div
-          className="px-8 py-6 border-b flex items-center gap-6"
+          className="px-5 pt-5 pb-4 border-b space-y-4"
           style={{ borderColor: "var(--border-subtle)" }}
         >
-          <Layers size={18} className="text-indigo-400/60" />
-          <h3 className="sr-only">Pattern Repository</h3>
-          <div className="flex-1">{renderSearchBar()}</div>
-          <button
-            onClick={clearForm}
-            className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-all"
+          {/* Title row */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="relative w-10 h-10 rounded-2xl border flex items-center justify-center shrink-0 overflow-hidden"
+              style={{
+                background:
+                  "linear-gradient(145deg, color-mix(in srgb, var(--accent) 18%, var(--bg-elevated)), var(--bg-elevated))",
+                borderColor: "var(--border-default)",
+                boxShadow: "0 1px 0 rgba(255,255,255,0.06) inset, 0 8px 20px -12px rgba(var(--accent-rgb),0.45)",
+              }}
+            >
+              <Layers size={17} className="text-[color:var(--accent)] relative z-10" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-[15px] font-semibold tracking-tight text-[color:var(--text-primary)]">
+                  规则仓库
+                </h3>
+                <span className="text-[11px] font-medium text-zinc-600 tabular-nums">
+                  {sortedRules.length}
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-600 mt-0.5 tracking-wide">
+                管理内置与自定义脱敏模式
+              </p>
+            </div>
+          </div>
+
+          {/* Segmented actions — Apple-style control strip */}
+          <div
+            className="grid grid-cols-4 gap-0.5 p-1 rounded-2xl border"
+            style={{
+              backgroundColor: "color-mix(in srgb, var(--bg-input) 92%, transparent)",
+              borderColor: "var(--border-subtle)",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
+            }}
           >
-            <Plus size={14} />
-          </button>
+            {(
+              [
+                {
+                  key: "import",
+                  label: "导入",
+                  title: "导入规则 YAML",
+                  onClick: handleImportRules,
+                  Icon: Upload,
+                  tone: "text-amber-500",
+                },
+                {
+                  key: "export",
+                  label: "导出",
+                  title: "导出自定义规则",
+                  onClick: handleExportRules,
+                  Icon: Download,
+                  tone: "text-emerald-400",
+                },
+                {
+                  key: "template",
+                  label: "模板",
+                  title: "下载导入模板",
+                  onClick: handleDownloadTemplate,
+                  Icon: FileDown,
+                  tone: "text-zinc-400",
+                },
+                {
+                  key: "create",
+                  label: "新建",
+                  title: "新建规则",
+                  onClick: clearForm,
+                  Icon: Plus,
+                  tone: "text-indigo-300",
+                },
+              ] as const
+            ).map(({ key, label, title, onClick, Icon, tone }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={onClick}
+                title={title}
+                className={cn(
+                  "group/btn relative inline-flex items-center justify-center gap-1.5 h-9 rounded-[12px]",
+                  "text-[11px] font-semibold tracking-wide",
+                  "transition-all duration-200 ease-out",
+                  "hover:bg-white/[0.06] active:scale-[0.97]",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring-color)]",
+                  tone,
+                )}
+              >
+                <Icon
+                  size={14}
+                  strokeWidth={2.25}
+                  className="shrink-0 opacity-90 transition-transform duration-200 group-hover/btn:-translate-y-px"
+                />
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="w-full min-w-0">{renderSearchBar()}</div>
         </div>
 
         {/* Rule list */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-3 custom-scroll">
+        <div className="flex-1 overflow-y-auto p-3.5 space-y-1.5 custom-scroll">
           {sortedRules.map(renderRuleItem)}
 
           {sortedRules.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Fingerprint
-                size={32}
-                className="text-zinc-700/40 mb-4"
-              />
-              <p className="text-zinc-600 text-[12px] font-bold">
-                {searchQuery
-                  ? "No rules match your search"
-                  : "No rules defined yet"}
+            <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+              <div
+                className="w-14 h-14 rounded-2xl border flex items-center justify-center mb-4"
+                style={{
+                  backgroundColor: "color-mix(in srgb, var(--bg-elevated) 90%, transparent)",
+                  borderColor: "var(--border-subtle)",
+                }}
+              >
+                <Fingerprint size={26} className="text-zinc-600" />
+              </div>
+              <p className="text-[13px] font-semibold text-[color:var(--text-secondary)]">
+                {searchQuery ? "没有匹配的规则" : "还没有规则"}
               </p>
-              <p className="text-zinc-700 text-[10px] mt-1">
+              <p className="text-[11px] text-zinc-600 mt-1.5 leading-relaxed">
                 {searchQuery
-                  ? "Try a different search term"
-                  : "Click + to create your first rule"}
+                  ? "试试其他关键词，或清空搜索"
+                  : "点击上方「新建」创建，或「导入」批量添加"}
               </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Right panel: Editor + Sandbox ── */}
-      <div className="w-[480px] flex flex-col gap-5 overflow-y-auto custom-scroll pr-1">
+      {/* ── Right panel: Editor + Sandbox（可滚动，沙盒始终可达） ── */}
+      <div className="w-[min(480px,42vw)] min-w-[300px] shrink-0 flex flex-col min-h-0 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scroll pr-1 space-y-4 pb-2">
         {/* Form container */}
         <div
-          className="border rounded-4xl p-10 space-y-6 shadow-2xl"
+          className="border rounded-3xl p-6 space-y-5 shadow-2xl"
           style={{
             backgroundColor: "color-mix(in srgb, var(--bg-card) 96%, transparent)",
             borderColor: "var(--border-subtle)",
@@ -755,8 +986,11 @@ export default function RuleManager() {
           </div>
         </div>
 
-        {/* Sandbox */}
-        {renderSandbox()}
+        {/* Sandbox — 同滚动流内紧跟表单，保证进入视口可滚动看到 */}
+        <div className="shrink-0 pb-1">
+          {renderSandbox()}
+        </div>
+        </div>
       </div>
     </div>
   );

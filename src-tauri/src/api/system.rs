@@ -426,3 +426,152 @@ pub async fn apply_window_chrome(
     Ok(())
 }
 
+/// 从本地 YAML 文件批量导入自定义规则（可多文件）。
+///
+/// - 冲突策略固定为覆盖同名自定义规则；与内置同名则跳过
+/// - 文件大小 / 数量 / 条数有上限
+/// - 成功后原子写盘并热重载引擎
+#[tauri::command]
+pub async fn import_custom_rules(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    paths: Vec<String>,
+) -> AppResult<crate::infra::config::rule_import::ImportRulesReport> {
+    use crate::infra::config::rule_import::{
+        self, ConflictPolicy, MAX_FILE_BYTES, MAX_FILES, MAX_RULES,
+    };
+    use std::path::PathBuf;
+
+    if paths.is_empty() {
+        return Err(crate::common::errors::AppError::Config("未选择任何文件".into()));
+    }
+    if paths.len() > MAX_FILES {
+        return Err(crate::common::errors::AppError::Config(format!(
+            "单次最多导入 {} 个文件",
+            MAX_FILES
+        )));
+    }
+
+    let mut parsed_files = Vec::new();
+    let mut total_rules = 0usize;
+
+    for p in &paths {
+        let path = PathBuf::from(p);
+        let ext = path
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        if ext != "yaml" && ext != "yml" {
+            return Err(crate::common::errors::AppError::Config(format!(
+                "仅支持 .yaml / .yml: {}",
+                path.display()
+            )));
+        }
+        let meta = std::fs::metadata(&path).map_err(|e| {
+            crate::common::errors::AppError::Config(format!(
+                "无法读取文件 {}: {}",
+                path.display(),
+                e
+            ))
+        })?;
+        if meta.len() > MAX_FILE_BYTES {
+            return Err(crate::common::errors::AppError::Config(format!(
+                "文件过大（>{}KB）: {}",
+                MAX_FILE_BYTES / 1024,
+                path.display()
+            )));
+        }
+        let content = std::fs::read_to_string(&path).map_err(|e| {
+            crate::common::errors::AppError::Config(format!(
+                "读取失败 {}: {}",
+                path.display(),
+                e
+            ))
+        })?;
+        let source = path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or(p)
+            .to_string();
+        let file = rule_import::parse_rules_yaml(&content, &source)
+            .map_err(crate::common::errors::AppError::Config)?;
+        total_rules += file.rules.len();
+        if total_rules > MAX_RULES {
+            return Err(crate::common::errors::AppError::Config(format!(
+                "单次最多导入 {} 条规则",
+                MAX_RULES
+            )));
+        }
+        parsed_files.push(file);
+    }
+
+    let wrapper = state.settings.read().mask_wrapper_style.clone();
+    let existing = ConfigLoader::load_custom_rules_only(&app);
+    let builtin = ConfigLoader::builtin_rule_names(&app);
+
+    let mut report = rule_import::merge_import(
+        existing,
+        &builtin,
+        parsed_files,
+        &wrapper,
+        ConflictPolicy::OverwriteCustom,
+    );
+
+    // 仅当有实际变更时写盘
+    let changed = report.imported + report.overwritten;
+    if changed > 0 {
+        ConfigLoader::write_all_custom_rules(&app, report.merged_custom_rules.clone())?;
+        reload_engine_internal(app, state).await?;
+    }
+
+    // 清空 skip 序列化字段后返回
+    report.merged_custom_rules.clear();
+    Ok(report)
+}
+
+/// 导出全部自定义规则为 YAML 文本（供前端保存到用户选择路径）。
+#[tauri::command]
+pub async fn export_custom_rules_yaml(app: AppHandle) -> AppResult<String> {
+    use crate::core::rules::RuleGroup;
+    let rules = ConfigLoader::load_custom_rules_only(&app);
+    let yaml = serde_yaml::to_string(&RuleGroup {
+        group: "CUSTOM".into(),
+        rules,
+    })
+    .map_err(|e| crate::common::errors::AppError::Config(format!("导出序列化失败: {}", e)))?;
+    Ok(yaml)
+}
+
+/// 返回官方规则导入模板 YAML。
+#[tauri::command]
+pub async fn get_rules_import_template() -> AppResult<String> {
+    Ok(crate::infra::config::rule_import::rules_import_template_yaml().to_string())
+}
+
+/// 将文本写入用户通过 save 对话框选择的路径（仅用于导出模板/规则）。
+#[tauri::command]
+pub async fn save_text_to_path(path: String, content: String) -> AppResult<()> {
+    use std::path::PathBuf;
+    let p = PathBuf::from(&path);
+    let ext = p
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    if ext != "yaml" && ext != "yml" && ext != "txt" {
+        return Err(crate::common::errors::AppError::Config(
+            "仅允许写入 .yaml / .yml / .txt".into(),
+        ));
+    }
+    if content.len() > 2 * 1024 * 1024 {
+        return Err(crate::common::errors::AppError::Config(
+            "导出内容过大".into(),
+        ));
+    }
+    std::fs::write(&p, content.as_bytes()).map_err(|e| {
+        crate::common::errors::AppError::Config(format!("写入失败: {}", e))
+    })?;
+    Ok(())
+}
+

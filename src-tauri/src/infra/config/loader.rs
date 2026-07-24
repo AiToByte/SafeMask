@@ -126,6 +126,72 @@ impl ConfigLoader {
         fs::write(file_path, yaml)?;
         Ok(())
     }
+
+    /// 读取当前全部自定义规则（仅 user_rules.yaml）。
+    pub fn load_custom_rules_only(app_handle: &AppHandle) -> Vec<Rule> {
+        let file_path = Self::get_custom_storage_path(app_handle).join("user_rules.yaml");
+        if !file_path.exists() {
+            return vec![];
+        }
+        match fs::read_to_string(&file_path) {
+            Ok(content) => {
+                if let Ok(group) = serde_yaml::from_str::<RuleGroup>(&content) {
+                    group.rules
+                } else if let Ok(list) = serde_yaml::from_str::<Vec<Rule>>(&content) {
+                    list
+                } else {
+                    error!("无法解析 user_rules.yaml");
+                    vec![]
+                }
+            }
+            Err(e) => {
+                error!("读取 user_rules.yaml 失败: {}", e);
+                vec![]
+            }
+        }
+    }
+
+    /// 原子替换写入完整自定义规则列表。
+    pub fn write_all_custom_rules(app_handle: &AppHandle, rules: Vec<Rule>) -> AppResult<()> {
+        let custom_dir = Self::get_custom_storage_path(app_handle);
+        if !custom_dir.exists() {
+            fs::create_dir_all(&custom_dir)?;
+        }
+
+        let mut rules = rules;
+        for r in &mut rules {
+            r.is_custom = true;
+        }
+
+        let yaml = serde_yaml::to_string(&RuleGroup {
+            group: "CUSTOM".into(),
+            rules,
+        })
+        .map_err(|e| AppError::Config(format!("YAML 序列化失败: {}", e)))?;
+
+        let file_path = custom_dir.join("user_rules.yaml");
+        let tmp_path = custom_dir.join("user_rules.yaml.tmp");
+        fs::write(&tmp_path, yaml.as_bytes())?;
+        if file_path.exists() {
+            let _ = fs::remove_file(&file_path);
+        }
+        fs::rename(&tmp_path, &file_path)?;
+        Ok(())
+    }
+
+    /// 内置规则名称集合（用于导入冲突检测）。
+    pub fn builtin_rule_names(app_handle: &AppHandle) -> std::collections::HashSet<String> {
+        let mut names = std::collections::HashSet::new();
+        if let Ok(resource_dir) = app_handle.path().resource_dir() {
+            let built_in_path = resource_dir.join("rules");
+            if built_in_path.exists() {
+                for r in Self::load_from_directory(&built_in_path, false) {
+                    names.insert(r.name);
+                }
+            }
+        }
+        names
+    }
     /// 🚀 智能路径判定：适配安装版、ZIP便携版、NSIS单文件版
     pub fn get_custom_storage_path(app_handle: &AppHandle) -> PathBuf {
         // 获取当前 EXE 所在目录
