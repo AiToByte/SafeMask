@@ -1,190 +1,394 @@
-# 🛡️ SafeMask (v2.0.x)
-
 <div align="center">
-  <p align="center">
-    <b>"Keep the Truth in the Physical Universe, Exchange Safety in the Digital Universe."</b>
-  </p>
+
+<img src="src-tauri/icons/icon.png" width="128" alt="SafeMask logo"/>
+
+# SafeMask
+
+**Keep the truth in the physical universe. Exchange safety in the digital universe.**
+
+Industrial-grade **local-first** privacy masking for the AI era — clipboard, files, and rules, fully offline.
+
+<br/>
+
+[![Rust](https://img.shields.io/badge/Rust-2024-orange?logo=rust)](https://www.rust-lang.org/) [![Tauri](https://img.shields.io/badge/Tauri-v2-blue)](https://v2.tauri.app/) [![React](https://img.shields.io/badge/React-19-61dafb?logo=react)](https://react.dev/) [![License](https://img.shields.io/badge/License-MIT-gray)](LICENSE) [![Offline](https://img.shields.io/badge/Privacy-100%25%20Offline-teal)](#-privacy--security) [![Release](https://img.shields.io/badge/Release-v2.1.x-emerald)](https://github.com/AiToByte/SafeMask/releases)
+<br/>
+
+**Languages:** **English** · [简体中文](README_CN.md) · [日本語](README_JA.md) · [한국어](README_KO.md) · [Русский](README_RU.md)
+
 </div>
 
-<p align="center">
-  <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Language-Rust_2024-orange.svg?style=for-the-badge&logo=rust" alt="Rust 2024"></a>
-  <a href="https://v2.tauri.app/"><img src="https://img.shields.io/badge/Framework-Tauri_v2-blue.svg?style=for-the-badge" alt="Tauri v2"></a>
-  <a href="https://react.dev/"><img src="https://img.shields.io/badge/Frontend-React_19-61dafb.svg?style=for-the-badge&logo=react" alt="React 19"></a>
-  <br>
-  <a href="README_CN.md"><img src="https://img.shields.io/badge/Documentation-简体中文-amber.svg?style=for-the-badge" alt="简体中文"></a>
-  <a href="https://github.com/AiToByte/SafeMask/releases"><img src="https://img.shields.io/badge/Download-Latest_v2.0.2-emerald.svg?style=for-the-badge" alt="Latest version"></a>
-  <a href="#-benchmarks"><img src="https://img.shields.io/badge/Throughput-340MB%2Fs+-brightgreen.svg?style=for-the-badge" alt="Throughput"></a>
-  <a href="#-privacy--security-commitment"><img src="https://img.shields.io/badge/Security-100%25_Offline-teal.svg?style=for-the-badge" alt="100% Offline"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-gray.svg?style=for-the-badge" alt="MIT License"></a>
-</p>
+---
+
+## Table of contents
+
+- [Why SafeMask?](#why-safemask)
+- [See it in action](#see-it-in-action)
+- [Features](#features)
+- [Local AI engine (on-device NER)](#local-ai-engine-on-device-ner)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Development](#development)
+- [Architecture (overview)](#architecture-overview)
+- [Documentation index](#documentation-index)
+- [Privacy & security](#privacy--security)
+- [FAQ](#faq)
+- [Releases](#releases)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## 🌌 What is SafeMask?
+## Why SafeMask?
 
-**SafeMask** is an **industrial-grade local privacy masking engine and control console** built for the AI era [docs/使用手册.md].
+When you paste logs, code, or notes into ChatGPT, Claude, or any LLM, secrets travel with them: API keys, phone numbers, emails, internal IPs, real names, and more.
 
-When interacting with Large Language Models (such as ChatGPT, Claude, or DeepSeek), we frequently copy-paste codebases, system logs, meeting transcripts, and configurations [docs/使用手册.md]. However, sensitive identifiers like `API_KEY`s, personal `phone numbers`, internal `IP addresses`, and physical `addresses` are often leaked in the process.
+**SafeMask** runs entirely on your machine. No telemetry. No cloud upload of content. Rules, regex, an optional on-device AI model, history, and masking all stay offline.
 
-SafeMask ensures your sensitive data **never leaves your machine** [docs/使用手册.md]. Operating completely **offline** [docs/使用手册.md], it implements a **hybrid matching matrix** and a **Dual-Universe clipboard workflow** to protect your local privacy assets without breaking your productivity [doc/架构详解/系统集成、剪切板监控与桌面安全.md].
-
-> 🌐 **Bilingual Documentation**: For the Simplified Chinese documentation, please refer to [README_CN.md](README_CN.md) [README.md].
-
----
-
-## ✨ Key Features
-
-### 1. The Dual-Universe Clipboard Model
-SafeMask moves away from rigid "all-or-nothing" clipboard blocking, implementing a quantum-state-inspired approach to clipboard handling [README_CN.md]:
-
-*   **Shadow Universe (Shadow Mode — *Default & Non-Intrusive*)**  
-    *   *Physical Universe (Local)*: Standard `Ctrl+C` copying preserves your **original plaintext** [README_CN.md]. Local compilers, configurations, and internal runs execute without any interference [README_CN.md].
-    *   *Digital Universe (AI)*: When pasting to an AI prompt, press **`Alt+V` (Magic Paste)** [README_CN.md]. SafeMask instantly triggers a millisecond-level transaction: *“Backup plaintext $\rightarrow$ Inject masked text $\rightarrow$ Send native paste $\rightarrow$ Restore original text”* [README_CN.md, .worktrees/shortcut-magic-paste-stability/docs/superpowers/specs/2026-04-09-shortcut-magic-paste-stability-design.md]. The AI receives a sanitized `<OPENAI_KEY>` [src-tauri/rules/auth/ai/keys.yaml], while your physical clipboard automatically heals back to the original plaintext [README_CN.md].
-*   **Sentry Universe (Sentry Mode — *Active Defense*)**  
-    *   System-level active clipboard bleaching [README_CN.md]. Any sensitive information hitting the clipboard is sanitized within milliseconds [README_CN.md]. This prevents accidental leaks during screen sharing, remote meetings, or working in public spaces.
-
-### 2. High-Performance Zero-Copy Mmap Pipeline
-For gigabyte-scale log files, SafeMask implements an asynchronous, thread-safe I/O processing pipeline [doc/架构详解/高并发保序流水线与IO优化.md]:
-*   **Zero-Copy Memory Mapping (Mmap)**: Maps disk files directly into the virtual memory address space via `memmap2`, eliminating expensive user-to-kernel memory copies and traditional read system calls [doc/架构详解/高并发保序流水线与IO优化.md].
-*   **Three-Stage Ordered Pipeline**:
-    *   *Smart Splitter*: Chunking files into 8MB blocks while dynamically locating the nearest `\n` to guarantee structural line integrity [doc/架构详解/高并发保序流水线与IO优化.md, src-tauri/src/infra/fs/processor.rs].
-    *   *Work-Stealing Compute*: Squeezing multi-core CPU power using `Rayon` task-stealing algorithms [doc/架构详解/高并发保序流水线与IO优化.md, README_CN.md].
-    *   *Ordered Writing*: Utilizing a `BTreeMap` and an atomic counter to ensure **the output line order matches the input file with 100% precision** [doc/架构详解/高并发保序流水线与IO优化.md, README_CN.md].
-*   **Backpressure Flow-Control**: Restricts in-flight memory chunks to 32 (approx. 256MB), guaranteeing that **RAM usage remains constant at ~300MB even when processing 100GB+ files** [doc/架构详解/高并发保序流水线与IO优化.md].
-
-### 3. Pluggable Hybrid Matching Matrix
-The detection engine coordinates high-performance deterministic rules with probabilistic ML models:
-*   **Aho-Corasick Automaton**: High-speed matching of static patterns, literal keywords, and project codenames in $O(n)$ time complexity [doc/架构详解/核心脱敏引擎与冲突算法.md, README_CN.md].
-*   **Byte-Level Regex**: Operates directly on raw `[u8]` byte streams, bypassing Rust's default UTF-8 validation overhead for a ~30% performance boost [doc/架构详解/核心脱敏引擎与冲突算法.md, README_CN.md].
-*   **ONNX Local NER Engine**: Runs token classification locally using `ort` (ONNX Runtime) to extract unstructured names, organizations, and addresses via a q4 quantized `openai/privacy-filter` model [docs/使用手册.md, docs/使用手册.md].
-*   **Sub-Span Carving Conflict Resolution**: When an AI-detected address overlaps with a regex-matched IP, the engine carves the overlapping ranges geometrically, preserving both high-priority rules and wide semantic contexts rather than dropping entire spans.
-
-### 4. Asynchronous PII Dataset Record Writer
-*   Implements a non-blocking `RecordWriter` [docs/record-writer.md]. When sensitive data is encountered, it asynchronously appends the original-to-masked mapping to your local storage in Markdown format with YAML front matter [docs/record-writer.md].
-*   Supports automatic 150-record file splitting and yearly directory partitioning [docs/record-writer.md]. These offline, sanitized, and structured datasets can be directly utilized as clean corpora for training and evaluating private LLMs [docs/record-writer.md].
+| Problem | SafeMask approach |
+|--------|-------------------|
+| Accidental paste of secrets into AI | **Magic Paste** injects masked text, then restores the original clipboard |
+| Need original text for local tools | **Shadow mode** keeps plaintext on the system clipboard by default |
+| Screen sharing / strict environments | **Sentry mode** actively sanitizes the clipboard after every copy |
+| Names & addresses that regex can't catch | **Local AI NER** — a quantized ONNX model running 100% on-device |
+| Huge log files | **mmap + Rayon** pipeline with ordered write-back |
+| Custom policies | **Rule manager** with import / export YAML |
 
 ---
 
-## 📁 System Architecture
+## See it in action
 
-SafeMask is engineered with a **6-Layer Decoupled Architecture**, isolating presentation, state machine orchestration, conflict resolution, detection registry, and cross-platform infrastructure:
+One keystroke between you and a safe paste. **Before** — what you copied:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│              Layer 6: Presentation Layer (React 19)              │
-│  Staged Bootstrap · Lazy-Loading · System Fonts · Web Audio SFX  │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ IPC (Tauri Commands)
-┌────────────────────────────▼────────────────────────────────────┐
-│              Layer 5: Orchestration Layer                       │
-│  Dual-Universe (Shadow vs. Sentry) State Machine                │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────────┐
-│              Layer 4: Masking Strategy Layer                    │
-│  Replace · Semantic Partial Mask · Hash · Redact · Token · Temp │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────────┐
-│              Layer 3: Conflict Resolution Layer                 │
-│  Sub-Span Carving · Container Swallowing · Confidence Filtering │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────────┐
-│              Layer 2: Pluggable Detection Layer                 │
-│  AC Dictionary · Byte Regex · ONNX AI NER · Checksum Validator  │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────────┐
-│              Layer 1: Infrastructure Layer                      │
-│  Zero-Copy Mmap · Polling Clipboard · Async RecordWriter · HMAC │
-└─────────────────────────────────────────────────────────────────┘
+```text
+2026-07-24 10:32:01 INFO user=张伟 email=zhang.wei@example.com phone=13812345678 ip=192.168.31.10 key=sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 ```
 
----
+**After** — what actually reaches the LLM:
 
-## 📊 Benchmarks
+```text
+2026-07-24 10:32:01 INFO user=<PERSON> email=<EMAIL> phone=<CHINA_MOBILE> ip=<IPv4> key=<OPENAI_KEY>
+```
 
-SafeMask's low-level optimizations provide significant throughput advantages over traditional Python, Node.js, or Electron-based tools:
-
-*   **Large Log File Throughput**:
-    *   **SafeMask (Rust 2024 Core)**: **340 MB/s** (Processes a 2.3 GB production log file in **8.1 seconds**) [README_CN.md].
-    *   **Traditional Python (Line-by-line)**: **18.4 MB/s** (Takes approx. 2 mins 15 seconds).
-*   **Memory Footprint**:
-    *   **Standby/Idle**: Only **40 MB** (compared to typical Electron footprint of 300MB+) [README_CN.md].
-    *   **During 50 GB File Runs**: Strictly limited to **under 300 MB** due to Mmap and backpressure queue bounds [doc/架构详解/高并发保序流水线与IO优化.md].
-*   **Magic Paste Latency**:
-    *   Total key simulation, swap sequence, and restore transaction executes in approx. **150ms** (fully configurable).
+The name was caught by the **AI model**, the rest by **built-in rules** — your original clipboard is restored immediately after the paste.
 
 ---
 
-## 🛠️ Quick Start
+## Features
 
-### 1. Download & Run (Recommended)
-Go to the [SafeMask Releases](https://github.com/AiToByte/SafeMask/releases) page and download the executable built for your platform [README_CN.md]:
-*   **Windows**: Standard installers (`.msi`) and zero-installation portable archives (`.zip`) are both supported [README_CN.md, .worktrees/shortcut-magic-paste-stability/.github/workflows/release.yml].
-*   **macOS**: Universal binaries (`.dmg`) compiled natively for both Apple Silicon (M1/M2/M3/M4) and Intel architectures [README_CN.md, .worktrees/shortcut-magic-paste-stability/.github/workflows/release.yml].
-*   **Linux**: Universal AppImage packages (`.AppImage`) and Debian installers (`.deb`) [.worktrees/shortcut-magic-paste-stability/.github/workflows/release.yml].
+### Dual-universe clipboard
 
-### 2. Manual Source Compilation
-If you prefer compiling the workspace from scratch:
+- **Shadow mode (default)** — `Ctrl+C` keeps the real text. Press **`Alt+V`** (configurable) for Magic Paste: backup → mask → paste → restore.
+- **Sentry mode** — sensitive clipboard content is bleached automatically after copy.
+- Toggle modes with **`Alt+M`**. Optional always-on-top window pin.
+
+### Hybrid detection engine
+
+- **Aho-Corasick** for dictionaries / keywords (priority 100)
+- **Byte-level regex** for high-throughput pattern matching (priority 90)
+- **Optional local AI NER** (priority 50) — see [below](#local-ai-engine-on-device-ner)
+- **Sub-span carving** conflict resolution — narrow high-priority spans carve wide low-priority ones, and rule hits suppress overlapping AI spans
+
+### Rules & configuration
+
+- Built-in YAML rule packs (auth keys, network, personal info, code, database URIs, …)
+- Custom rules with a live regex sandbox
+- **Multi-file YAML import** (overwrites same-name custom rules, skips built-in name conflicts)
+- **Export custom rules** + downloadable import template
+- Global mask wrapper style: `<TAG>` or `[TAG]` — applied to every rule and AI label at runtime
+
+### File pipeline
+
+- Memory-mapped I/O, ~8 MB chunks, line-safe splits
+- Ordered multi-core processing with backpressure
+- Stable RAM footprint on very large inputs
+
+### UI & themes
+
+- React 19 + Zustand + Tailwind, native window chrome
+- Extensible theme system: **Default (industrial amber)** and **Claude (warm paper)**
+
+### Optional audit records
+
+- Opt-in Markdown audit writer for reviewing what was masked (plaintext PII on disk — **off by default**)
+
+---
+
+## Local AI engine (on-device NER)
+
+SafeMask ships with an optional AI layer for what rules can't express: **person names, addresses, organizations** and other context-dependent entities.
+
+### What it is
+
+- A quantized (**q4**) ONNX NER model based on `openai/privacy-filter` — an 8-layer MoE token classifier with 33 BIOES labels.
+- Inference runs **100% on-device** via ONNX Runtime + HuggingFace tokenizers. No text ever leaves your machine.
+- The model is **not bundled** with the installer — it's a separate, explicit, one-time download.
+
+### What it recognizes
+
+| Model entity | Mask label | Example |
+|---|---|---|
+| `private_person` | `<PERSON>` | 张伟, John Smith |
+| `private_email` | `<EMAIL>` | zhang.wei@example.com |
+| `private_phone` | `<PHONE>` | +86 138 1234 5678 |
+| `private_address` | `<ADDRESS>` | 北京市朝阳区… |
+| `account_number` | `<BANK_CARD>` | 6222 0212 3456 7890 |
+| `private_date` | `<DATE>` | personal dates |
+| `private_url` | `<URL>` | personal URLs |
+| `secret` | `<API_KEY>` | tokens & secrets |
+
+### How to enable
+
+**Option A — one-click download (recommended)**
+
+1. Open **Settings → AI Engine**.
+2. Click **Download** (~550 MB zip; ~2 GB free disk required during install).
+3. The model downloads from a list of mirrors with automatic fallback, is verified (SHA-256), extracted, and **hot-loaded** — no restart needed.
+
+**Option B — self-service mirrors**
+
+Server bandwidth is limited — if the in-app download is slow, grab `privacy-filter.zip` from any mirror:
+
+| Mirror | Link | Code |
+|---|---|---|
+| HuggingFace | [privacy-filter.zip](https://huggingface.co/buckets/XiaoShengCYZ/AI_Models/resolve/privacy-filter.zip?download=true) | — |
+| Quark Netdisk (夸克网盘) | [pan.quark.cn](https://pan.quark.cn/s/51647902f801?pwd=HQ1Y) | `HQ1Y` |
+| Baidu Netdisk (百度网盘) | [pan.baidu.com](https://pan.baidu.com/s/1mDBr0mdo2r-guC4LshF87w?pwd=ba7b) | `ba7b` |
+
+Extract the zip into `models/privacy-filter/` next to `SafeMask.exe`, then restart SafeMask.
+
+**Option C — manual placement**
+
+Place these files into `models/privacy-filter/` next to `SafeMask.exe`:
+
+```text
+models/privacy-filter/
+├── model_q4.onnx         # quantized model (stub)
+├── model_q4.onnx_data    # quantized weights (~875 MB)
+├── tokenizer.json        # HuggingFace tokenizer
+└── config.json           # id2label metadata
+```
+
+> Also searched at startup: `./models` (working directory), the app-local-data directory, and the app resources directory.
+
+### How it behaves
+
+- **Lazy loading** — the model stays on disk until the first masked copy/paste, then loads in the background (typically 1–3 min, 5 min timeout). Status and elapsed time are shown in Settings; details are logged to `ai_model_load.log`.
+- **Rules win overlaps** — AI runs at priority 50, rules at 90–100, so deterministic rule hits always take precedence over AI guesses on the same text.
+- **Runtime toggle** — switch AI on/off anytime in Settings. When the model files exist, AI is auto-enabled at startup.
+- **Graceful degradation** — without the model, everything else works identically; SafeMask simply falls back to rules-only mode.
+
+### Tuning
+
+| Knob | Default | Notes |
+|---|---|---|
+| `ORT_NUM_THREADS` env var | `2` | ONNX Runtime inference threads |
+| Confidence threshold | `0.5` | Below this, AI spans are discarded |
+| Context window | 512 tokens | Per inference pass |
+
+---
+
+## Installation
+
+### Prebuilt installers (recommended)
+
+Download from [**GitHub Releases**](https://github.com/AiToByte/SafeMask/releases):
+
+| Package | Notes |
+|---|---|
+| `SafeMask_x.y.z_x64-setup.exe` | Windows NSIS installer — recommended |
+| `SafeMask_x.y.z_x64_zh-CN.msi` | Windows MSI |
+| macOS / Linux packages | Produced by CI on every `v*` tag |
+
+The AI model is optional and downloaded separately from inside the app (see [Local AI engine](#local-ai-engine-on-device-ner)).
+
+---
+
+## Usage
+
+### Clipboard workflow
+
+1. Copy anything as usual (`Ctrl+C`) — in **Shadow mode** the real text stays on your clipboard.
+2. Focus the target (ChatGPT, Claude, a web form…).
+3. Press **`Alt+V`** — SafeMask backs up your clipboard, masks the text, pastes the safe version, then restores your original clipboard.
+4. Need strict hygiene? Toggle **Sentry mode** with **`Alt+M`** — every copy is sanitized in place.
+
+| Shortcut | Action | Configurable |
+|---|---|---|
+| `Alt+V` | Magic Paste (mask & paste) | ✅ shortcut & paste delay |
+| `Alt+M` | Toggle Shadow / Sentry mode | ❌ (hard-bound) |
+
+### Custom rules
+
+Add your own patterns in **Rules**, or import a YAML pack:
+
+```yaml
+group: "MY_COMPANY"
+rules:
+  - name: "Internal_Project_Code"
+    pattern: '\bPRJ-\d{6}\b'
+    mask: "<PROJECT_CODE>"
+    priority: 10
+```
+
+Test patterns live in the built-in regex sandbox before saving. See [docs/RULES_IMPORT.md](docs/RULES_IMPORT.md) for the full format.
+
+### Mask wrapper style
+
+Prefer square brackets? **Settings → Mask wrapper style** switches every mask between `<TAG>` and `[TAG]` instantly — built-in rules, custom rules, and AI labels all follow.
+
+### File processing
+
+Drag a log file onto the dashboard (or use the file picker) — SafeMask streams it through a memory-mapped, multi-core pipeline and writes a masked copy next to the original, with a stable RAM footprint even on very large files.
+
+---
+
+## Development
+
+### Requirements
+
+- Node.js 18+
+- Rust stable (edition 2024 toolchain)
+- Platform build deps for [Tauri v2](https://v2.tauri.app/start/prerequisites/)
+
+### Run
 
 ```bash
-# Clone the repository
-git clone https://github.com/AiToByte/SafeMask.git
-cd SafeMask
-
-# Install frontend node modules
+# Install JS deps
 npm install
 
-# Run the full-stack development environment (Vite 6 + Tauri Window)
+# Full desktop app (Vite + Tauri)
 npm run tauri dev
 
-# Build the release bundle for your current platform
+# Frontend only (http://127.0.0.1:18924)
+npm run dev
+```
+
+### Build
+
+```bash
+npm run build
 npm run tauri build
 ```
 
----
+### Rust checks (workspace root)
 
-## 🧠 Local AI Model Configuration
+```bash
+cargo check  -p SafeMask
+cargo test   -p SafeMask
+cargo clippy -p SafeMask -- -D warnings
+cargo fmt    -p SafeMask
+```
 
-SafeMask utilizes a quantized token-classification model for Named Entity Recognition [docs/使用手册.md]. To activate local AI processing [docs/使用手册.md]:
+### Environment variables
 
-1. Ensure the model directory exists [docs/使用手册.md]:
-   `src-tauri/models/privacy-filter/`
-2. Download and place the following asset bundle into the directory (you can also use the one-click download option directly from the Settings page) [src-tauri/src/ai_downloader.rs]:
-   ```text
-   privacy-filter/
-   ├── model_q4.onnx           # ONNX model structure (160 KB)
-   ├── model_q4.onnx_data      # Quantized 4-bit weights file (874 MB)
-   ├── tokenizer.json          # Fast HF Tokenizer configuration (27 MB)
-   └── config.json             # ID-to-Label mapping metadata
-   ```
-3. Open the app, navigate to the Settings page, and verify the **AI Engine** status indicator glows green, indicating the local model has successfully loaded into memory.
+| Variable | Default | Purpose |
+|---|---|---|
+| `SAFEMASK_THREADS` | `2` | Rayon worker threads (file pipeline) |
+| `ORT_NUM_THREADS` | `2` | ONNX Runtime inference threads |
 
 ---
 
-> 模型下载地址
-[privacy-filter Model Quark download link](https://pan.quark.cn/s/51647902f801?pwd=HQ1Y)
-[privacy-filter Baidu Netdisk download link for the model](https://pan.baidu.com/s/1mDBr0mdo2r-guC4LshF87w?pwd=ba7b)
+## Architecture (overview)
+
+```
+React 19 UI
+    │  invoke / events
+    ▼
+api/*  (Tauri commands)
+    ▼
+orchestrator  (Shadow / Sentry)
+    ▼
+hybrid_engine  → recognizers → resolver → masking
+    ▼
+infra  (clipboard, mmap files, ONNX, config, records)
+```
+
+- `core/` has **zero** Tauri imports — unit-testable in isolation
+- Offsets are **byte offsets** on UTF-8 buffers
+- Custom rules live under the app `custom/` storage path (`user_rules.yaml`)
+
+More detail: [CLAUDE.md](CLAUDE.md) · [docs/](docs/) · [docs/RULES_IMPORT.md](docs/RULES_IMPORT.md) · [docs/THEMES.md](docs/THEMES.md)
 
 ---
 
-## 🔒 Privacy & Security Commitment
+## Documentation index
 
-*   **100% Offline**: All masking, rules, and AI inferences execute entirely in local sandbox environments with zero network calls [docs/使用手册.md]. The codebase contains no telemetry or remote reporting.
-*   **Audit Sanitization**: All historical logs and audit records can be permanently deleted and zeroed out from the disk with a single click [README_CN.md, src-tauri/src/api/system.rs].
-*   **Least Privilege**: The application operates under a strict, minimal permission model [doc/架构详解/系统集成、剪切板监控与桌面安全.md], requesting only clipboard and local file I/O permissions.
+| Doc | Description |
+|-----|-------------|
+| [README.md](README.md) | English (this file) |
+| [README_CN.md](README_CN.md) | 简体中文 |
+| [README_JA.md](README_JA.md) | 日本語 |
+| [README_KO.md](README_KO.md) | 한국어 |
+| [README_RU.md](README_RU.md) | Русский |
+| [CLAUDE.md](CLAUDE.md) | Contributor / agent architecture notes |
+| [DEVELOPMENT.md](DEVELOPMENT.md) | Development guide |
+| [docs/使用手册.md](docs/使用手册.md) | User handbook (Chinese) |
+| [docs/RULES_IMPORT.md](docs/RULES_IMPORT.md) | Rule import / export format |
+| [docs/THEMES.md](docs/THEMES.md) | Theme system |
+| [docs/record-writer.md](docs/record-writer.md) | Audit record writer |
+| [GitHub Releases](https://github.com/AiToByte/SafeMask/releases) | Prebuilt installers |
+| [Issues](https://github.com/AiToByte/SafeMask/issues) | Bug reports & feature requests |
+| [LICENSE](LICENSE) | MIT |
 
 ---
 
-## 📜 License
+## Privacy & security
 
-This project is open-source and distributed under the terms of the **MIT License**.
+- **No cloud API** for masking content — ever
+- **AI inference is 100% on-device**; the only network traffic is the optional, explicit one-time model download from allow-listed mirrors
+- Model download is optional and user-initiated
+- Audit writing is opt-in (stores sensitive originals locally)
+- Prefer reviewing custom rules before importing from untrusted sources
+
+---
+
+## FAQ
+
+**Does SafeMask send my clipboard or files anywhere?**
+No. All masking — rules and AI alike — runs locally. There is no telemetry and no content upload.
+
+**Does SafeMask work without the AI model?**
+Yes. The rule engine (dictionaries + regex) is fully functional on its own. AI is an additive layer for names, addresses, and similar context-dependent entities.
+
+**Why is the first AI-masked paste slow?**
+The ~900 MB model is lazy-loaded on first use (typically 1–3 minutes). Subsequent masking is immediate. Progress is shown in Settings → AI Engine.
+
+**Where is the AI model stored?**
+In `models/privacy-filter/` next to the executable (or in the app-local-data / resources directory). Delete that folder to remove it completely.
+
+**Can I use my own detection rules?**
+Yes — custom YAML rules with a live regex sandbox, plus multi-file import/export. See [docs/RULES_IMPORT.md](docs/RULES_IMPORT.md).
+
+---
+
+## Releases
+
+Prebuilt installers: [GitHub Releases](https://github.com/AiToByte/SafeMask/releases)
+
+Tag-driven CI produces multi-platform packages (Windows / macOS / Linux) on `v*` tags.
+
+---
+
+## Contributing
+
+1. Prefer small, focused PRs
+2. Run `cargo test -p SafeMask` and `npm run build` before push
+3. Follow existing layout: `core/` pure logic, `infra/` OS, `api/` IPC
+4. New themes: see [docs/THEMES.md](docs/THEMES.md)
+5. New rule packs: YAML compatible with `RuleGroup` or bare rule arrays
+
+Issues and PRs welcome: [AiToByte/SafeMask](https://github.com/AiToByte/SafeMask)
+
+---
+
+## License
+
+[MIT](LICENSE) © SafeMask contributors / AiToByte
 
 ---
 
 <div align="center">
-  <p><b>SafeMask</b> — Empowering every line of data to safely and fearlessly embrace AI.</p>
-  <p>Developed with ❤️ by <b>XiaoSheng</b></p>
+
+**English** · [简体中文](README_CN.md) · [日本語](README_JA.md) · [한국어](README_KO.md) · [Русский](README_RU.md)
+
 </div>
